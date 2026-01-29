@@ -1,0 +1,441 @@
+<!--templates/lecturer.html-->
+{% extends "base.html" %}
+
+{% block title %}Cổng Giảng Viên - HOU S-RIMS{% endblock %}
+
+{% block content %}
+        <div class="top-bar">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fa-solid fa-building-columns text-muted"></i> 
+                <span class="fw-bold text-uppercase small">HANOI OPEN UNIVERSITY</span>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <button class="btn btn-light border-0 btn-sm fw-bold text-muted" onclick="switchTab('l-calendar', document.querySelector('.sub-nav-item:last-child'))">
+                    <i class="fa-regular fa-calendar me-2"></i> Lịch sự kiện
+                </button>
+                
+                <div class="dropdown border-start ps-3">
+                    <div class="d-flex align-items-center gap-2 cursor-pointer dropdown-toggle no-arrow" data-bs-toggle="dropdown">
+                        <div class="text-end">
+                            <div class="fw-bold text-dark" style="font-size: 13px;">TS. Nguyễn Văn A</div>
+                            <div class="text-primary fw-bold" style="font-size: 10px;">MENTOR / KHOA CNTT</div>
+                        </div>
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 35px; height: 35px; font-size: 12px;">NA</div>
+                    </div>
+                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow mt-2">
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalEditProfile">Cập nhật hồ sơ</a></li>
+                        <li><a class="dropdown-item text-danger" href="index.html">Đăng xuất</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    <div class="content-area">
+        
+        <div id="view-l-profile" class="fade-in">
+            <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 text-center mb-4">
+                            <div class="mx-auto bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px; font-size: 30px;">
+                                <i class="fa-regular fa-user"></i>
+                            </div>
+                            <h5 class="fw-bold mb-1">TS. Nguyễn Văn A</h5>
+                            <p class="text-muted small mb-2">Khoa Công nghệ Thông tin</p>
+                            <div class="text-warning mb-3 small">
+                                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                            </div>
+                            <button class="btn btn-dark rounded-pill px-4 fw-bold w-100" data-bs-toggle="modal" data-bs-target="#modalEditProfile">Chỉnh sửa hồ sơ</button>
+                        </div>
+                        <div class="card border-0 shadow-sm rounded-4 p-4">
+                            <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-chart-line me-2"></i> Chỉ số NCKH</h6>
+                            <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
+                                <span class="text-muted small fw-bold">H-INDEX</span><span class="fw-bold text-primary">12</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
+                                <span class="text-muted small fw-bold">BÀI BÁO</span><span class="fw-bold text-primary">08</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted small fw-bold">HƯỚNG DẪN</span><span class="fw-bold text-primary">24</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                            <h6 class="fw-bold mb-3">Hướng nghiên cứu chính</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill"># Trí tuệ nhân tạo (AI)</span>
+                                <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill"># NLP</span>
+                                <span class="badge bg-light text-muted border border-dashed px-3 py-2 rounded-pill cursor-pointer" data-bs-toggle="modal" data-bs-target="#modalEditProfile">+ Thêm hướng mới</span>
+                            </div>
+                        </div>
+                        
+                        <div class="card border-0 shadow-sm rounded-4 p-4">
+                            <h6 class="fw-bold mb-4">Danh sách công bố tiêu biểu</h6>
+                            <div class="d-flex gap-3 mb-4">
+                                <div class="bg-light p-3 rounded-3 d-flex align-items-center"><i class="fa-regular fa-newspaper text-muted fs-4"></i></div>
+                                <div>
+                                    <div class="fw-bold text-dark">Ứng dụng thuật toán C4.5 trong việc dự báo kết quả học tập...</div>
+                                    <div class="small text-muted fst-italic">Tạp chí Khoa học & Công nghệ, Vol. 45, 2024</div>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-3">
+                                <div class="bg-light p-3 rounded-3 d-flex align-items-center"><i class="fa-regular fa-newspaper text-muted fs-4"></i></div>
+                                <div>
+                                    <div class="fw-bold text-dark">Xây dựng mô hình Chatbot hỗ trợ tư vấn tuyển sinh dựa trên RAG...</div>
+                                    <div class="small text-muted fst-italic">Kỷ yếu Hội thảo Quốc gia CITA, 2025</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-l-approve" class="fade-in hidden">
+                <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h5 class="fw-bold mb-0">Yêu cầu hướng dẫn (2025-2026)</h5>
+                        <small class="text-danger fw-bold">Hạn phê duyệt: Còn 5 ngày</small>
+                    </div>
+                    
+                    <div class="card border shadow-sm p-3 mb-3 rounded-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="d-flex gap-2 mb-1">
+                                    <span class="badge bg-warning text-dark" style="font-size: 10px;">CHỜ PHÊ DUYỆT</span>
+                                    <span class="small fw-bold text-success">92% Match</span>
+                                </div>
+                                <div class="fw-bold mb-1">Xây dựng ứng dụng nhận diện sinh viên ra vào thư viện</div>
+                                <small class="text-muted"><i class="fa-solid fa-users me-1"></i> Nhóm SV K21 - CNTT</small>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-outline-secondary btn-sm fw-bold">Xem chi tiết</button>
+                                <button class="btn btn-primary btn-sm fw-bold" style="background-color: #6366f1; border-color: #6366f1;" data-bs-toggle="modal" data-bs-target="#modalConfirmGuide">Đồng ý hướng dẫn</button>
+                                <button class="btn btn-light text-danger border-0" data-bs-toggle="modal" data-bs-target="#modalRejectGuide"><i class="fa-regular fa-circle-xmark fs-4"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card border shadow-sm p-3 mb-3 rounded-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="d-flex gap-2 mb-1">
+                                    <span class="badge bg-warning text-dark" style="font-size: 10px;">CHỜ PHÊ DUYỆT</span>
+                                    <span class="small fw-bold text-success">88% Match</span>
+                                </div>
+                                <div class="fw-bold mb-1">Phân tích dữ liệu học tập để tối ưu hóa lộ trình ôn thi</div>
+                                <small class="text-muted"><i class="fa-solid fa-users me-1"></i> Trần Minh Tuấn (K22)</small>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-outline-secondary btn-sm fw-bold">Xem chi tiết</button>
+                                <button class="btn btn-primary btn-sm fw-bold" style="background-color: #6366f1; border-color: #6366f1;" data-bs-toggle="modal" data-bs-target="#modalConfirmGuide">Đồng ý hướng dẫn</button>
+                                <button class="btn btn-light text-danger border-0" data-bs-toggle="modal" data-bs-target="#modalRejectGuide"><i class="fa-regular fa-circle-xmark fs-4"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </div>
+
+        <div id="view-l-progress" class="fade-in hidden">
+                <div class="card border-0 shadow-sm rounded-4 p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+                        <div>
+                            <h5 class="fw-bold mb-1">Theo dõi tiến độ NCKH SV</h5>
+                            <div class="small text-muted">Quản lý các đề tài đang hướng dẫn (08 đề tài)</div>
+                        </div>
+                        <button class="btn btn-light border btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalCreateMeeting">
+                            <i class="fa-regular fa-calendar me-2"></i> Lịch họp định kỳ
+                        </button>
+                    </div>
+
+                    <div class="bg-white border rounded-4 p-4 mb-3 shadow-sm">
+                        <div class="d-flex justify-content-between mb-4">
+                            <div>
+                                <h6 class="fw-bold text-primary mb-1">Hệ thống gợi ý học tập cá nhân hóa tại HOU</h6>
+                                <small class="text-muted fw-bold">NHÓM K21-CNTT</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="h4 fw-bold text-primary mb-0">65%</div>
+                                <div class="small text-muted fw-bold">TIẾN ĐỘ TỔNG THỂ</div>
+                            </div>
+                        </div>
+                        <div class="position-relative mb-4 px-3">
+                            <div class="progress" style="height: 4px; top: 15px; position: relative; z-index: 1;">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: 65%"></div>
+                            </div>
+                            <div class="d-flex justify-content-between position-relative" style="z-index: 2;">
+                                <div class="text-center">
+                                    <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 32px; height: 32px;"><i class="fa-solid fa-check"></i></div>
+                                    <div class="small fw-bold">Đề xuất</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 32px; height: 32px;"><i class="fa-solid fa-check"></i></div>
+                                    <div class="small fw-bold">Ký HĐ</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 32px; height: 32px;"><i class="fa-solid fa-check"></i></div>
+                                    <div class="small fw-bold">Khảo sát</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 shadow" style="width: 32px; height: 32px; background-color: #6366f1 !important;">4</div>
+                                    <div class="small fw-bold text-primary">Thử nghiệm</div>
+                                </div>
+                                <div class="text-center opacity-50">
+                                    <div class="bg-light border rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2" style="width: 32px; height: 32px;">5</div>
+                                    <div class="small fw-bold">Nghiệm thu</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex gap-1">
+                                <span class="badge bg-secondary rounded-circle p-2" style="width: 30px; height: 30px;">SV1</span>
+                                <span class="badge bg-secondary rounded-circle p-2" style="width: 30px; height: 30px;">SV2</span>
+                            </div>
+                            <button class="btn btn-light btn-sm fw-bold border"><i class="fa-regular fa-message me-1"></i> Ghi chú nhắc nhở</button>
+                        </div>
+                    </div>
+                </div>
+        </div>
+
+        <div id="view-l-chat" class="fade-in hidden">
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden" style="height: 600px;">
+                    <div class="row g-0 h-100">
+                        <div class="col-md-4 border-end bg-light">
+                            <div class="p-3 border-bottom"><input type="text" class="form-control rounded-pill border-0 bg-white" placeholder="Tìm nhóm chat..."></div>
+                            <div class="list-group list-group-flush">
+                                <a href="#" class="list-group-item list-group-item-action active p-3 border-0" style="background-color: #e0f2fe; color: #000;">
+                                    <div class="d-flex justify-content-between align-items-center mb-1"><span class="fw-bold">Nhóm AI-Face-Recognize</span><small class="text-muted" style="font-size: 10px;">10:30</small></div>
+                                    <div class="d-flex justify-content-between"><small class="text-muted text-truncate" style="max-width: 180px;">Em đã cập nhật báo cáo...</small><span class="badge bg-danger rounded-circle">2</span></div>
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action p-3 border-0">
+                                    <div class="d-flex justify-content-between align-items-center mb-1"><span class="fw-bold">Nhóm Luật-RAG-System</span><small class="text-muted" style="font-size: 10px;">Hôm qua</small></div>
+                                    <small class="text-muted">Thầy cho em hỏi về...</small>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-8 d-flex flex-column bg-white">
+                            <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="bg-primary text-white rounded-3 d-flex align-items-center justify-content-center fw-bold" style="width: 40px; height: 40px; background-color: #6366f1 !important;">AI</div>
+                                    <div><div class="fw-bold">Nhóm AI-Face-Recognize</div><div class="small text-success"><i class="fa-solid fa-circle" style="font-size: 8px;"></i> 3 thành viên đang trực tuyến</div></div>
+                                </div>
+                                <i class="fa-solid fa-ellipsis-vertical text-muted cursor-pointer"></i>
+                            </div>
+                            <div class="flex-grow-1 p-4 chat-scroll" style="background-color: #f8fafc; overflow-y: auto;">
+                                <div class="text-center small text-muted mb-4">HÔM NAY</div>
+                                <div class="d-flex gap-3 mb-3">
+                                    <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center small fw-bold" style="width: 30px; height: 30px;">SV1</div>
+                                    <div class="bg-white p-3 rounded-3 shadow-sm" style="max-width: 70%;">Thưa thầy, chúng em đã hoàn thành xong module nhận diện bằng OpenCV, thầy xem qua giúp chúng em bản draft này ạ.</div>
+                                </div>
+                                <div class="d-flex gap-3 mb-3 justify-content-end">
+                                    <div class="text-white p-3 rounded-3 shadow-sm" style="max-width: 70%; background-color: #6366f1;">Tốt lắm, các em tải file lên thư mục Shared Resources để thầy review vào tối nay nhé.</div>
+                                </div>
+                            </div>
+                            <div class="p-3 border-top bg-white">
+                                <div class="input-group"><input type="text" class="form-control border-0 bg-light rounded-pill" placeholder="Nhập tin nhắn..."><button class="btn btn-primary rounded-circle ms-2" style="background-color: #6366f1; border-color: #6366f1; width: 40px; height: 40px;"><i class="fa-solid fa-paper-plane"></i></button></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </div>
+
+        <div id="view-l-calendar" class="fade-in hidden">
+                <div class="row g-4">
+                    <div class="col-md-8">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <div class="d-flex align-items-center gap-3">
+                                    <button class="btn btn-light btn-sm rounded-circle"><i class="fa-solid fa-chevron-left"></i></button>
+                                    <h5 class="fw-bold mb-0">Tháng 01, 2026</h5>
+                                    <button class="btn btn-light btn-sm rounded-circle"><i class="fa-solid fa-chevron-right"></i></button>
+                                </div>
+                                <button class="btn btn-primary-subtle text-primary fw-bold btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#modalCreateEvent">
+                                    + Tạo nhắc hẹn
+                                </button>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-bordered align-top custom-calendar-table">
+                                    <thead class="text-secondary small text-uppercase text-center fw-bold bg-light">
+                                        <tr>
+                                            <th style="width: 14.28%">CN</th><th style="width: 14.28%">T2</th><th style="width: 14.28%">T3</th>
+                                            <th style="width: 14.28%">T4</th><th style="width: 14.28%">T5</th><th style="width: 14.28%">T6</th>
+                                            <th style="width: 14.28%">T7</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-muted fw-bold small">
+                                        <tr>
+                                            <td class="opacity-25">29</td><td class="opacity-25">30</td><td class="opacity-25">31</td>
+                                            <td>1</td><td>2</td><td>3</td><td>4</td>
+                                        </tr>
+                                        <tr>
+                                            <td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td><td>11</td>
+                                        </tr>
+                                        <tr>
+                                            <td>12</td><td>13</td>
+                                            <td class="calendar-today">
+                                                <div class="d-flex justify-content-between">
+                                                    <span>14</span>
+                                                </div>
+                                            </td>
+                                            <td>15</td><td>16</td><td>17</td><td>18</td>
+                                        </tr>
+                                        <tr>
+                                            <td>19</td><td>20</td><td>21</td>
+                                            <td class="position-relative bg-danger-subtle bg-opacity-10">
+                                                <div class="d-flex justify-content-between"><span>22</span></div>
+                                                <div class="event-chip bg-danger text-white mt-2">
+                                                    Hạn nộp thuyết minh
+                                                </div>
+                                            </td>
+                                            <td>23</td><td>24</td>
+                                            <td class="position-relative bg-warning-subtle bg-opacity-10">
+                                                <div class="d-flex justify-content-between"><span>25</span></div>
+                                                <div class="event-chip bg-warning text-dark mt-2">
+                                                    Họp hội đồng
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>26</td><td>27</td>
+                                            <td class="position-relative bg-info-subtle bg-opacity-10">
+                                                <div class="d-flex justify-content-between"><span>28</span></div>
+                                                <div class="event-chip bg-primary text-white mt-2" style="background-color: #6366f1 !important;">
+                                                    Báo cáo tiến độ
+                                                </div>
+                                            </td>
+                                            <td>29</td><td>30</td><td>31</td><td class="opacity-25">1</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 d-flex flex-column gap-4">
+                        
+                        <div class="card border-0 shadow-sm rounded-4 p-4">
+                            <h6 class="fw-bold mb-4 d-flex justify-content-between align-items-center">
+                                <span><i class="fa-regular fa-bell me-2 text-primary"></i> Thông báo quan trọng</span>
+                                <span class="badge bg-danger rounded-circle small" style="width: 24px; height: 24px; line-height: 18px;">02</span>
+                            </h6>
+
+                            <div class="p-3 rounded-3 mb-3 bg-danger-subtle bg-opacity-25 border border-danger-subtle">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <i class="fa-solid fa-thumbtack text-danger"></i>
+                                    <span class="fw-bold text-danger" style="font-size: 11px;">KHẨN CẤP</span>
+                                </div>
+                                <div class="fw-bold text-dark small mb-1">
+                                    Gia hạn thời gian nộp thuyết minh đề tài NCKH sinh viên đến hết ngày 20/01.
+                                </div>
+                                <div class="text-muted fst-italic" style="font-size: 10px;">2 giờ trước - Phòng Quản lý Khoa học</div>
+                            </div>
+
+                            <div class="p-3 rounded-3 mb-4 bg-primary-subtle bg-opacity-25 border border-primary-subtle">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <span class="fw-bold text-primary" style="font-size: 11px;">TIN MỚI</span>
+                                </div>
+                                <div class="fw-bold text-dark small mb-1">
+                                    Hướng dẫn quyết toán kinh phí các đề tài nghiệm thu đợt 1/2026.
+                                </div>
+                                <div class="text-muted fst-italic" style="font-size: 10px;">Hôm qua - Phòng Tài vụ</div>
+                            </div>
+
+                            <div class="mb-4 ps-2 border-start border-3">
+                                <div class="text-uppercase text-muted fw-bold" style="font-size: 10px;">HỆ THỐNG</div>
+                                <div class="small text-dark mt-1">Bạn có <strong>3 đề tài</strong> đang chờ phê duyệt từ Khoa CNTT.</div>
+                                <div class="text-muted" style="font-size: 10px;">3 ngày trước</div>
+                            </div>
+
+                            <button class="btn btn-outline-secondary rounded-pill w-100 fw-bold btn-sm py-2">Xem tất cả thông báo</button>
+                        </div>
+
+                        <div class="card border-0 shadow-sm rounded-4 p-4 text-white position-relative overflow-hidden mt-auto" style="background-color: #6366f1;">
+                            <div class="d-flex align-items-start gap-3 position-relative" style="z-index: 2;">
+                                <div class="bg-white bg-opacity-25 p-2 rounded-3">
+                                    <i class="fa-solid fa-medal fs-4 text-white"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Thành tích NCKH</h6>
+                                    <p class="small opacity-75 mb-3" style="font-size: 12px; line-height: 1.4;">Khoa CNTT đã đạt giải Nhất toàn Trường về số lượng bài báo Scopus trong năm học này.</p>
+                                    <button class="btn btn-light text-primary fw-bold rounded-pill w-100 btn-sm shadow-sm">Xem Bảng Vàng</button>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-trophy position-absolute text-white" style="font-size: 120px; right: -20px; bottom: -30px; opacity: 0.1; transform: rotate(-15deg);"></i>
+                        </div>
+
+                    </div>
+                </div>
+        </div>
+
+    </div>
+{% endblock %}
+
+{% block modals %}
+    <div class="modal fade" id="modalEditProfile" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-dark text-white"><h5 class="modal-title fw-bold">Cập nhật Hồ sơ Giảng viên</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body p-4">
+                    <div class="row g-3 mb-3"><div class="col-md-6"><label class="form-label">Họ và Tên</label><input type="text" class="form-control" value="Nguyễn Văn A"></div><div class="col-md-6"><label class="form-label">Học hàm/Học vị</label><select class="form-select"><option selected>Tiến sĩ</option><option>PGS.TS</option></select></div></div>
+                    <div class="mb-3"><label class="form-label">Hướng nghiên cứu (Phân cách bằng dấu phẩy)</label><input type="text" class="form-control" value="AI, NLP, EdTech, Data Mining"></div>
+                    <div class="mb-3"><label class="form-label">Link Google Scholar</label><input type="url" class="form-control" value="https://scholar.google.com/..."></div>
+                    <div class="mb-0"><label class="form-label">Giới thiệu bản thân (Bio)</label><textarea class="form-control" rows="3">Giảng viên Khoa CNTT với 10 năm kinh nghiệm...</textarea></div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-dark w-100 fw-bold" onclick="showToast('Đã cập nhật hồ sơ thành công!')" data-bs-dismiss="modal">Lưu thay đổi</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalConfirmGuide" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-primary text-white"><h5 class="modal-title fw-bold">Xác nhận Hướng dẫn</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body p-4">
+                    <p class="mb-3">Bạn có chắc chắn muốn nhận hướng dẫn đề tài: <br><strong>"Xây dựng ứng dụng nhận diện sinh viên..."</strong>?</p>
+                    <div class="mb-0"><label class="form-label">Gửi lời nhắn cho nhóm (Tùy chọn)</label><textarea class="form-control" rows="2" placeholder="Chào các em, thầy đã nhận lời..."></textarea></div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy</button><button class="btn btn-primary fw-bold px-4" onclick="showToast('Đã xác nhận hướng dẫn!')" data-bs-dismiss="modal">Đồng ý</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalRejectGuide" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-danger text-white"><h5 class="modal-title fw-bold">Từ chối Hướng dẫn</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body p-4">
+                    <div class="mb-0"><label class="form-label">Lý do từ chối (Bắt buộc)</label><textarea class="form-control" rows="3" placeholder="VD: Đề tài không phù hợp chuyên môn, đã đủ số lượng nhóm..."></textarea></div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-danger w-100 fw-bold" onclick="showToast('Đã gửi phản hồi từ chối!')" data-bs-dismiss="modal">Gửi phản hồi</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalCreateMeeting" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold text-primary">Đặt lịch họp với nhóm</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body p-4 pt-0">
+                    <div class="mb-3"><label class="form-label">Chọn Nhóm/Đề tài</label><select class="form-select"><option>Nhóm K21-CNTT (Hệ thống gợi ý...)</option></select></div>
+                    <div class="row g-2 mb-3"><div class="col-6"><label class="form-label">Ngày họp</label><input type="date" class="form-control"></div><div class="col-6"><label class="form-label">Giờ</label><input type="time" class="form-control"></div></div>
+                    <div class="mb-0"><label class="form-label">Hình thức</label><select class="form-select"><option>Online (Google Meet)</option><option>Offline (Văn phòng Khoa)</option></select></div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-primary w-100 fw-bold" onclick="showToast('Đã gửi lịch mời họp!')" data-bs-dismiss="modal">Gửi lịch mời</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalCreateEvent" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold text-primary">Thêm Sự kiện/Deadline Mới</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body p-4 pt-0">
+                    <div class="mb-3"><label class="form-label">Tiêu đề sự kiện</label><input type="text" class="form-control" placeholder="VD: Hạn nộp báo cáo chương 1"></div>
+                    <div class="row g-2 mb-3"><div class="col-6"><label class="form-label">Ngày</label><input type="date" class="form-control"></div><div class="col-6"><label class="form-label">Loại</label><select class="form-select"><option>Cá nhân</option><option>Thông báo cho Sinh viên</option></select></div></div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-primary w-100 fw-bold" onclick="showToast('Đã thêm sự kiện vào lịch!')" data-bs-dismiss="modal">Lưu sự kiện</button></div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,136 @@
+<!--templates/components/sidebar.html-->
+<div class="sidebar">
+    <div class="sidebar-logo">
+        <div class="d-flex align-items-center justify-content-center bg-primary rounded p-1" style="width: 32px; height: 32px;">
+            <img src="{{ url_for('static', filename='assets/images/logo.png') }}" alt="" style="max-width:100%;">
+        </div>
+        <div>
+            <div class="fw-bold text-white" style="font-size: 14px;">HOU S-RIMS</div>
+            <div style="font-size: 10px; color: #aeb9cc;">RESEARCH MANAGEMENT</div>
+        </div>
+    </div>
+
+    <div class="sidebar-menu-wrapper" style="flex: 1; overflow-y: auto; padding-bottom: 100px;">
+    {% if session.get('role') == 'admin' %}
+    <div class="menu-category">QUẢN TRỊ CẤP TRƯỜNG</div>
+    <a href="{{ url_for('web.admin_page') }}#overview" onclick="{% if request.endpoint == 'web.admin_page' %}event.preventDefault(); switchTab('overview', this){% endif %}" class="nav-link {{ 'active-main' if request.endpoint == 'web.admin_page' else '' }}">
+        <i class="fa-solid fa-chart-pie"></i> Tổng quan Trường
+    </a>
+    <a href="{{ url_for('web.admin_page') }}#deployment" onclick="{% if request.endpoint == 'web.admin_page' %}event.preventDefault(); switchTab('deployment', this){% endif %}" class="nav-link">
+        <i class="fa-solid fa-paper-plane"></i> Triển khai đợt NCKH
+    </a>
+    <a href="{{ url_for('web.admin_page') }}#topics" onclick="{% if request.endpoint == 'web.admin_page' %}event.preventDefault(); switchTab('topics', this){% endif %}" class="nav-link">
+        <i class="fa-solid fa-layer-group"></i> Đề tài & Nhóm
+    </a>
+    <a href="{{ url_for('web.admin_page') }}#lecturers" onclick="{% if request.endpoint == 'web.admin_page' %}event.preventDefault(); switchTab('lecturers', this){% endif %}" class="nav-link">
+        <i class="fa-regular fa-user"></i> Giảng viên
+    </a>
+    <a href="{{ url_for('web.admin_page') }}#approval" onclick="{% if request.endpoint == 'web.admin_page' %}event.preventDefault(); switchTab('approval', this){% endif %}" class="nav-link">
+        <i class="fa-regular fa-file-lines"></i> Phê duyệt cấp Trường
+    </a>
+    <a href="{{ url_for('web.admin_page') }}#council" onclick="{% if request.endpoint == 'web.admin_page' %}event.preventDefault(); switchTab('council', this){% endif %}" class="nav-link">
+        <i class="fa-solid fa-gavel"></i> Hội đồng Trường
+    </a>
+    <a href="{{ url_for('web.admin_page') }}#rubric" onclick="{% if request.endpoint == 'web.admin_page' %}event.preventDefault(); switchTab('rubric', this){% endif %}" class="nav-link">
+        <i class="fa-solid fa-clipboard-list"></i> Rubric Trường
+    </a>
+    <a href="{{ url_for('web.admin_page') }}#reports" onclick="{% if request.endpoint == 'web.admin_page' %}event.preventDefault(); switchTab('reports', this){% endif %}" class="nav-link">
+        <i class="fa-solid fa-chart-simple"></i> Báo cáo Thống kê
+    </a>
+    {% endif %}
+
+    {% if session.get('role') == 'faculty' %}
+    <div class="menu-category">QUẢN LÝ CẤP KHOA</div>
+    <a href="{{ url_for('web.faculty_page') }}#f-overview" onclick="{% if request.endpoint == 'web.faculty_page' %}event.preventDefault(); switchTab('f-overview', this){% endif %}" class="nav-link {{ 'active-main' if request.endpoint == 'web.faculty_page' else '' }}">
+        <i class="fa-solid fa-border-all"></i> Tổng quan
+    </a>
+    <a href="{{ url_for('web.faculty_page') }}#f-batches" onclick="{% if request.endpoint == 'web.faculty_page' %}event.preventDefault(); switchTab('f-batches', this){% endif %}" class="nav-link">
+        <i class="fa-regular fa-calendar-check"></i> Đợt NCKH
+    </a>
+    <a href="{{ url_for('web.faculty_page') }}#f-topics" onclick="{% if request.endpoint == 'web.faculty_page' %}event.preventDefault(); switchTab('f-topics', this){% endif %}" class="nav-link">
+        <i class="fa-solid fa-layer-group"></i> Đề tài & Nhóm
+    </a>
+    <a href="{{ url_for('web.faculty_page') }}#f-lecturers" onclick="{% if request.endpoint == 'web.faculty_page' %}event.preventDefault(); switchTab('f-lecturers', this){% endif %}" class="nav-link">
+        <i class="fa-regular fa-user"></i> Giảng viên
+    </a>
+    <a href="{{ url_for('web.faculty_page') }}#f-council" onclick="{% if request.endpoint == 'web.faculty_page' %}event.preventDefault(); switchTab('f-council', this){% endif %}" class="nav-link">
+        <i class="fa-solid fa-gavel"></i> Hội đồng
+    </a>
+    <a href="{{ url_for('web.faculty_page') }}#f-rubric" onclick="{% if request.endpoint == 'web.faculty_page' %}event.preventDefault(); switchTab('f-rubric', this){% endif %}" class="nav-link">
+        <i class="fa-solid fa-clipboard-check"></i> Nghiệm thu Rubric
+    </a>
+    <a href="{{ url_for('web.faculty_page') }}#f-stats" onclick="{% if request.endpoint == 'web.faculty_page' %}event.preventDefault(); switchTab('f-stats', this){% endif %}" class="nav-link">
+        <i class="fa-solid fa-chart-column"></i> Thống kê & Báo cáo
+    </a>
+    {% endif %}
+
+    {% if session.get('role') == 'lecturer' %}
+    <div class="menu-category">GIẢNG VIÊN PORTAL</div>
+    <a href="{{ url_for('web.lecturer_page') }}#l-profile" onclick="{% if request.endpoint == 'web.lecturer_page' %}event.preventDefault(); switchTab('l-profile', this){% endif %}" class="nav-link {{ 'active-purple' if request.endpoint == 'web.lecturer_page' else '' }}">
+        <i class="fa-regular fa-id-card"></i> Hồ sơ & Hướng NC
+    </a>
+    <a href="{{ url_for('web.lecturer_page') }}#l-approve" onclick="{% if request.endpoint == 'web.lecturer_page' %}event.preventDefault(); switchTab('l-approve', this){% endif %}" class="nav-link">
+        <i class="fa-solid fa-file-signature"></i> Phê duyệt đề tài
+        <span class="badge bg-danger rounded-pill ms-1" style="font-size: 9px;">3</span>
+    </a>
+    <a href="{{ url_for('web.lecturer_page') }}#l-progress" onclick="{% if request.endpoint == 'web.lecturer_page' %}event.preventDefault(); switchTab('l-progress', this){% endif %}" class="nav-link">
+        <i class="fa-solid fa-bars-progress"></i> Theo dõi tiến độ
+    </a>
+    <a href="{{ url_for('web.lecturer_page') }}#l-chat" onclick="{% if request.endpoint == 'web.lecturer_page' %}event.preventDefault(); switchTab('l-chat', this){% endif %}" class="nav-link">
+        <i class="fa-regular fa-comments"></i> Chatgroups
+        <span class="badge bg-danger rounded-pill ms-1" style="font-size: 9px;">5</span>
+    </a>
+    <a href="{{ url_for('web.lecturer_page') }}#l-calendar" onclick="{% if request.endpoint == 'web.lecturer_page' %}event.preventDefault(); switchTab('l-calendar', this){% endif %}" class="nav-link">
+        <i class="fa-regular fa-calendar-check"></i> Lịch & Thông báo
+    </a>
+    {% endif %}
+
+    {% if session.get('role') == 'student' %}
+    <div class="menu-category">SINH VIÊN PORTAL</div>
+    <a href="{{ url_for('web.student_page') }}#s-explore" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-explore', this){% endif %}" class="nav-link {{ 'active-student' if request.endpoint == 'web.student_page' else '' }}">
+        <i class="fa-solid fa-compass"></i> Khám phá ý tưởng
+    </a>
+    <a href="{{ url_for('web.student_page') }}#s-profile" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-profile', this){% endif %}" class="nav-link">
+        <i class="fa-regular fa-id-badge"></i> Hồ sơ năng lực
+    </a>
+    <a href="{{ url_for('web.student_page') }}#s-register" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-register', this){% endif %}" class="nav-link">
+        <i class="fa-solid fa-pen-to-square"></i> Đăng ký NCKH
+    </a>
+    <a href="{{ url_for('web.student_page') }}#s-group" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-group', this){% endif %}" class="nav-link">
+        <i class="fa-solid fa-layer-group"></i> Nhóm nghiên cứu
+    </a>
+    <a href="{{ url_for('web.student_page') }}#s-templates" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-templates', this){% endif %}" class="nav-link">
+        <i class="fa-regular fa-folder-open"></i> Tài liệu mẫu
+    </a>
+    <a href="{{ url_for('web.student_page') }}#s-submit" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-submit', this){% endif %}" class="nav-link">
+        <i class="fa-solid fa-cloud-arrow-up"></i> Nộp báo cáo
+    </a>
+    <a href="{{ url_for('web.student_page') }}#s-chat" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-chat', this){% endif %}" class="nav-link">
+        <i class="fa-regular fa-comments"></i> Chatgroups
+        <span class="badge bg-danger rounded-pill ms-1" style="font-size: 9px;">3</span>
+    </a>
+    <a href="{{ url_for('web.student_page') }}#s-calendar" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-calendar', this){% endif %}" class="nav-link">
+        <i class="fa-regular fa-calendar"></i> Lịch & Thông báo
+    </a>
+    {% endif %}
+
+    <div class="menu-category">CÔNG CỤ HỖ TRỢ (ALL)</div>
+    
+    <a href="{{ url_for('web.analysis_page') }}" class="nav-link {{ 'active-main' if request.endpoint == 'web.analysis_page' else '' }}">
+        <i class="fa-solid fa-chart-pie"></i> Phân tích Số liệu (AI)
+    </a>
+    
+    <a href="{{ url_for('web.repository_page') }}" class="nav-link {{ 'active-main' if request.endpoint == 'web.repository_page' else '' }}">
+        <i class="fa-solid fa-database"></i> Kho tài liệu số
+    </a>
+    </div>
+
+    <div class="sidebar-footer" style="position: absolute; bottom: 0; left: 0; right: 0; background: var(--sidebar-bg); border-top: 1px solid rgba(255,255,255,0.05); padding: 15px 0;">
+        <div class="px-4 mb-2 text-white small opacity-50">
+            Xin chào, <strong>{{ session.get('user_name', 'Khách') }}</strong>
+        </div>
+        <a href="{{ url_for('auth.logout') }}" class="nav-link text-danger">
+            <i class="fa-solid fa-right-from-bracket"></i> Đăng xuất
+        </a>
+    </div>
+</div>

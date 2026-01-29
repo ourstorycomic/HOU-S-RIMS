@@ -1,0 +1,632 @@
+/* static/assets/css/style.css */
+:root {
+    /* Color Palette */
+    --primary-blue: #2563eb;       /* Dùng cho Admin & Faculty */
+    --primary-purple: #6366f1;     /* Dùng cho Lecturer */
+    --student-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); /* Dùng cho Student */
+    
+    /* Status Colors (Ranking) */
+    --rank-a: #10b981; /* Xuất sắc - Green */
+    --rank-b: #3b82f6; /* Tốt - Blue */
+    --rank-c: #f59e0b; /* Khá - Orange */
+    --rank-d: #94a3b8; /* Đạt/Khác - Gray */
+
+    /* Layout Colors */
+    --sidebar-bg: #0f172a;
+    --sidebar-text: #94a3b8;
+    --bg-body: #f1f5f9;
+    --text-dark: #1e293b;
+    --text-gray: #64748b;
+    
+    /* Borders */
+    --border-color: #e2e8f0;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    background-color: var(--bg-body);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: var(--text-dark);
+    overflow-x: hidden;
+    margin: 0;
+}
+
+a { text-decoration: none !important; }
+
+/* ==========================================================================
+   2. SIDEBAR (THANH ĐIỀU HƯỚNG TRÁI)
+   ========================================================================== */
+.sidebar {
+    background-color: var(--sidebar-bg);
+    width: 260px;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    padding-top: 25px;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid rgba(255,255,255,0.05);
+}
+
+.sidebar-logo {
+    padding: 0 24px 30px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.menu-category {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: #475569;
+    padding: 0 24px;
+    margin-bottom: 10px;
+    margin-top: 20px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.nav-link {
+    color: var(--sidebar-text);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.nav-link:hover {
+    color: #fff;
+    background-color: rgba(255,255,255,0.05);
+    padding-left: 28px; /* Hiệu ứng trượt */
+}
+
+.nav-link i { width: 20px; text-align: center; }
+
+/* Sidebar menu scroll styling */
+.sidebar-menu-wrapper::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar-menu-wrapper::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-menu-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    transition: background 0.3s ease;
+}
+
+.sidebar-menu-wrapper::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* --- ACTIVE STATES CHO TỪNG VAI TRÒ --- */
+.nav-link.active-main {
+    background: linear-gradient(90deg, rgba(37,99,235,0.15) 0%, transparent 100%);
+    color: #fff;
+    border-left: 3px solid var(--primary-blue);
+}
+
+.nav-link.active-purple {
+    background: linear-gradient(90deg, rgba(99, 102, 241, 0.2) 0%, transparent 100%);
+    color: #fff;
+    border-left: 3px solid var(--primary-purple);
+}
+
+.nav-link.active-student {
+    background: linear-gradient(90deg, rgba(99, 102, 241, 0.15) 0%, transparent 100%);
+    color: #fff;
+    border-left: 3px solid #6366f1;
+}
+.nav-link.active-student i { color: #fff !important; }
+
+
+/* ==========================================================================
+   3. MAIN LAYOUT & HEADER (TOP BAR)
+   ========================================================================== */
+.main-content {
+    margin-left: 260px;
+    width: calc(100% - 260px);
+    min-height: 100vh;
+}
+
+.top-bar {
+    background: #fff;
+    height: 70px;
+    padding: 0 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 900;
+}
+
+/* Nút chọn năm học */
+.year-select {
+    background: #f1f5f9;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    color: var(--primary-blue);
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.year-select:hover { background: #e2e8f0; }
+.no-arrow::after { display: none !important; }
+
+
+/* ==========================================================================
+   4. NAVIGATION TABS (SUB-NAV)
+   ========================================================================== */
+.sub-nav {
+    background: #fff;
+    padding: 0 30px;
+    display: flex;
+    gap: 30px;
+    border-bottom: 1px solid var(--border-color);
+    overflow-x: auto;
+    white-space: nowrap;
+    align-items: center;
+}
+
+.sub-nav-item {
+    padding: 15px 0;
+    font-size: 13px;
+    color: var(--text-gray);
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.2s;
+    user-select: none;
+}
+
+.sub-nav-item:hover { color: var(--primary-blue); }
+
+.sub-nav-item.active {
+    color: var(--primary-blue);
+    font-weight: 700;
+}
+
+.sub-nav-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background-color: var(--primary-blue);
+    border-radius: 3px 3px 0 0;
+}
+
+
+/* ==========================================================================
+   5. COMPONENT: CARDS & WIDGETS
+   ========================================================================== */
+.content-area { 
+    padding: 5px;
+    position: relative;
+}
+
+/* Các view trong content-area */
+.content-area > div[id^="view-"] {
+    width: 100%;
+}
+
+.stat-card, .card {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+    transition: transform 0.2s;
+}
+
+.stat-card:hover { 
+    transform: translateY(-3px); 
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+}
+
+.icon-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    margin-bottom: 16px;
+}
+
+.lecturer-card { cursor: default; transition: all 0.2s; }
+.lecturer-card[onclick], .lecturer-card[data-bs-toggle] { cursor: pointer; }
+.lecturer-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--primary-blue);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+}
+
+.avatar-letter {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 800;
+}
+
+.hover-shadow { transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
+.hover-shadow:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
+}
+
+
+/* ==========================================================================
+   6. COMPONENT: FORMS & MODALS
+   ========================================================================== */
+.modal-content { border: none; overflow: hidden; border-radius: 16px; }
+.modal-header { border-bottom: 1px solid #f1f5f9; padding: 20px 24px; }
+.modal-body { padding: 24px; }
+.modal-footer { border-top: none; padding: 0 24px 24px; }
+
+.form-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.form-control, .form-select {
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    font-size: 0.9rem;
+    background-color: #fff;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.upload-zone {
+    border: 2px dashed #cbd5e1;
+    background-color: #f8fafc;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.upload-zone:hover {
+    border-color: var(--primary-purple);
+    background-color: #eef2ff;
+}
+.border-dashed { border-style: dashed !important; }
+
+
+/* ==========================================================================
+   7. COMPONENT: TABLES & LISTS
+   ========================================================================== */
+.table-hover tbody tr:hover { background-color: #f8fafc; }
+
+.table-bordered td { 
+    height: 80px; 
+    vertical-align: top; 
+    padding: 10px; 
+    font-size: 0.9rem; 
+}
+.table-bordered th { 
+    border-bottom-width: 0; 
+    font-weight: 600; 
+    background-color: #f8fafc; 
+    text-align: center;
+}
+
+.meeting-time {
+    min-width: 60px;
+    text-align: center;
+    border-right: 2px solid #f1f5f9;
+    margin-right: 15px;
+    padding-right: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Thanh tiến độ nhỏ (ở Card thống kê khoa) */
+.progress-custom {
+    height: 8px;
+    background-color: #e2e8f0;
+    border-radius: 20px;
+    overflow: hidden;
+    margin-top: 6px;
+}
+
+/* --- [MỚI] THANH TIẾN ĐỘ XẾP LOẠI TOÀN HỆ THỐNG (GIỐNG ẢNH) --- */
+.progress-ranking {
+    height: 26px; /* Dày hơn để hiển thị rõ */
+    border-radius: 13px; /* Bo tròn đều */
+    background-color: #f1f5f9;
+    overflow: hidden;
+    display: flex; /* Dùng Flexbox cho các đoạn */
+}
+
+.progress-ranking .progress-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: white;
+    box-shadow: inset 0 -2px 0 rgba(0,0,0,0.1); /* Hiệu ứng nổi nhẹ */
+    transition: width 0.6s ease;
+}
+
+/* Màu riêng cho các mức xếp loại */
+.bg-rank-a { background-color: var(--rank-a) !important; }
+.bg-rank-b { background-color: var(--rank-b) !important; }
+.bg-rank-c { background-color: var(--rank-c) !important; }
+.bg-rank-d { background-color: var(--rank-d) !important; }
+
+/* Nút Xuất báo cáo (Nổi bật, giống ảnh) */
+.btn-export-report {
+    background-color: #eff6ff; /* Nền xanh rất nhạt */
+    color: var(--primary-blue);
+    border: 1px solid rgba(37, 99, 235, 0.1);
+    padding: 12px 30px;
+    border-radius: 50px;
+    font-weight: 800;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 6px rgba(37, 99, 235, 0.05);
+}
+
+.btn-export-report:hover {
+    background-color: #dbeafe;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(37, 99, 235, 0.15);
+}
+
+
+/* ==========================================================================
+   8. COMPONENT: UTILITY CLASSES & COLORS
+   ========================================================================== */
+.bg-primary-subtle { background-color: #dbeafe !important; color: #1e40af !important; }
+.bg-info-subtle { background-color: #e0f2fe !important; color: #0369a1 !important; }
+.bg-success-subtle { background-color: #dcfce7 !important; color: #15803d !important; }
+.bg-warning-subtle { background-color: #fef9c3 !important; color: #a16207 !important; }
+.bg-danger-subtle { background-color: #fee2e2 !important; color: #b91c1c !important; }
+
+.btn-primary-subtle {
+    background-color: #e0f2fe;
+    color: #0284c7;
+    border: none;
+    font-weight: 600;
+}
+.btn-primary-subtle:hover { background-color: #bae6fd; color: #0369a1; }
+.cursor-pointer { cursor: pointer; }
+
+
+/* ==========================================================================
+   9. STYLE RIÊNG (SPECIFIC PAGES)
+   ========================================================================== */
+.rubric-banner {
+    background-image: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+    position: relative;
+    overflow: hidden;
+}
+.rubric-banner::after {
+    content: '';
+    position: absolute;
+    right: -30px; top: -30px;
+    width: 150px; height: 150px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+}
+
+.rubric-banner-purple {
+    background-image: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+    position: relative;
+    overflow: hidden;
+}
+.rubric-banner-purple::after {
+    content: '';
+    position: absolute;
+    right: -30px; top: -30px;
+    width: 150px; height: 150px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+}
+
+.chat-scroll::-webkit-scrollbar { width: 6px; }
+.chat-scroll::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 3px;
+}
+.chat-scroll::-webkit-scrollbar-track { background: transparent; }
+
+
+/* ==========================================================================
+   10. ANIMATIONS (HIỆU ỨNG CHUYỂN ĐỘNG)
+   ========================================================================== */
+.hidden { display: none !important; }
+
+.fade-in { animation: fadeIn 0.4s ease-out forwards; }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in-up { animation: fadeInUp 0.3s ease-out forwards; }
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.rotate-icon { transition: transform 0.3s ease; }
+.collapsed .rotate-icon { transform: rotate(0deg); }
+.rotate-icon { transform: rotate(90deg); }
+
+/* --- [MỚI] STYLE CHO GIAO DIỆN TỔNG QUAN (GIỐNG ẢNH MỚI) --- */
+
+/* 1. Card Thống kê dạng đơn giản (Icon -> Title -> Number) */
+.stat-card-simple {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    padding: 24px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s;
+}
+.stat-card-simple:hover { transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.05); }
+
+.stat-icon-wrapper {
+    width: 40px; 
+    height: 40px;
+    border-radius: 10px;
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    font-size: 1.1rem;
+    margin-bottom: 12px;
+}
+
+/* 2. Card Lịch trình*/
+.card-schedule-dark {
+    background: linear-gradient(145deg, #2e3b55 0%, #1f2937 100%);
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(30, 41, 59, 0.3);
+}
+
+.card-schedule-dark .card-header {
+    background: transparent;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding: 20px 24px;
+}
+
+.card-schedule-dark .list-group-item {
+    background: transparent;
+    border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+    padding: 20px 24px;
+    color: #fff;
+}
+.card-schedule-dark .list-group-item:last-child { border-bottom: none !important; }
+
+/* Box ngày tháng trong card tối */
+.date-box-light {
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+    width: 50px; 
+    height: 50px;
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center;
+    margin-right: 15px;
+    backdrop-filter: blur(5px);
+}
+.date-box-light .day { font-size: 1.1rem; font-weight: 800; line-height: 1; }
+.date-box-light .month { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; margin-top: 2px; opacity: 0.8; }
+
+.sidebar-logo img {
+    max-width: 100%;
+    height: auto;
+    max-height: 50px;
+    object-fit: contain;
+}
+
+
+
+/* --- CSS CHO CHAT SINH VIÊN --- */
+
+/*Thông báo */
+.dropdown-menu .dropdown-item {
+    white-space: normal;
+    transition: background-color 0.2s;
+}
+.dropdown-menu .dropdown-item:hover {
+    background-color: #f8fafc !important;
+}
+.dropdown-menu .dropdown-item:active {
+    background-color: #e2e8f0 !important;
+    color: inherit;
+}
+.chat-bubble-me {
+    background-color: #6366f1;
+    color: #fff;
+    border-radius: 12px 12px 2px 12px;
+    padding: 12px 16px;
+    box-shadow: 0 2px 5px rgba(99, 102, 241, 0.2);
+}
+.chat-bubble-other {
+    background-color: #f1f5f9;
+    color: #1e293b;
+    border-radius: 12px 12px 12px 2px;
+    padding: 12px 16px;
+}
+.chat-bubble-mentor {
+    background-color: #eff6ff;
+    border: 1px solid #dbeafe;
+    color: #1e3a8a;
+    border-radius: 12px 12px 12px 2px;
+    padding: 12px 16px;
+}
+.chat-item-active {
+    background-color: #f8fafc;
+    border-right: 3px solid #6366f1;
+}
+
+/* --- CSS CHO LỊCH & THÔNG BÁO SINH VIÊN --- */
+.calendar-day-circle {
+    width: 32px; 
+    height: 32px; 
+    line-height: 32px;
+    border-radius: 50%;
+    display: inline-block;
+    text-align: center;
+    font-weight: bold;
+}
+.calendar-day-circle.active {
+    background-color: #6366f1;
+    color: white;
+    box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
+}
+.calendar-event-tag {
+    font-size: 10px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-top: 4px;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 600;
+}
+.notif-card-item {
+    transition: transform 0.2s;
+}
+.notif-card-item:hover {
+    transform: translateX(5px);
+}

@@ -1,0 +1,136 @@
+/* tool/assets/css/style.css */
+
+/* --- 1. CẤU HÌNH CƠ BẢN (RESET) --- */
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', 'Segoe UI', sans-serif; }
+body { display: flex; height: 100vh; background: #f0f2f5; overflow: hidden; }
+
+/* --- 2. SIDEBAR (THANH BÊN TRÁI) --- */
+.sidebar { width: 260px; background: #0f172a; color: white; display: flex; flex-direction: column; flex-shrink: 0; border-right: 1px solid #333; }
+.brand { padding: 20px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #333; }
+.logo-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: rgba(255,255,255,0.1); }
+.logo-text { font-weight: 700; font-size: 18px; letter-spacing: 0.5px; }
+.sidebar-content { padding: 15px; overflow-y: auto; flex: 1; }
+/* Scrollbar đẹp cho sidebar */
+.sidebar-content::-webkit-scrollbar { width: 4px; }
+.sidebar-content::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+.group-label { font-size: 11px; color: #9ca3af; margin: 20px 0 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* --- 3. MENU ACCORDION --- */
+.accordion-item { margin-bottom: 5px; border-radius: 6px; background: #262a30; overflow: hidden; }
+.accordion-header { width: 100%; padding: 12px 15px; background: transparent; border: none; color: #e5e7eb; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 500; transition: background 0.2s; }
+.accordion-header:hover { background: #374151; }
+.accordion-header span i { width: 20px; color: #9ca3af; }
+.accordion-body { display: none; padding: 10px; background: #1f2227; border-top: 1px solid #374151; }
+.accordion-item.active .accordion-body { display: block; animation: slideDown 0.3s ease; }
+.accordion-item.active .accordion-header { background: #374151; color: white; }
+.accordion-item.active .arrow { transform: rotate(90deg); }
+.arrow { transition: transform 0.2s; }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.chart-btn { padding: 8px; background: #374151; border: 1px solid transparent; border-radius: 4px; color: #d1d5db; cursor: pointer; font-size: 12px; text-align: center; transition: all 0.2s; }
+.chart-btn:hover { background: #3b82f6; color: white; border-color: #60a5fa; }
+
+/* --- 4. UPLOAD & INPUTS --- */
+.upload-widget { border: 2px dashed #4b5563; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; margin-bottom: 15px; transition: 0.2s; background: rgba(255,255,255,0.02); }
+.upload-widget:hover { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+.icon-upload { font-size: 24px; color: #9ca3af; margin-bottom: 8px; }
+.text-upload { font-size: 13px; color: #d1d5db; }
+
+/* Nút hiển thị cột đang chọn (Thay thế Input cũ) */
+.control-group { margin-bottom: 15px; }
+.control-group label { display: block; font-size: 12px; margin-bottom: 5px; color: #9ca3af; }
+.selection-display { background: #111827; border: 1px solid #374151; border-radius: 6px; padding: 10px; font-size: 13px; color: #d1d5db; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; user-select: none; }
+.selection-display:hover { border-color: #3b82f6; background: #1f2937; color: white; }
+.selection-display span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90%; }
+.edit-icon { color: #6b7280; font-size: 14px; }
+.selection-display:hover .edit-icon { color: #3b82f6; }
+
+/* --- 5. MAIN CONTENT (PHẦN GIỮA) --- */
+.main-wrapper { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.top-bar { height: 60px; background: white; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
+.file-status { font-size: 14px; color: #374151; display: flex; align-items: center; gap: 8px; }
+.top-actions { display: flex; align-items: center; gap: 15px; }
+.switch-group { display: flex; align-items: center; gap: 5px; font-size: 13px; color: #374151; }
+.btn-primary { padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 6px; font-weight: 500; }
+.btn-primary:hover { background: #2563eb; }
+.btn-icon { width: 36px; height: 36px; border: 1px solid #e5e7eb; border-radius: 6px; background: white; cursor: pointer; color: #4b5563; display: flex; align-items: center; justify-content: center; }
+.btn-icon:hover { background: #f3f4f6; }
+
+.content-area { flex: 1; padding: 20px; overflow-y: auto; background: #f3f4f6; }
+.plot-card { background: white; border-radius: 12px; padding: 20px; min-height: 500px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; position: relative; }
+.plot-card img { max-width: 100%; max-height: 100%; object-fit: contain; animation: fadeIn 0.5s; }
+.empty-state { text-align: center; color: #6b7280; }
+
+/* --- 6. MODALS (CHUNG) --- */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 2000; backdrop-filter: blur(2px); }
+.modal-box { background: white; border-radius: 12px; display: flex; flex-direction: column; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); animation: slideIn 0.2s ease; }
+.modal-box.small { width: 350px; }
+.modal-box.large { width: 900px; height: 85%; }
+.modal-header { padding: 15px 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+.modal-header h3 { font-size: 16px; font-weight: 600; }
+.modal-header button { background: none; border: none; font-size: 20px; cursor: pointer; color: #6b7280; }
+.modal-footer { padding: 15px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; align-items: center; gap: 15px; }
+
+/* --- 7. DUAL LIST BOX (GIAO DIỆN 2 CỘT) --- */
+.modal-body.no-padding { padding: 0; flex: 1; overflow: hidden; }
+.dual-list-container { display: flex; height: 100%; background: #f9fafb; }
+.list-panel { flex: 1; background: white; border-right: 1px solid #e5e7eb; display: flex; flex-direction: column; }
+.list-panel:last-child { border-right: none; }
+
+.panel-header { padding: 12px 15px; background: #f3f4f6; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #374151; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+.panel-content { flex: 1; overflow-y: auto; padding: 10px; }
+.panel-content::-webkit-scrollbar { width: 6px; }
+.panel-content::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+
+/* Style item trong danh sách */
+.dual-item { padding: 8px 12px; margin-bottom: 4px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-size: 13px; display: flex; justify-content: space-between; align-items: center; transition: 0.15s; background: white; border-bottom: 1px solid #f3f4f6; }
+.dual-item:hover { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+
+/* Cột Trái (Nguồn) */
+.dual-item.source { border-left: 3px solid #9ca3af; }
+.dual-item.source:hover::after { content: "\f061"; font-family: "Font Awesome 6 Free"; font-weight: 900; color: #3b82f6; }
+
+/* Cột Phải (Đích) */
+.dual-item.target { background: #eff6ff; border-left: 3px solid #3b82f6; color: #1e40af; }
+.dual-item.target:hover { background: #fee2e2; border-color: #fecaca; color: #b91c1c; }
+.dual-item.target .remove-icon { color: #ef4444; }
+.dual-item.target:hover .remove-icon { color: #b91c1c; }
+
+/* Mũi tên ở giữa */
+.exchange-icon { width: 40px; display: flex; align-items: center; justify-content: center; color: #9ca3af; background: #f3f4f6; border-right: 1px solid #e5e7eb; border-left: 1px solid #e5e7eb; }
+
+/* Ô tìm kiếm nhỏ */
+.mini-search { position: relative; width: 150px; }
+.mini-search input { width: 100%; padding: 5px 10px 5px 30px; font-size: 12px; border: 1px solid #d1d5db; border-radius: 4px; outline: none; }
+.mini-search i { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 11px; color: #9ca3af; }
+.clear-all-btn { font-size: 11px; color: #ef4444; background: none; border: none; cursor: pointer; text-decoration: underline; }
+
+/* --- 8. CHAT INTERFACE --- */
+.chat-container { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
+.fab-btn { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; font-size: 24px; cursor: pointer; box-shadow: 0 4px 10px rgba(37,99,235,0.4); display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
+.fab-btn:hover { transform: scale(1.05); }
+.chat-interface { width: 380px; height: 550px; background: white; border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); display: none; flex-direction: column; overflow: hidden; position: absolute; bottom: 70px; right: 0; animation: slideIn 0.3s; border: 1px solid #e5e7eb; }
+.chat-interface.open { display: flex; }
+.chat-header { padding: 15px; background: #1e293b; color: white; display: flex; justify-content: space-between; align-items: flex-start; }
+.bot-info { display: flex; gap: 10px; align-items: center; }
+.bot-avatar { width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.model-select { background: #334155; border: 1px solid #475569; color: white; font-size: 11px; border-radius: 4px; padding: 4px; outline: none; }
+.chat-body { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #f9fafb; }
+.message { display: flex; gap: 8px; font-size: 13px; max-width: 85%; }
+.message.user { align-self: flex-end; flex-direction: row-reverse; }
+.bubble { padding: 10px 14px; border-radius: 12px; line-height: 1.5; word-wrap: break-word; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.message.bot .bubble { background: white; border: 1px solid #e5e7eb; color: #374151; border-top-left-radius: 2px; }
+.message.user .bubble { background: #3b82f6; color: white; border-top-right-radius: 2px; }
+.suggestion-chips { padding: 10px 15px; display: flex; gap: 8px; overflow-x: auto; white-space: nowrap; border-top: 1px solid #e5e7eb; background: white; }
+.suggestion-chips span { padding: 6px 12px; background: #f3f4f6; color: #1f2937; border: 1px solid #d1d5db; border-radius: 16px; font-size: 11px; font-weight: 500; cursor: pointer; transition: 0.2s; }
+.suggestion-chips span:hover { background: #e5e7eb; color: black; border-color: #9ca3af; }
+.chat-footer { padding: 10px; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; background: white; }
+.chat-footer input { flex: 1; padding: 10px 15px; border: 1px solid #d1d5db; border-radius: 20px; outline: none; font-size: 13px; }
+.chat-footer button { width: 40px; height: 40px; background: #3b82f6; color: white; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+/* --- 9. ANIMATIONS & LOADER --- */
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.loader { border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }

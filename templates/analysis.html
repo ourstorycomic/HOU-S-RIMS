@@ -1,0 +1,226 @@
+<!--templates/analysis.html-->
+{% extends "base.html" %}
+
+{% block title %}Công cụ Phân tích Số liệu - HOU S-RIMS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='tool/css/style.css') }}">
+<style>
+    /* Fix xung đột CSS giữa 2 project */
+    body { overflow: hidden; } /* Giữ layout không bị vỡ */
+    .tool-wrapper { 
+        padding: 20px; 
+        height: calc(100vh - 70px); 
+        overflow-y: auto; 
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    /* Đảm bảo container chiếm full width */
+    .tool-wrapper .container-fluid {
+        max-width: 100%;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    /* Ẩn sidebar cũ của tool đi vì đã có sidebar mới */
+    .sidebar-tool-old { display: none !important; }
+    
+    /* Điều chỉnh lại khung chat cho phù hợp màn hình mới */
+    .chat-container { bottom: 30px; right: 30px; }
+</style>
+{% endblock %}
+
+{% block content %}
+        <div class="top-bar">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fa-solid fa-robot text-primary"></i> 
+                <span class="fw-bold text-uppercase small">HOU AI ANALYTICS TOOL</span>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <div class="dropdown border-start ps-3">
+                    <div class="d-flex align-items-center gap-2 cursor-pointer">
+                        <div class="text-end">
+                            <div class="fw-bold text-dark" style="font-size: 13px;">Người dùng</div>
+                            <div class="text-primary fw-bold" style="font-size: 10px;">RESEARCHER</div>
+                        </div>
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold" style="width: 35px; height: 35px;">US</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tool-wrapper bg-light">
+            <div class="container-fluid">
+                <div class="row g-4">
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white mb-3">
+                            <h6 class="fw-bold mb-3 small text-muted">DỮ LIỆU ĐẦU VÀO</h6>
+                            <div class="upload-widget" onclick="document.getElementById('datasetFile').click()" style="border: 2px dashed #cbd5e1;">
+                                <input id="datasetFile" type="file" accept=".csv,.xls,.xlsx" hidden>
+                                <div class="icon-upload text-primary mb-2"><i class="fa-solid fa-cloud-arrow-up fs-3"></i></div>
+                                <div class="text-upload text-muted small" id="uploadText">Tải file Excel/CSV</div>
+                            </div>
+                            <div class="file-status mt-2 small text-truncate" id="fileStatus"></div>
+                        </div>
+
+                        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white mb-3">
+                            <h6 class="fw-bold mb-3 small text-muted">TÙY CHỌN PHÂN TÍCH</h6>
+                            <div class="control-group mb-3">
+                                <label class="small fw-bold text-muted mb-1">Cột dữ liệu</label>
+                                <div class="selection-display p-2 border rounded bg-light cursor-pointer" onclick="openMultiModal('selection')">
+                                    <span id="colDisplay" class="small text-muted">Chưa chọn...</span>
+                                    <i class="fa-solid fa-pen float-end small text-primary"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-primary btn-sm fw-bold" onclick="setType('column')"><i class="fa-solid fa-chart-column"></i> Biểu đồ Cột</button>
+                                <button class="btn btn-info text-white btn-sm fw-bold" onclick="setType('pie')"><i class="fa-solid fa-chart-pie"></i> Biểu đồ Tròn</button>
+                                <button class="btn btn-warning text-white btn-sm fw-bold" onclick="openMultiModal('grouped')"><i class="fa-solid fa-layer-group"></i> So sánh Nhóm</button>
+                            </div>
+                        </div>
+                        
+                        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="autoAnalyze" checked>
+                                <label class="form-check-label small fw-bold" for="autoAnalyze">AI Tự động phân tích</label>
+                            </div>
+                            <hr class="my-2">
+                            <button class="btn btn-dark w-100 btn-sm fw-bold" onclick="exportReport()"><i class="fa-solid fa-file-word"></i> Xuất Báo cáo (DOCX)</button>
+                        </div>
+                    </div>
+
+                    <div class="col-md-9">
+                        <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden">
+                            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                                <h6 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-chart-simple me-2"></i> KẾT QUẢ TRỰC QUAN HÓA</h6>
+                                <button class="btn btn-light btn-sm rounded-circle" onclick="downloadImage()"><i class="fa-solid fa-download"></i></button>
+                            </div>
+                            <div class="card-body bg-light d-flex align-items-center justify-content-center" id="plotArea" style="min-height: 500px;">
+                                <div class="text-center text-muted opacity-50">
+                                    <i class="fa-solid fa-chart-area display-1 mb-3"></i>
+                                    <p>Vui lòng tải dữ liệu và chọn loại biểu đồ</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+    </div>
+
+    <div class="chat-container">
+        <button id="aiFab" class="fab-btn shadow-lg" onclick="toggleChat()" style="width: 60px; height: 60px; border-radius: 50%; background: #2563eb; color: white; border: none; font-size: 24px;">
+            <i class="fa-solid fa-robot"></i>
+        </button>
+        <div id="chatBox" class="chat-interface bg-white shadow-lg rounded-4 overflow-hidden d-none" style="position: fixed; bottom: 100px; right: 30px; width: 350px; height: 500px; border: 1px solid #e5e7eb; display: flex; flex-direction: column;">
+            <div class="chat-header bg-dark text-white p-3 d-flex justify-content-between align-items-center">
+                <div class="fw-bold"><i class="fa-solid fa-brain me-2"></i> Trợ lý AI</div>
+                <button class="btn btn-sm text-white" onclick="toggleChat()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="messages" class="chat-body p-3 flex-grow-1 overflow-auto bg-light">
+                <div class="d-flex gap-2 mb-3">
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center small" style="width: 30px; height: 30px;">AI</div>
+                    <div class="bg-white p-2 rounded-3 shadow-sm small">Xin chào! Tải file lên để mình phân tích nhé.</div>
+                </div>
+            </div>
+            <div class="suggestion-chips px-3 pb-2 d-flex gap-1 overflow-auto" style="white-space: nowrap;"></div>
+            <div class="chat-footer p-3 border-top bg-white">
+                <div class="input-group">
+                    <input type="text" id="chatInput" class="form-control form-control-sm rounded-start-pill" placeholder="Hỏi AI...">
+                    <button class="btn btn-primary btn-sm rounded-end-pill" onclick="sendChat()"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block modals %}
+    <div id="multiModal" class="modal fade" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold" id="multiTitle">Chọn dữ liệu</h5><button type="button" class="btn-close" data-bs-dismiss="modal" onclick="closeModal('multiModal')"></button></div>
+                <div class="modal-body p-0">
+                    <div class="d-flex" style="height: 400px;">
+                        <div class="w-50 border-end p-3 d-flex flex-column">
+                            <input type="text" id="colSearchInput" class="form-control mb-2" placeholder="Tìm cột...">
+                            <div id="availableList" class="flex-grow-1 overflow-auto border rounded p-2 bg-light"></div>
+                        </div>
+                        <div class="w-50 p-3 d-flex flex-column">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="fw-bold small">Đã chọn (<span id="selectedCountDisplay">0</span>)</span>
+                                <button class="btn btn-link btn-sm text-danger text-decoration-none p-0" onclick="clearAllSelection()">Xóa hết</button>
+                            </div>
+                            <div id="selectedList" class="flex-grow-1 overflow-auto border rounded p-2 bg-white"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button class="btn btn-primary fw-bold px-4 rounded-pill" onclick="applyMulti()"><span id="btnConfirmText">Xác nhận</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="cleanModal" class="modal fade" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Làm sạch dữ liệu</h5></div>
+                <div class="modal-body">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="chkNa" checked>
+                        <label class="form-check-label">Xóa dòng trống (Null/NaN)</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="chkDup" checked>
+                        <label class="form-check-label">Xóa dòng trùng lặp (Duplicates)</label>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button class="btn btn-primary w-100 rounded-pill fw-bold" onclick="runClean()">Thực hiện ngay</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='tool/js/main.js') }}"></script>
+
+<script>
+    // Hàm vá lỗi tương thích giữa Modal cũ và Bootstrap 5
+    function openMultiModal(type) {
+            // Logic cũ để set state
+            window.tempChartType = type;
+            if(type==='selection') { document.getElementById('multiTitle').innerText = 'Chọn dữ liệu'; document.getElementById('btnConfirmText').innerText = 'Lưu lựa chọn'; }
+            else { document.getElementById('multiTitle').innerText = 'Vẽ biểu đồ ' + type; document.getElementById('btnConfirmText').innerText = 'Vẽ ngay'; }
+            
+            renderDualList(); // Từ main.js cũ
+            
+            // Dùng Bootstrap Modal API
+            var myModal = new bootstrap.Modal(document.getElementById('multiModal'));
+            myModal.show();
+        }
+        
+        function openCleanModal() {
+            var myModal = new bootstrap.Modal(document.getElementById('cleanModal'));
+            myModal.show();
+        }
+
+        // Override toggleChat để dùng class d-none của Bootstrap
+        function toggleChat() {
+            const box = document.getElementById('chatBox');
+            const fab = document.getElementById('aiFab');
+            if (box.classList.contains('d-none')) {
+                box.classList.remove('d-none');
+                box.classList.add('d-flex'); // Flex để căn chỉnh
+                fab.classList.add('d-none');
+            } else {
+                box.classList.add('d-none');
+                box.classList.remove('d-flex');
+                fab.classList.remove('d-none');
+            }
+        }
+</script>
+{% endblock %}

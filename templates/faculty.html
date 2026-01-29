@@ -1,0 +1,270 @@
+<!--templates/faculty.html-->
+{% extends "base.html" %}
+
+{% block title %}Quản trị Khoa CNTT - HOU S-RIMS{% endblock %}
+
+{% block content %}
+        <div class="top-bar">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fa-regular fa-building text-primary"></i> 
+                <span class="fw-bold text-uppercase" style="font-size: 0.9rem;">HANOI OPEN UNIVERSITY • QUẢN TRỊ KHOA CNTT</span>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <div class="dropdown">
+                    <button class="year-select dropdown-toggle" type="button" data-bs-toggle="dropdown"><i class="fa-regular fa-calendar me-2"></i> 2025-2026</button>
+                    <ul class="dropdown-menu border-0 shadow mt-2">
+                        <li><a class="dropdown-item fw-bold text-primary" href="#">2025-2026</a></li>
+                        <li><a class="dropdown-item" href="#">2024-2025</a></li>
+                    </ul>
+                </div>
+                <div class="dropdown border-start ps-3">
+                    <div class="d-flex align-items-center gap-2 cursor-pointer dropdown-toggle no-arrow" data-bs-toggle="dropdown">
+                        <div class="text-end"><div class="fw-bold text-dark" style="font-size: 13px;">Admin Khoa</div><div class="text-muted" style="font-size: 11px;">HOU-OFFICER</div></div>
+                        <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 35px; height: 35px; font-size: 12px;">AD</div>
+                    </div>
+                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow mt-2">
+                        <li><a class="dropdown-item" href="#">Thông tin tài khoản</a></li>
+                        <li><a class="dropdown-item text-danger" href="index.html">Đăng xuất</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    <div class="content-area">
+        
+        <div id="view-f-overview" class="fade-in">
+            <div class="row g-4 mb-4">
+                    <div class="col-md-3"><div class="stat-card p-4"><div class="icon-box bg-primary-subtle text-primary mb-3"><i class="fa-regular fa-file"></i></div><div class="text-muted small fw-bold text-uppercase">TỔNG ĐỀ TÀI</div><div class="h2 fw-bold mb-0">124</div></div></div>
+                    <div class="col-md-3"><div class="stat-card p-4"><div class="icon-box bg-warning-subtle text-warning mb-3"><i class="fa-regular fa-clock"></i></div><div class="text-muted small fw-bold text-uppercase">CHỜ PHÊ DUYỆT</div><div class="h2 fw-bold mb-0">18</div></div></div>
+                    <div class="col-md-3"><div class="stat-card p-4"><div class="icon-box bg-success-subtle text-success mb-3"><i class="fa-solid fa-chart-line"></i></div><div class="text-muted small fw-bold text-uppercase">ĐANG THỰC HIỆN</div><div class="h2 fw-bold mb-0">86</div></div></div>
+                    <div class="col-md-3"><div class="stat-card p-4"><div class="icon-box bg-info-subtle text-info mb-3"><i class="fa-solid fa-database"></i></div><div class="text-muted small fw-bold text-uppercase">TỔNG KINH PHÍ</div><div class="h2 fw-bold mb-0">450Tr</div></div></div>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-md-7">
+                        <div class="card border-0 shadow-sm p-4 h-100 rounded-4">
+                            <div class="d-flex justify-content-between mb-4"><h6 class="fw-bold">Tiến độ NCKH cấp Khoa</h6><a href="#" class="small text-decoration-none fw-bold">CHI TIẾT</a></div>
+                            <div class="mb-4"><div class="d-flex justify-content-between mb-1"><span class="small fw-bold">Thuyết minh đề tài</span><span class="small fw-bold">100%</span></div><div class="progress" style="height: 6px;"><div class="progress-bar bg-primary" style="width: 100%"></div></div></div>
+                            <div class="mb-4"><div class="d-flex justify-content-between mb-1"><span class="small fw-bold">Thực hiện nghiên cứu</span><span class="small fw-bold">65%</span></div><div class="progress" style="height: 6px;"><div class="progress-bar bg-primary" style="width: 65%"></div></div></div>
+                            <div class="mb-2"><div class="d-flex justify-content-between mb-1"><span class="small fw-bold">Nghiệm thu cấp Khoa</span><span class="small fw-bold">15%</span></div><div class="progress" style="height: 6px;"><div class="progress-bar bg-primary" style="width: 15%"></div></div></div>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="card border-0 shadow-sm p-4 h-100 rounded-4 d-flex align-items-center justify-content-center">
+                            <div class="text-center text-muted">
+                                <i class="fa-solid fa-chart-pie fa-3x mb-3 text-primary-subtle"></i>
+                                <p class="small fw-bold mb-2">Biểu đồ phân bố đề tài theo bộ môn</p>
+                                <div class="d-flex gap-2 justify-content-center small">
+                                    <span><i class="fa-solid fa-circle text-primary" style="font-size: 8px;"></i> CNTT</span>
+                                    <span><i class="fa-solid fa-circle text-success" style="font-size: 8px;"></i> HTTT</span>
+                                    <span><i class="fa-solid fa-circle text-warning" style="font-size: 8px;"></i> KHMT</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </div>
+
+        <div id="view-f-batches" class="fade-in hidden">
+                <div class="bg-white p-4 rounded-4 shadow-sm mb-4 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0">DANH SÁCH ĐỢT NCKH 2025-2026</h5>
+                    <button class="btn btn-primary fw-bold rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalCreateBatch"><i class="fa-solid fa-plus me-2"></i> TẠO ĐỢT MỚI</button>
+                </div>
+                <div class="row g-4">
+                    <div class="col-md-6"><div class="card border-0 shadow-sm p-4 rounded-4 h-100"><span class="badge bg-success-subtle text-success fw-bold w-auto align-self-start mb-3 px-3">BẮT ĐẦU</span><h5 class="fw-bold mb-2">NCKH SV Năm học 2025-2026 - Đợt 1</h5><div class="text-muted small mb-4"><i class="fa-regular fa-calendar me-2"></i> 01/09/2025 <i class="fa-solid fa-arrow-right mx-2"></i> 30/06/2026</div><div class="d-flex justify-content-between mt-auto"><button class="btn btn-primary-subtle btn-sm fw-bold px-3">Chính quy</button><a href="#" class="text-muted small fw-bold text-decoration-none">Xem thông báo <i class="fa-solid fa-arrow-right ms-1"></i></a></div></div></div>
+                    <div class="col-md-6"><div class="card border-0 shadow-sm p-4 rounded-4 h-100"><span class="badge bg-secondary-subtle text-secondary fw-bold w-auto align-self-start mb-3 px-3">KẾT THÚC</span><h5 class="fw-bold mb-2">Sáng tạo khởi nghiệp SV 2025</h5><div class="text-muted small mb-4"><i class="fa-regular fa-calendar me-2"></i> 01/03/2025 <i class="fa-solid fa-arrow-right mx-2"></i> 30/12/2025</div><div class="d-flex justify-content-between mt-auto"><button class="btn btn-primary-subtle btn-sm fw-bold px-3">Khởi nghiệp</button><a href="#" class="text-muted small fw-bold text-decoration-none">Xem thông báo <i class="fa-solid fa-arrow-right ms-1"></i></a></div></div></div>
+                </div>
+        </div>
+
+        <div id="view-f-topics" class="fade-in hidden">
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                    <div class="card-header bg-white border-bottom py-3 px-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-primary btn-sm rounded-pill px-4 fw-bold btn-filter active" onclick="filterTopics('all', this)">TẤT CẢ</button>
+                                <button class="btn btn-light btn-sm rounded-pill px-4 text-muted fw-bold btn-filter" onclick="filterTopics('pending', this)">CHỜ PHÊ DUYỆT (18)</button>
+                                <button class="btn btn-light btn-sm rounded-pill px-4 text-muted fw-bold btn-filter" onclick="filterTopics('approved', this)">ĐÃ PHÊ DUYỆT</button>
+                            </div>
+                            <input type="text" class="form-control rounded-pill bg-light border-0 px-4 small" placeholder="Tìm tên đề tài..." style="width: 300px;">
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="bg-light text-muted small text-uppercase fw-bold"><tr><th class="ps-4 py-3">Mã đề tài</th><th>Tên đề tài & Nhóm</th><th>Giảng viên HD</th><th>Trạng thái</th><th class="text-end pe-4">Thao tác</th></tr></thead>
+                            <tbody>
+                                <tr class="status-pending"><td class="ps-4 fw-bold text-primary">DT-0042</td><td><div class="fw-bold text-dark">Ứng dụng AI trong chẩn đoán y khoa</div><small class="text-muted">Nguyễn Văn Học + 2 thành viên</small></td><td class="fw-bold text-dark small">TS. Nguyễn Văn A</td><td><span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-3 py-1 small">CHỜ PHÊ DUYỆT TM</span></td><td class="text-end pe-4"><button class="btn btn-sm text-primary"><i class="fa-solid fa-pen-to-square"></i></button></td></tr>
+                                <tr class="status-approved"><td class="ps-4 fw-bold text-primary">DT-0045</td><td><div class="fw-bold text-dark">Xây dựng hệ thống Smart Home giá rẻ</div><small class="text-muted">Lê Thị Lan + 2 thành viên</small></td><td class="fw-bold text-dark small">ThS. Trần Thị B</td><td><span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1 small">ĐANG THỰC HIỆN</span></td><td class="text-end pe-4"><button class="btn btn-sm text-primary"><i class="fa-solid fa-eye"></i></button></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+        </div>
+
+        <div id="view-f-lecturers" class="fade-in hidden">
+                <div class="bg-white p-4 rounded-4 shadow-sm mb-4 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0">DANH SÁCH GIẢNG VIÊN THAM GIA HD NCKH</h5>
+                    <button class="btn btn-primary fw-bold rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalAddLecturer"><i class="fa-solid fa-user-plus me-2"></i> THÊM GIẢNG VIÊN</button>
+                </div>
+                <div class="row g-4">
+                    <div class="col-md-4"><div class="card border-0 shadow-sm p-3 rounded-4 h-100 d-flex flex-row align-items-center gap-3 lecturer-card"><div class="avatar-letter bg-primary-subtle text-primary rounded-3" style="width: 60px; height: 60px;">A</div><div><div class="fw-bold">TS. Nguyễn Văn A</div><div class="small text-muted fw-bold text-uppercase mb-1">Bộ môn CNTT</div><div class="small text-muted fst-italic mb-2">Giảng viên hạng I</div><span class="badge bg-dark text-white rounded-pill px-2">HD: 5 ĐỀ TÀI</span></div></div></div>
+                    <div class="col-md-4"><div class="card border-0 shadow-sm p-3 rounded-4 h-100 d-flex flex-row align-items-center gap-3 lecturer-card"><div class="avatar-letter bg-primary-subtle text-primary rounded-3" style="width: 60px; height: 60px;">B</div><div><div class="fw-bold">ThS. Trần Thị B</div><div class="small text-muted fw-bold text-uppercase mb-1">Bộ môn HTTT</div><div class="small text-muted fst-italic mb-2">Giảng viên hạng II</div><span class="badge bg-dark text-white rounded-pill px-2">HD: 3 ĐỀ TÀI</span></div></div></div>
+                    <div class="col-md-4"><div class="card border-0 shadow-sm p-3 rounded-4 h-100 d-flex flex-row align-items-center gap-3 lecturer-card"><div class="avatar-letter bg-primary-subtle text-primary rounded-3" style="width: 60px; height: 60px;">C</div><div><div class="fw-bold">PGS.TS Lê Minh C</div><div class="small text-muted fw-bold text-uppercase mb-1">Bộ môn KHMT</div><div class="small text-muted fst-italic mb-2">Giảng viên hạng I</div><span class="badge bg-dark text-white rounded-pill px-2">HD: 8 ĐỀ TÀI</span></div></div></div>
+                </div>
+        </div>
+
+        <div id="view-f-council" class="fade-in hidden">
+                <div class="row g-4">
+                    <div class="col-md-7">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h6 class="fw-bold text-primary"><i class="fa-solid fa-gavel me-2"></i> HỘI ĐỒNG PHÊ DUYỆT TM</h6>
+                                <button class="btn btn-light btn-sm rounded-circle shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAddCouncil"><i class="fa-solid fa-plus"></i></button>
+                            </div>
+                            <div class="card border shadow-sm mb-3 rounded-3 overflow-hidden">
+                                <div class="p-3 d-flex justify-content-between align-items-center bg-white" data-bs-toggle="collapse" href="#councilCollapse1" role="button" style="cursor: pointer;"><div><div class="fw-bold">Hội đồng CNTT 01</div><small class="text-muted">Họp ngày: 15/10/2025 • 5 thành viên</small></div><i class="fa-solid fa-chevron-right text-muted rotate-icon"></i></div>
+                                <div class="collapse" id="councilCollapse1"><div class="card-body bg-light border-top p-3"><div class="small fw-bold text-muted mb-2">DANH SÁCH THÀNH VIÊN:</div><ul class="list-group small"><li class="list-group-item bg-transparent border-0 py-1 ps-0"><i class="fa-solid fa-user-tie text-primary me-2"></i> PGS.TS Nguyễn Văn A (Chủ tịch)</li><li class="list-group-item bg-transparent border-0 py-1 ps-0"><i class="fa-solid fa-user text-muted me-2"></i> TS. Trần Văn B (Thư ký)</li></ul></div></div>
+                            </div>
+                            <div class="card border shadow-sm mb-3 rounded-3 overflow-hidden">
+                                <div class="p-3 d-flex justify-content-between align-items-center bg-white" data-bs-toggle="collapse" href="#councilCollapse2" role="button" style="cursor: pointer;"><div><div class="fw-bold">Hội đồng Kinh tế số 02</div><small class="text-muted">Họp ngày: 17/10/2025 • 3 thành viên</small></div><i class="fa-solid fa-chevron-right text-muted rotate-icon"></i></div>
+                                <div class="collapse" id="councilCollapse2"><div class="card-body bg-light border-top p-3"><div class="small fw-bold text-muted mb-2">DANH SÁCH THÀNH VIÊN:</div><ul class="list-group small"><li class="list-group-item bg-transparent border-0 py-1 ps-0"><i class="fa-solid fa-user-tie text-primary me-2"></i> TS. Phạm Văn D (Chủ tịch)</li></ul></div></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                            <h6 class="fw-bold text-success mb-4"><i class="fa-solid fa-certificate me-2"></i> HỘI ĐỒNG NGHIỆM THU</h6>
+                            <div class="d-flex flex-column align-items-center justify-content-center h-75 text-muted border border-dashed rounded-3 p-4">
+                                <i class="fa-solid fa-layer-group fa-2x mb-3 text-muted opacity-50"></i>
+                                <div class="fw-bold small">CHƯA CÓ HỘI ĐỒNG</div>
+                                <button class="btn btn-success btn-sm mt-3 rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#modalAddCouncil">Thiết lập ngay</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </div>
+
+        <div id="view-f-rubric" class="fade-in hidden">
+                <div class="rubric-banner-purple text-white p-4 rounded-4 shadow-sm mb-4 d-flex align-items-center justify-content-between">
+                    <div><h4 class="fw-bold mb-1">HỆ THỐNG NGHIỆM THU RUBRIC</h4><p class="mb-0 small opacity-75">Thiết lập bộ tiêu chuẩn đánh giá đa chiều.</p></div>
+                    <i class="fa-solid fa-gear fa-3x opacity-25"></i>
+                </div>
+                <div class="card border-0 shadow-sm rounded-4 p-4">
+                    <h6 class="fw-bold text-muted text-uppercase mb-4">CÁC TIÊU CHÍ ĐÁNH GIÁ (RUBRIC)</h6>
+                    <div id="rubricContainer">
+                        <div class="d-flex align-items-center justify-content-between bg-light p-3 rounded-3 mb-3 border-start border-4 border-primary">
+                            <div class="d-flex align-items-center gap-3"><div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px;">1</div><div><div class="fw-bold text-dark">Tính mới và sáng tạo</div><small class="text-primary fw-bold" style="font-size: 10px;">TRỌNG SỐ: 30%</small></div></div><div class="fw-bold text-muted h5 mb-0">/ 3.0</div>
+                        </div>
+                    </div>
+                    <div class="text-center mt-3 p-3 border border-dashed rounded-3 text-muted fw-bold" style="cursor: pointer;" onclick="addRubricCriteria()">+ THÊM TIÊU CHÍ MỚI</div>
+                </div>
+        </div>
+
+        <div id="view-f-stats" class="fade-in hidden">
+                <div class="row g-4">
+                    <div class="col-md-8">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                            <div class="d-flex justify-content-between mb-4"><h6 class="fw-bold text-uppercase">XẾP LOẠI ĐỀ TÀI CẤP KHOA</h6><i class="fa-solid fa-download text-muted"></i></div>
+                            <div class="mb-4"><div class="d-flex justify-content-between mb-1"><span class="fw-bold small">XUẤT SẮC (A)</span><span class="fw-bold small">12 ĐỀ TÀI (15%)</span></div><div class="progress" style="height: 10px; border-radius: 5px;"><div class="progress-bar bg-success" style="width: 15%"></div></div></div>
+                            <div class="mb-4"><div class="d-flex justify-content-between mb-1"><span class="fw-bold small">TỐT (B)</span><span class="fw-bold small">45 ĐỀ TÀI (40%)</span></div><div class="progress" style="height: 10px; border-radius: 5px;"><div class="progress-bar bg-primary" style="width: 40%"></div></div></div>
+                            <div class="mb-4"><div class="d-flex justify-content-between mb-1"><span class="fw-bold small">KHÁ (C)</span><span class="fw-bold small">52 ĐỀ TÀI (35%)</span></div><div class="progress" style="height: 10px; border-radius: 5px;"><div class="progress-bar bg-info" style="width: 35%"></div></div></div>
+                            <div><div class="d-flex justify-content-between mb-1"><span class="fw-bold small">ĐẠT (D)</span><span class="fw-bold small">15 ĐỀ TÀI (10%)</span></div><div class="progress" style="height: 10px; border-radius: 5px;"><div class="progress-bar bg-secondary" style="width: 10%"></div></div></div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex flex-column gap-4 h-100">
+                            <div class="card border-0 shadow-sm rounded-4 p-4">
+                                <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-file-pdf me-2"></i> Báo cáo định kỳ</h6>
+                                <div class="d-flex justify-content-between py-2 border-bottom"><span class="text-muted small">Báo cáo giữa kỳ</span><i class="fa-solid fa-download text-muted"></i></div>
+                                <div class="d-flex justify-content-between py-2 border-bottom"><span class="text-muted small">Báo cáo tổng kết đợt 1</span><i class="fa-solid fa-download text-muted"></i></div>
+                                <div class="d-flex justify-content-between py-2"><span class="text-muted small">Dự toán kinh phí 2026</span><i class="fa-solid fa-download text-muted"></i></div>
+                            </div>
+                            <div class="card border-0 shadow-sm rounded-4 p-4 bg-warning text-white mt-auto position-relative overflow-hidden">
+                                <h6 class="fw-bold mb-1">THÔNG BÁO TRỄ HẠN</h6><div class="h3 fw-bold mb-1">08 NHÓM</div><div class="small opacity-75">CẦN NHẮC NHỞ NGAY LẬP TỨC</div><i class="fa-solid fa-circle-exclamation position-absolute" style="font-size: 80px; right: -20px; bottom: -20px; opacity: 0.2;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </div>
+
+    </div>
+{% endblock %}
+
+{% block modals %}
+    <div class="modal fade" id="modalCreateBatch" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-primary text-white"><h5 class="modal-title fw-bold">Thiết lập Đợt NCKH Mới</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body p-4">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-8"><label class="form-label">Tên đợt triển khai</label><input type="text" class="form-control" placeholder="VD: NCKH Sinh viên 2025 - Đợt 2"></div>
+                        <div class="col-md-4"><label class="form-label">Năm học áp dụng</label><select class="form-select"><option>2025-2026</option><option>2026-2027</option></select></div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6"><label class="form-label">Loại hình</label><select class="form-select"><option selected>Nghiên cứu khoa học (Chuẩn)</option><option>Khởi nghiệp sáng tạo</option></select></div>
+                        <div class="col-md-6"><label class="form-label">Hạn mức kinh phí tối đa (VNĐ)</label><input type="text" class="form-control" value="5,000,000"></div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6"><label class="form-label">Ngày bắt đầu</label><input type="date" class="form-control"></div>
+                        <div class="col-md-6"><label class="form-label">Hạn cuối nộp đề tài</label><input type="date" class="form-control"></div>
+                    </div>
+                    <div class="mb-3"><label class="form-label">Mô tả chi tiết / Ghi chú</label><textarea class="form-control" rows="3"></textarea></div>
+                    <div class="mb-0"><label class="form-label">Văn bản hướng dẫn (PDF/DOC)</label><input type="file" class="form-control"></div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy bỏ</button><button class="btn btn-primary fw-bold px-4" onclick="showToast('Đã tạo đợt mới thành công!')" data-bs-dismiss="modal">Lưu & Ban hành</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalAddLecturer" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Thêm Giảng viên Khoa</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body p-4 pt-0">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6"><label class="form-label">Họ và Tên</label><input type="text" class="form-control" placeholder="Nhập họ tên..."></div>
+                        <div class="col-md-3"><label class="form-label">Giới tính</label><select class="form-select"><option>Nam</option><option>Nữ</option></select></div>
+                        <div class="col-md-3"><label class="form-label">Học hàm/Học vị</label><select class="form-select"><option>Thạc sĩ</option><option>Tiến sĩ</option><option>PGS.TS</option></select></div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6"><label class="form-label">Email công vụ</label><input type="email" class="form-control" placeholder="@hou.edu.vn"></div>
+                        <div class="col-md-6"><label class="form-label">Số điện thoại</label><input type="text" class="form-control"></div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6"><label class="form-label">Bộ môn trực thuộc</label><select class="form-select"><option>Công nghệ phần mềm</option><option>Khoa học máy tính</option><option>Hệ thống thông tin</option></select></div>
+                        <div class="col-md-6"><label class="form-label">Quota hướng dẫn (Số nhóm tối đa)</label><input type="number" class="form-control" value="5"></div>
+                    </div>
+                    <div class="mb-0"><label class="form-label">Hướng nghiên cứu chuyên sâu (Dùng để gợi ý đề tài)</label><textarea class="form-control" rows="2" placeholder="Ví dụ: AI, IoT, Blockchain..."></textarea></div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-primary w-100 fw-bold" onclick="showToast('Đã thêm giảng viên vào hệ thống!')" data-bs-dismiss="modal">Lưu hồ sơ giảng viên</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalAddCouncil" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-success text-white"><h5 class="modal-title fw-bold">Thành lập Hội đồng Mới</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body p-4">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-8"><label class="form-label">Tên Hội đồng</label><input type="text" class="form-control" placeholder="HĐ Phê duyệt đề cương..."></div>
+                        <div class="col-md-4"><label class="form-label">Số Quyết định</label><input type="text" class="form-control" placeholder="Số: .../QĐ-CNTT"></div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4"><label class="form-label">Ngày họp</label><input type="date" class="form-control"></div>
+                        <div class="col-md-4"><label class="form-label">Giờ bắt đầu</label><input type="time" class="form-control"></div>
+                        <div class="col-md-4"><label class="form-label">Địa điểm</label><input type="text" class="form-control" placeholder="Phòng họp..."></div>
+                    </div>
+                    <hr class="my-4">
+                    <h6 class="fw-bold mb-3 small text-muted">THÀNH PHẦN HỘI ĐỒNG</h6>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6"><label class="form-label">Chủ tịch Hội đồng</label><input type="text" class="form-control" placeholder="Nhập tên..."></div>
+                        <div class="col-md-6"><label class="form-label">Thư ký</label><input type="text" class="form-control" placeholder="Nhập tên..."></div>
+                    </div>
+                    <div class="mb-3"><label class="form-label">Các Ủy viên (Mỗi người 1 dòng)</label><textarea class="form-control" rows="3"></textarea></div>
+                    <div class="mb-0"><label class="form-label">File Quyết định thành lập (PDF)</label><input type="file" class="form-control"></div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-success w-100 fw-bold" onclick="showToast('Đã lập hội đồng mới thành công!')" data-bs-dismiss="modal">Xác nhận thành lập</button></div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
