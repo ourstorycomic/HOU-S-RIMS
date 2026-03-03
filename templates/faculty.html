@@ -7,24 +7,38 @@
         <div class="top-bar">
             <div class="d-flex align-items-center gap-2">
                 <i class="fa-regular fa-building text-primary"></i> 
-                <span class="fw-bold text-uppercase" style="font-size: 0.9rem;">HANOI OPEN UNIVERSITY • QUẢN TRỊ KHOA CNTT</span>
+                <span class="fw-bold text-uppercase small">HANOI OPEN UNIVERSITY • QUẢN TRỊ KHOA CNTT</span>
             </div>
+
             <div class="d-flex align-items-center gap-3">
                 <div class="dropdown">
-                    <button class="year-select dropdown-toggle" type="button" data-bs-toggle="dropdown"><i class="fa-regular fa-calendar me-2"></i> 2025-2026</button>
+                    <button class="year-select dropdown-toggle" type="button" data-bs-toggle="dropdown" style="background: #f1f5f9; border: none; padding: 8px 16px; border-radius: 20px; color: #2563eb; font-weight: 600; font-size: 13px;">
+                        <i class="fa-regular fa-calendar me-2"></i> 2025-2026
+                    </button>
                     <ul class="dropdown-menu border-0 shadow mt-2">
                         <li><a class="dropdown-item fw-bold text-primary" href="#">2025-2026</a></li>
                         <li><a class="dropdown-item" href="#">2024-2025</a></li>
                     </ul>
                 </div>
+
                 <div class="dropdown border-start ps-3">
                     <div class="d-flex align-items-center gap-2 cursor-pointer dropdown-toggle no-arrow" data-bs-toggle="dropdown">
-                        <div class="text-end"><div class="fw-bold text-dark" style="font-size: 13px;">Admin Khoa</div><div class="text-muted" style="font-size: 11px;">HOU-OFFICER</div></div>
-                        <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 35px; height: 35px; font-size: 12px;">AD</div>
+                        <div class="text-end">
+                            <div class="fw-bold text-dark" style="font-size: 13px;">
+                                {{ session.get('user_name', 'Admin Khoa') }}
+                            </div>
+                            <div class="fw-bold text-uppercase" style="font-size: 10px; color: #2563eb !important;">
+                                ADMIN KHOA
+                            </div>
+                        </div>
+                        <div class="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 35px; height: 35px; font-size: 12px; background: #2563eb !important;">
+                            {{ session.get('user_name', 'A')[0] | upper }}
+                        </div>
                     </div>
                     <ul class="dropdown-menu dropdown-menu-end border-0 shadow mt-2">
-                        <li><a class="dropdown-item" href="#">Thông tin tài khoản</a></li>
-                        <li><a class="dropdown-item text-danger" href="index.html">Đăng xuất</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="fa-solid fa-gear me-2"></i> Cài đặt hệ thống</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="fa-solid fa-right-from-bracket me-2"></i> Đăng xuất</a></li>
                     </ul>
                 </div>
             </div>
@@ -82,7 +96,9 @@
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <div class="d-flex gap-2">
                                 <button class="btn btn-primary btn-sm rounded-pill px-4 fw-bold btn-filter active" onclick="filterTopics('all', this)">TẤT CẢ</button>
-                                <button class="btn btn-light btn-sm rounded-pill px-4 text-muted fw-bold btn-filter" onclick="filterTopics('pending', this)">CHỜ PHÊ DUYỆT (18)</button>
+                                <button class="btn btn-light btn-sm rounded-pill px-4 text-muted fw-bold btn-filter position-relative" onclick="filterTopics('pending', this)">
+                                    CHỜ PHÊ DUYỆT (18)
+                                </button>
                                 <button class="btn btn-light btn-sm rounded-pill px-4 text-muted fw-bold btn-filter" onclick="filterTopics('approved', this)">ĐÃ PHÊ DUYỆT</button>
                             </div>
                             <input type="text" class="form-control rounded-pill bg-light border-0 px-4 small" placeholder="Tìm tên đề tài..." style="width: 300px;">

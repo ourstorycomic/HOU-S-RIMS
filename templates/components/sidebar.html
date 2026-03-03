@@ -49,6 +49,7 @@
     </a>
     <a href="{{ url_for('web.faculty_page') }}#f-topics" onclick="{% if request.endpoint == 'web.faculty_page' %}event.preventDefault(); switchTab('f-topics', this){% endif %}" class="nav-link">
         <i class="fa-solid fa-layer-group"></i> Đề tài & Nhóm
+        <span class="badge bg-danger rounded-pill ms-1" style="font-size: 9px;">18</span>
     </a>
     <a href="{{ url_for('web.faculty_page') }}#f-lecturers" onclick="{% if request.endpoint == 'web.faculty_page' %}event.preventDefault(); switchTab('f-lecturers', this){% endif %}" class="nav-link">
         <i class="fa-regular fa-user"></i> Giảng viên

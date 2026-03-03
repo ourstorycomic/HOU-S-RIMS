@@ -7,11 +7,14 @@
     <div class="top-bar">
         <div class="d-flex align-items-center gap-2">
             <i class="fa-solid fa-globe text-primary"></i> 
-            <span class="fw-bold text-uppercase" style="font-size: 0.9rem;">Hanoi Open University - Phòng Khoa Học & Đối Ngoại</span>
+            <span class="fw-bold text-uppercase small">HANOI OPEN UNIVERSITY - QUẢN TRỊ CẤP TRƯỜNG</span>
         </div>
+
         <div class="d-flex align-items-center gap-3">
             <div class="dropdown">
-                <button class="year-select dropdown-toggle" type="button" data-bs-toggle="dropdown"><i class="fa-regular fa-calendar me-2"></i> 2025-2026</button>
+                <button class="year-select dropdown-toggle" type="button" data-bs-toggle="dropdown" style="background: #f1f5f9; border: none; padding: 8px 16px; border-radius: 20px; color: #2563eb; font-weight: 600; font-size: 13px;">
+                    <i class="fa-regular fa-calendar me-2"></i> 2025-2026
+                </button>
                 <ul class="dropdown-menu border-0 shadow mt-2">
                     <li><a class="dropdown-item fw-bold text-primary" href="#">2025-2026</a></li>
                     <li><a class="dropdown-item" href="#">2024-2025</a></li>
@@ -22,14 +25,21 @@
             <div class="dropdown border-start ps-3">
                 <div class="d-flex align-items-center gap-2 cursor-pointer dropdown-toggle no-arrow" data-bs-toggle="dropdown">
                     <div class="text-end">
-                        <div class="fw-bold text-dark" style="font-size: 13px;">{{ session.get('user_name', 'Admin Trường') }}</div>
-                        <div class="text-muted" style="font-size: 11px;">QUẢN TRỊ VIÊN</div>
+                        <div class="fw-bold text-dark" style="font-size: 13px;">
+                            {{ session.get('user_name', 'Admin Trường') }}
+                        </div>
+                        <div class="fw-bold text-uppercase" style="font-size: 10px; color: #2563eb !important;">
+                            ADMIN TRƯỜNG
+                        </div>
                     </div>
-                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 35px; height: 35px; font-size: 12px;">AD</div>
+                    <div class="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 35px; height: 35px; font-size: 12px; background: #2563eb !important;">
+                        {{ session.get('user_name', 'A')[0] | upper }}
+                    </div>
                 </div>
                 <ul class="dropdown-menu dropdown-menu-end border-0 shadow mt-2">
-                    <li><a class="dropdown-item" href="#">Cấu hình hệ thống</a></li>
-                    <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">Đăng xuất</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="fa-solid fa-gear me-2"></i> Cài đặt hệ thống</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="fa-solid fa-right-from-bracket me-2"></i> Đăng xuất</a></li>
                 </ul>
             </div>
         </div>

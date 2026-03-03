@@ -9,6 +9,7 @@
                 <i class="fa-solid fa-building-columns text-muted"></i> 
                 <span class="fw-bold text-uppercase small">HANOI OPEN UNIVERSITY</span>
             </div>
+
             <div class="d-flex align-items-center gap-3">
                 <button class="btn btn-light border-0 btn-sm fw-bold text-muted" onclick="switchTab('l-calendar', document.querySelector('.sub-nav-item:last-child'))">
                     <i class="fa-regular fa-calendar me-2"></i> Lịch sự kiện
@@ -17,14 +18,21 @@
                 <div class="dropdown border-start ps-3">
                     <div class="d-flex align-items-center gap-2 cursor-pointer dropdown-toggle no-arrow" data-bs-toggle="dropdown">
                         <div class="text-end">
-                            <div class="fw-bold text-dark" style="font-size: 13px;">TS. Nguyễn Văn A</div>
-                            <div class="text-primary fw-bold" style="font-size: 10px;">MENTOR / KHOA CNTT</div>
+                            <div class="fw-bold text-dark" style="font-size: 13px;">
+                                {{ session.get('user_name', 'Giảng Viên') }}
+                            </div>
+                            <div class="fw-bold text-uppercase" style="font-size: 10px; color: #6366f1 !important;">
+                                GIẢNG VIÊN
+                            </div>
                         </div>
-                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 35px; height: 35px; font-size: 12px;">NA</div>
+                        <div class="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 35px; height: 35px; font-size: 12px; background: #6366f1 !important;">
+                            {{ session.get('user_name', 'G')[0] | upper }}
+                        </div>
                     </div>
                     <ul class="dropdown-menu dropdown-menu-end border-0 shadow mt-2">
-                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalEditProfile">Cập nhật hồ sơ</a></li>
-                        <li><a class="dropdown-item text-danger" href="index.html">Đăng xuất</a></li>
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalEditProfile"><i class="fa-regular fa-id-card me-2"></i> Hồ sơ khoa học</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="fa-solid fa-right-from-bracket me-2"></i> Đăng xuất</a></li>
                     </ul>
                 </div>
             </div>

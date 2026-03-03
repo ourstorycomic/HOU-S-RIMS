@@ -7,6 +7,8 @@ let currentCols = [];
 let selectedMultiCols = new Set();
 let lastUsedCols = [];
 let tempChartType = null;
+let currentMultiModal = null;
+let currentCleanModal = null;
 
 // Hàm lấy Element an toàn (tránh lỗi null)
 const getEl = (id) => document.getElementById(id);
@@ -56,8 +58,10 @@ function toggleChat() {
     }
 }
 
-function sendPrompt(txt) { 
-    if(els.chatInput) { els.chatInput.value = txt; sendChat(); }
+function sendPrompt(text) {
+  const input = document.getElementById('chatInput');
+  input.value = text;
+  sendChat();
 }
 
 // --- UPLOAD ---
@@ -96,21 +100,26 @@ if(els.fileInput) {
 
 // --- DUAL LIST MODAL ---
 function openMultiModal(type) {
-    if(!datasetId) return alert("Vui lòng tải file trước!");
+    if (!datasetId) return alert("Vui lòng tải file trước!");
     tempChartType = type;
-    
+
     const config = {
         'selection': { title: 'Chọn dữ liệu', btn: 'Lưu lựa chọn' },
-        'grouped':   { title: 'Vẽ Ghép nhóm (Grouped)', btn: 'Vẽ ngay' },
-        'stacked':   { title: 'Vẽ Cột chồng (Stacked)', btn: 'Vẽ ngay' }
+        'grouped':   { title: 'Cột Ghép nhóm – chọn nhiều cột', btn: 'Vẽ ngay' },
+        'stacked':   { title: 'Cột Chồng Dọc – chọn nhiều cột', btn: 'Vẽ ngay' },
+        'stacked_h': { title: 'Cột Chồng Ngang – chọn nhiều cột', btn: 'Vẽ ngay' },
     };
     const cfg = config[type] || config['selection'];
-    if(getEl('multiTitle')) getEl('multiTitle').innerText = cfg.title;
-    if(els.btnConfirmText) els.btnConfirmText.innerText = cfg.btn;
-    
-    if(els.colSearchInput) els.colSearchInput.value = "";
+    document.getElementById('multiTitle').innerText = cfg.title;
+    document.getElementById('btnConfirmText').innerText = cfg.btn;
+
+    if (els.colSearchInput) els.colSearchInput.value = "";
     renderDualList();
-    if(els.multiModal) els.multiModal.style.display = 'flex';
+
+    // Tạo instance và hiển thị modal
+    const modalEl = document.getElementById('multiModal');
+    currentMultiModal = new bootstrap.Modal(modalEl);
+    currentMultiModal.show();
 }
 
 function renderDualList() {
@@ -143,15 +152,29 @@ function clearAllSelection() { selectedMultiCols.clear(); renderDualList(); }
 
 function applyMulti() {
     const arr = Array.from(selectedMultiCols);
-    if(arr.length < 1) return alert("Chọn ít nhất 1 cột!");
+    // Đọc từ cả window.tempChartType (set bởi override trong HTML) lẫn biến let
+    const chartType = window.tempChartType || tempChartType;
+    const multiColTypes = ['grouped', 'stacked', 'stacked_h'];
+    if (arr.length < 1) return alert("Chọn ít nhất 1 cột!");
+    if (multiColTypes.includes(chartType) && arr.length < 2)
+        return alert("Biểu đồ so sánh cần chọn ít nhất 2 cột!");
     lastUsedCols = arr;
-    
-    if(els.colDisplay) {
-        els.colDisplay.style.color = "#fff";
-        els.colDisplay.innerText = arr.length === 1 ? arr[0] : `${arr[0]} (+${arr.length-1} cột)`;
+
+    if (els.colDisplay) {
+        els.colDisplay.style.color = "#1d4ed8";
+        els.colDisplay.innerText = arr.length === 1 ? arr[0] : `${arr[0]} (+${arr.length - 1} cột)`;
     }
-    if(els.multiModal) els.multiModal.style.display = 'none';
-    if(tempChartType && tempChartType !== 'selection') drawPlot(tempChartType, arr);
+
+    // Đóng modal bằng Bootstrap API (dùng getInstance để luôn lấy đúng instance)
+    const modalEl = document.getElementById('multiModal');
+    const modal = bootstrap.Modal.getInstance(modalEl) || currentMultiModal || window.currentMultiModal;
+    if (modal) { modal.hide(); }
+    window.currentMultiModal = null;
+    currentMultiModal = null;
+
+    if (chartType && chartType !== 'selection') {
+        drawPlot(chartType, arr);
+    }
 }
 
 // --- VẼ BIỂU ĐỒ ---
@@ -165,68 +188,106 @@ async function setType(type) {
 }
 
 async function drawPlot(type, cols) {
-    if(els.plotArea) els.plotArea.innerHTML = '<div class="loader" style="margin:auto"></div>';
-    try {
-        const res = await fetch('/api/plot', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({ dataset_id: datasetId, plots: [{type, col: cols[0], cols: cols}] })
-        });
-        const d = await res.json();
-        
-        if(d.images && d.images.length && els.plotArea) {
-            els.plotArea.innerHTML = `<img src="${d.images[0]}" class="fade-in">`;
-            if(getEl('autoAnalyze') && getEl('autoAnalyze').checked) {
-                if(els.chatBox && !els.chatBox.classList.contains('open')) toggleChat();
-                sendPrompt(`Phân tích biểu đồ ${type}: ${cols.join(', ')}`);
-            }
-        } else if(els.plotArea) {
-            els.plotArea.innerHTML = "<div class='empty-state'>Lỗi dữ liệu.</div>";
-        }
-    } catch(e) { 
-        if(els.plotArea) els.plotArea.innerHTML = "Lỗi Vẽ: " + e.message; 
+  if (!cols || cols.length === 0) return;
+
+  // Biểu đồ cần nhiều cột để so sánh
+  const multiColTypes = ['grouped', 'stacked', 'stacked_h'];
+
+  let plots = [];
+  if (multiColTypes.includes(type)) {
+    // grouped/stacked: dùng tất cả cột được chọn
+    plots = [{ type, cols }];
+  } else {
+    // Biểu đồ đơn: nếu chọn nhiều cột vẽ từng cột riêng, hoặc gom lại
+    if (cols.length === 1) {
+      plots = [{ type, cols }];
+    } else {
+      // Với pie/donut chỉ dùng cột đầu, các loại khác gom nhiều cột
+      if (type === 'pie' || type === 'donut') {
+        plots = [{ type, cols: [cols[0]] }];
+      } else {
+        plots = [{ type, cols }];
+      }
     }
+  }
+
+  document.getElementById('plotArea').innerHTML = `
+    <div class="d-flex flex-column align-items-center justify-content-center gap-2" style="min-height:300px;">
+      <div class="spinner-border text-primary" role="status"></div>
+      <span class="text-muted small">Đang vẽ biểu đồ...</span>
+    </div>`;
+
+  try {
+    const res = await fetch('/api/plot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataset_id: datasetId, plots })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    if (data.images && data.images.length) {
+      document.getElementById('plotArea').innerHTML =
+        `<img src="${data.images[0]}" class="fade-in" style="max-width:100%;height:auto;">`;
+      if (document.getElementById('autoAnalyze')?.checked) {
+        if (document.getElementById('chatBox')?.classList.contains('d-none')) toggleChat();
+        sendPrompt(`Phân tích biểu đồ ${type} cho dữ liệu: ${cols.slice(0,3).join(', ')}${cols.length > 3 ? '...' : ''}`);
+      }
+    } else {
+      document.getElementById('plotArea').innerHTML =
+        '<div class="text-center text-muted p-4"><i class="fa-solid fa-circle-exclamation fs-3 mb-2 d-block text-warning"></i>Không thể vẽ biểu đồ với dữ liệu này.</div>';
+    }
+  } catch (e) {
+    document.getElementById('plotArea').innerHTML =
+      `<div class="text-center text-danger p-4"><i class="fa-solid fa-triangle-exclamation fs-3 mb-2 d-block"></i>Lỗi: ${e.message}</div>`;
+  }
 }
 
 // --- CHAT & UTILS ---
 async function sendChat() {
-    if(!els.chatInput) return;
-    const txt = els.chatInput.value.trim();
-    if (!txt) return;
-    addMsg(txt, 'user'); els.chatInput.value = '';
-    
-    // [FIX LỖI NULL] Lấy model an toàn
-    const modelEl = getEl('aiModel');
-    const modelVal = modelEl ? modelEl.value : "llama-3.3-70b-versatile";
-    
-    const botId = addMsg('<div class="loader" style="width:15px;height:15px;border-width:2px"></div>', 'bot');
-    
-    try {
-        const res = await fetch('/api/chat', {
-            method: 'POST', headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ 
-                prompt: txt, dataset_id: datasetId, cols: lastUsedCols, 
-                selected_col: lastUsedCols[0], model: modelVal 
-            })
-        });
-        const data = await res.json();
-        const b = getEl(botId);
-        if(b) { 
-            b.innerHTML = data.reply.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
-            if(data.suggestions) {
-                const con = document.querySelector('.suggestion-chips');
-                if(con) {
-                    con.innerHTML = '';
-                    data.suggestions.forEach(s => {
-                        const sp = document.createElement('span'); sp.innerText = s; 
-                        sp.onclick = () => sendPrompt(s); con.appendChild(sp);
-                    });
-                }
-            }
+  const input = document.getElementById('chatInput');
+  const txt = input.value.trim();
+  if (!txt) return;
+  addMsg(txt, 'user');
+  input.value = '';
+
+  const modelEl = document.getElementById('aiModel');
+  const modelVal = modelEl ? modelEl.value : "llama-3.3-70b-versatile";
+
+  const botId = addMsg('<div class="loader" style="width:15px;height:15px;border-width:2px"></div>', 'bot');
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: txt,
+        dataset_id: datasetId,
+        cols: lastUsedCols,
+        selected_col: lastUsedCols[0],
+        model: modelVal
+      })
+    });
+    const data = await res.json();
+    const botMsg = document.getElementById(botId);
+    if (botMsg) {
+      botMsg.innerHTML = data.reply.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+      if (data.suggestions && data.suggestions.length) {
+        const chipsContainer = document.querySelector('.suggestion-chips');
+        if (chipsContainer) {
+          chipsContainer.innerHTML = '';
+          data.suggestions.forEach(s => {
+            const chip = document.createElement('span');
+            chip.textContent = s;
+            chip.onclick = () => sendPrompt(s);
+            chipsContainer.appendChild(chip);
+          });
         }
-    } catch(e) { 
-        const b = getEl(botId); 
-        if(b) b.innerHTML = `<span style='color:red'>Lỗi AI: ${e.message}</span>`; 
+      }
     }
+  } catch (e) {
+    const botMsg = document.getElementById(botId);
+    if (botMsg) botMsg.innerHTML = `<span style='color:red'>Lỗi AI: ${e.message}</span>`;
+  }
 }
 
 function addMsg(txt, role) {
@@ -238,31 +299,80 @@ function addMsg(txt, role) {
     return id;
 }
 
-function openCleanModal() { if(datasetId && els.cleanModal) els.cleanModal.style.display='flex'; }
-function closeModal(id) { const el = getEl(id); if(el) el.style.display='none'; }
+function openCleanModal() {
+    if (!datasetId) return alert("Vui lòng tải file trước!");
+    const modalEl = document.getElementById('cleanModal');
+    currentCleanModal = new bootstrap.Modal(modalEl);
+    currentCleanModal.show();
+}
+function closeModal(modalId) {
+    const modalEl = document.getElementById(modalId);
+    if (modalEl) {
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+    }
+}
 
 async function runClean() {
     try {
         const btn = document.querySelector('#cleanModal .btn-primary');
-        if(btn) { btn.innerText = "Đang xử lý..."; btn.disabled = true; }
-        
+        if (btn) {
+            btn.innerText = "Đang xử lý...";
+            btn.disabled = true;
+        }
+
         const res = await fetch('/api/clean', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({ 
-                dataset_id: datasetId, 
-                drop_na: getEl('chkNa')?.checked, 
-                drop_duplicates: getEl('chkDup')?.checked 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                dataset_id: datasetId,
+                drop_na: document.getElementById('chkNa')?.checked,
+                drop_duplicates: document.getElementById('chkDup')?.checked
             })
         });
         const d = await res.json();
-        if(d.error) throw new Error(d.error);
-        alert(`Đã làm sạch!\nTrước: ${d.old_shape[0]}\nSau: ${d.new_shape[0]}`);
-        if(els.cleanModal) els.cleanModal.style.display='none';
-    } catch(e) { alert("Lỗi: " + e.message); } 
-    finally { 
-        const btn = document.querySelector('#cleanModal .btn-primary'); 
-        if(btn){ btn.innerText="Thực hiện"; btn.disabled=false; }
+        if (d.error) throw new Error(d.error);
+
+        // Đóng modal ngay sau khi thành công
+        const cleanModalEl = document.getElementById('cleanModal');
+        const cleanModal = bootstrap.Modal.getInstance(cleanModalEl) || window.currentCleanModal;
+        if (cleanModal) { cleanModal.hide(); }
+        window.currentCleanModal = null;
+
+        // Cập nhật kết quả vào bảng trong modal (nếu còn visible) và hiển thị toast
+        const resultBox = document.getElementById('cleanResult');
+        if (resultBox) {
+            const oldRowsEl = document.getElementById('cleanOldRows');
+            const oldColsEl = document.getElementById('cleanOldCols');
+            const newRowsEl = document.getElementById('cleanNewRows');
+            const newColsEl = document.getElementById('cleanNewCols');
+            const diffRowsEl = document.getElementById('cleanDiffRows');
+            if (oldRowsEl) oldRowsEl.innerText = d.old_shape[0];
+            if (oldColsEl) oldColsEl.innerText = d.old_shape[1];
+            if (newRowsEl) newRowsEl.innerText = d.new_shape[0];
+            if (newColsEl) newColsEl.innerText = d.new_shape[1];
+            if (diffRowsEl) diffRowsEl.innerText = d.old_shape[0] - d.new_shape[0];
+        }
+        showCleanToast(d.old_shape[0], d.new_shape[0]);
+    } catch (e) {
+        alert("Lỗi: " + e.message);
+    } finally {
+        const btn = document.getElementById('btnRunClean');
+        if (btn) { btn.innerText = 'Thực hiện ngay'; btn.disabled = false; }
     }
+}
+
+function showCleanToast(oldRows, newRows) {
+    const removed = oldRows - newRows;
+    let toastEl = document.getElementById('cleanToast');
+    if (!toastEl) return; // fallback
+    document.getElementById('cleanToastBody').innerHTML =
+        `<i class="fa-solid fa-circle-check text-success me-2"></i>
+        <strong>Làm sạch thành công!</strong><br>
+        <span class="small">Trước: <b>${oldRows}</b> dòng &nbsp;→&nbsp; Sau: <b>${newRows}</b> dòng &nbsp;
+        <span class="badge bg-warning text-dark">Đã xóa ${removed} dòng</span></span>`;
+    const toast = new bootstrap.Toast(toastEl, { delay: 4000 });
+    toast.show();
 }
 
 function downloadImage() { 

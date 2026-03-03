@@ -1,3 +1,4 @@
+# routes/web.py
 from flask import Blueprint, render_template, session, redirect, url_for, request
 
 web_bp = Blueprint('web', __name__)

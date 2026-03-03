@@ -34,18 +34,88 @@
 {% block content %}
         <div class="top-bar">
             <div class="d-flex align-items-center gap-2">
-                <i class="fa-solid fa-robot text-primary"></i> 
-                <span class="fw-bold text-uppercase small">HOU AI ANALYTICS TOOL</span>
+                {% if request.endpoint == 'web.analysis_page' %}
+                    <i class="fa-solid fa-wand-magic-sparkles text-primary"></i> 
+                    <span class="fw-bold text-uppercase small">HOU AI ANALYTICS TOOL</span>
+                {% else %}
+                    <i class="fa-solid fa-database text-primary"></i> 
+                    <span class="fw-bold text-uppercase small">HOU DIGITAL REPOSITORY</span>
+                {% endif %}
             </div>
+
             <div class="d-flex align-items-center gap-3">
-                <div class="dropdown border-start ps-3">
-                    <div class="d-flex align-items-center gap-2 cursor-pointer">
-                        <div class="text-end">
-                            <div class="fw-bold text-dark" style="font-size: 13px;">Người dùng</div>
-                            <div class="text-primary fw-bold" style="font-size: 10px;">RESEARCHER</div>
-                        </div>
-                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold" style="width: 35px; height: 35px;">US</div>
+
+                {% if session['role'] in ['admin', 'faculty'] %}
+                    <div class="dropdown">
+                        <button class="year-select dropdown-toggle" type="button" data-bs-toggle="dropdown" style="background: #f1f5f9; border: none; padding: 8px 16px; border-radius: 20px; color: #2563eb; font-weight: 600; font-size: 13px;">
+                            <i class="fa-regular fa-calendar me-2"></i> 2025-2026
+                        </button>
+                        <ul class="dropdown-menu border-0 shadow mt-2">
+                            <li><a class="dropdown-item fw-bold text-primary" href="#">2025-2026</a></li>
+                            <li><a class="dropdown-item" href="#">2024-2025</a></li>
+                            <li><a class="dropdown-item" href="#">2023-2024</a></li>
+                        </ul>
                     </div>
+
+                {% elif session['role'] == 'lecturer' %}
+                    <a href="{{ url_for('web.lecturer_page') }}#l-calendar" class="btn btn-light border-0 btn-sm fw-bold text-muted">
+                        <i class="fa-regular fa-calendar me-2"></i> Lịch sự kiện
+                    </a>
+
+                {% elif session['role'] == 'student' %}
+                    <div class="dropdown">
+                        <button class="btn btn-light border-0 btn-sm fw-bold text-muted position-relative" type="button" data-bs-toggle="dropdown">
+                            <i class="fa-regular fa-bell" style="font-size: 1.1rem;"></i>
+                            <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle">
+                                <span class="visually-hidden">New alerts</span>
+                            </span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg mt-3" style="width: 300px;">
+                            <li class="p-3 border-bottom"><h6 class="fw-bold mb-0">Thông báo</h6></li>
+                            <li><a class="dropdown-item p-3 small text-muted" href="#">
+                                <div class="fw-bold text-dark">Nhắc nhở nộp bài</div>
+                                <div>Hạn nộp báo cáo tiến độ còn 2 ngày.</div>
+                            </a></li>
+                            <li><a class="dropdown-item p-3 small text-muted" href="#">
+                                <div class="fw-bold text-dark">Tin nhắn mới</div>
+                                <div>Mentor đã phản hồi câu hỏi của bạn.</div>
+                            </a></li>
+                        </ul>
+                    </div>
+                {% endif %}
+
+                <div class="dropdown border-start ps-3">
+                    <div class="d-flex align-items-center gap-2 cursor-pointer dropdown-toggle no-arrow" data-bs-toggle="dropdown">
+                        <div class="text-end">
+                            <div class="fw-bold text-dark" style="font-size: 13px;">
+                                {{ session.get('user_name', 'Khách') }}
+                            </div>
+                            <div class="fw-bold text-uppercase" style="font-size: 10px; color: {% if session['role']=='student' %}#6366f1{% elif session['role']=='lecturer' %}#6366f1{% else %}#2563eb{% endif %} !important;">
+                                {% if session['role'] == 'student' %} K21-CNTT / SV001
+                                {% elif session['role'] == 'lecturer' %} GIẢNG VIÊN
+                                {% elif session['role'] == 'faculty' %} ADMIN KHOA
+                                {% else %} ADMIN TRƯỜNG {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" 
+                            style="width: 35px; height: 35px; font-size: 12px; background: {% if session['role']=='student' %}linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%){% elif session['role']=='lecturer' %}#6366f1{% else %}#2563eb{% endif %} !important;">
+                            {{ session.get('user_name', 'U')[0] | upper }}
+                        </div>
+                    </div>
+                    
+                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow mt-2">
+                        {% if session['role'] == 'student' %}
+                            <li><a class="dropdown-item" href="{{ url_for('web.student_page') }}#s-profile"><i class="fa-regular fa-id-badge me-2"></i> Hồ sơ cá nhân</a></li>
+                        {% elif session['role'] == 'lecturer' %}
+                            <li><a class="dropdown-item" href="{{ url_for('web.lecturer_page') }}#l-profile"><i class="fa-regular fa-id-card me-2"></i> Hồ sơ khoa học</a></li>
+                        {% else %}
+                            <li><a class="dropdown-item" href="#"><i class="fa-solid fa-gear me-2"></i> Cài đặt hệ thống</a></li>
+                        {% endif %}
+                        
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="fa-solid fa-right-from-bracket me-2"></i> Đăng xuất</a></li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -74,10 +144,24 @@
                                 </div>
                             </div>
                             
-                            <div class="d-grid gap-2">
-                                <button class="btn btn-primary btn-sm fw-bold" onclick="setType('column')"><i class="fa-solid fa-chart-column"></i> Biểu đồ Cột</button>
-                                <button class="btn btn-info text-white btn-sm fw-bold" onclick="setType('pie')"><i class="fa-solid fa-chart-pie"></i> Biểu đồ Tròn</button>
-                                <button class="btn btn-warning text-white btn-sm fw-bold" onclick="openMultiModal('grouped')"><i class="fa-solid fa-layer-group"></i> So sánh Nhóm</button>
+                            <p class="small text-muted mb-1 fw-bold">Biểu đồ Đơn (1 cột):</p>
+                            <div class="d-grid gap-1 mb-2">
+                                <button class="btn btn-primary btn-sm fw-bold" onclick="setType('column')"><i class="fa-solid fa-chart-column me-1"></i>Cột đứng</button>
+                                <button class="btn btn-secondary btn-sm fw-bold" onclick="setType('bar')"><i class="fa-solid fa-bars me-1"></i>Thanh ngang</button>
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-info text-white btn-sm fw-bold flex-fill" onclick="setType('pie')"><i class="fa-solid fa-chart-pie me-1"></i>Tròn</button>
+                                    <button class="btn btn-purple btn-sm fw-bold flex-fill" style="background:#8b5cf6;color:#fff" onclick="setType('donut')"><i class="fa-solid fa-circle-half-stroke me-1"></i>Vòng</button>
+                                </div>
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-success btn-sm fw-bold flex-fill" onclick="setType('line')"><i class="fa-solid fa-chart-line me-1"></i>Đường</button>
+                                    <button class="btn btn-teal btn-sm fw-bold flex-fill" style="background:#0d9488;color:#fff" onclick="setType('area')"><i class="fa-solid fa-chart-area me-1"></i>Miền</button>
+                                </div>
+                            </div>
+                            <p class="small text-muted mb-1 fw-bold">Biểu đồ So sánh (nhiều cột):</p>
+                            <div class="d-grid gap-1">
+                                <button class="btn btn-warning text-white btn-sm fw-bold" onclick="openMultiModal('grouped')"><i class="fa-solid fa-layer-group me-1"></i>Cột Ghép nhóm</button>
+                                <button class="btn btn-danger btn-sm fw-bold" onclick="openMultiModal('stacked')"><i class="fa-solid fa-chart-bar me-1"></i>Cột Chồng (dọc)</button>
+                                <button class="btn btn-dark btn-sm fw-bold" onclick="openMultiModal('stacked_h')"><i class="fa-solid fa-align-left me-1"></i>Cột Chồng (ngang)</button>
                             </div>
                         </div>
                         
@@ -110,6 +194,16 @@
             </div>
     </div>
 
+    <!-- Toast thông báo kết quả làm sạch -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
+        <div id="cleanToast" class="toast align-items-center border-0 shadow" role="alert">
+            <div class="d-flex">
+                <div class="toast-body" id="cleanToastBody"></div>
+                <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
     <div class="chat-container">
         <button id="aiFab" class="fab-btn shadow-lg" onclick="toggleChat()" style="width: 60px; height: 60px; border-radius: 50%; background: #2563eb; color: white; border: none; font-size: 24px;">
             <i class="fa-solid fa-robot"></i>
@@ -140,7 +234,10 @@
     <div id="multiModal" class="modal fade" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content rounded-4 border-0 shadow">
-                <div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold" id="multiTitle">Chọn dữ liệu</h5><button type="button" class="btn-close" data-bs-dismiss="modal" onclick="closeModal('multiModal')"></button></div>
+                <div class="modal-header border-bottom-0">
+                    <h5 class="modal-title fw-bold" id="multiTitle">Chọn dữ liệu</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
                 <div class="modal-body p-0">
                     <div class="d-flex" style="height: 400px;">
                         <div class="w-50 border-end p-3 d-flex flex-column">
@@ -166,19 +263,33 @@
     <div id="cleanModal" class="modal fade" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content rounded-4 border-0 shadow">
-                <div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Làm sạch dữ liệu</h5></div>
+                <div class="modal-header border-bottom-0">
+                    <h5 class="modal-title fw-bold">Làm sạch dữ liệu</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
                 <div class="modal-body">
                     <div class="form-check mb-2">
                         <input class="form-check-input" type="checkbox" id="chkNa" checked>
                         <label class="form-check-label">Xóa dòng trống (Null/NaN)</label>
                     </div>
-                    <div class="form-check">
+                    <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" id="chkDup" checked>
                         <label class="form-check-label">Xóa dòng trùng lặp (Duplicates)</label>
                     </div>
+                    <div id="cleanResult" style="display:none;" class="rounded-3 p-3 bg-light border">
+                        <div class="fw-bold small mb-2 text-success"><i class="fa-solid fa-circle-check me-1"></i> Làm sạch thành công!</div>
+                        <table class="table table-sm table-bordered mb-0 small">
+                            <thead class="table-light"><tr><th></th><th>Số dòng</th><th>Số cột</th></tr></thead>
+                            <tbody>
+                                <tr><td class="fw-bold">Trước</td><td id="cleanOldRows">-</td><td id="cleanOldCols">-</td></tr>
+                                <tr><td class="fw-bold">Sau</td><td id="cleanNewRows">-</td><td id="cleanNewCols">-</td></tr>
+                                <tr class="table-warning"><td class="fw-bold">Đã xóa</td><td id="cleanDiffRows">-</td><td>—</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
                 <div class="modal-footer border-0">
-                    <button class="btn btn-primary w-100 rounded-pill fw-bold" onclick="runClean()">Thực hiện ngay</button>
+                    <button class="btn btn-primary w-100 rounded-pill fw-bold" id="btnRunClean" onclick="runClean()">Thực hiện ngay</button>
                 </div>
             </div>
         </div>
@@ -187,25 +298,39 @@
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='tool/js/main.js') }}"></script>
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     // Hàm vá lỗi tương thích giữa Modal cũ và Bootstrap 5
     function openMultiModal(type) {
-            // Logic cũ để set state
+            // Ghi cả window lẫn biến let trong main.js scope
             window.tempChartType = type;
-            if(type==='selection') { document.getElementById('multiTitle').innerText = 'Chọn dữ liệu'; document.getElementById('btnConfirmText').innerText = 'Lưu lựa chọn'; }
-            else { document.getElementById('multiTitle').innerText = 'Vẽ biểu đồ ' + type; document.getElementById('btnConfirmText').innerText = 'Vẽ ngay'; }
+            if (typeof tempChartType !== 'undefined') { try { tempChartType = type; } catch(e){} }
+            const titles = {
+                'selection': ['Chọn dữ liệu', 'Lưu lựa chọn'],
+                'grouped':   ['Cột Ghép nhóm – chọn nhiều cột', 'Vẽ ngay'],
+                'stacked':   ['Cột Chồng Dọc – chọn nhiều cột', 'Vẽ ngay'],
+                'stacked_h': ['Cột Chồng Ngang – chọn nhiều cột', 'Vẽ ngay'],
+            };
+            const [title, btn] = titles[type] || ['Vẽ biểu đồ', 'Vẽ ngay'];
+            document.getElementById('multiTitle').innerText = title;
+            document.getElementById('btnConfirmText').innerText = btn;
             
             renderDualList(); // Từ main.js cũ
             
-            // Dùng Bootstrap Modal API
-            var myModal = new bootstrap.Modal(document.getElementById('multiModal'));
-            myModal.show();
+            // Lưu reference vào window.currentMultiModal để applyMulti() có thể đóng
+            window.currentMultiModal = new bootstrap.Modal(document.getElementById('multiModal'));
+            window.currentMultiModal.show();
         }
         
         function openCleanModal() {
-            var myModal = new bootstrap.Modal(document.getElementById('cleanModal'));
-            myModal.show();
+            // Reset kết quả cũ mỗi lần mở lại
+            const resultBox = document.getElementById('cleanResult');
+            if (resultBox) resultBox.style.display = 'none';
+            const runBtn = document.getElementById('btnRunClean');
+            if (runBtn) { runBtn.innerText = 'Thực hiện ngay'; runBtn.disabled = false; }
+            // Lưu reference để runClean() có thể đóng modal
+            window.currentCleanModal = new bootstrap.Modal(document.getElementById('cleanModal'));
+            window.currentCleanModal.show();
         }
 
         // Override toggleChat để dùng class d-none của Bootstrap

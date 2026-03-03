@@ -10,8 +10,8 @@
                 <i class="fa-solid fa-building-columns text-muted"></i> 
                 <span class="fw-bold text-uppercase small">HANOI OPEN UNIVERSITY</span>
             </div>
+
             <div class="d-flex align-items-center gap-3">
-                
                 <div class="dropdown">
                     <button class="btn btn-light border-0 btn-sm fw-bold text-muted position-relative" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="fa-regular fa-bell" style="font-size: 1.1rem;"></i>
@@ -61,14 +61,21 @@
                 <div class="dropdown border-start ps-3">
                     <div class="d-flex align-items-center gap-2 cursor-pointer dropdown-toggle no-arrow" data-bs-toggle="dropdown">
                         <div class="text-end">
-                            <div class="fw-bold text-dark" style="font-size: 13px;">Nguyễn Văn Học</div>
-                            <div class="text-primary fw-bold" style="font-size: 10px;">K21-CNTT / SV001</div>
+                            <div class="fw-bold text-dark" style="font-size: 13px;">
+                                {{ session.get('user_name', 'Sinh Viên') }}
+                            </div>
+                            <div class="fw-bold text-uppercase" style="font-size: 10px; color: #6366f1 !important;">
+                                K21-CNTT / SV001
+                            </div>
                         </div>
-                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 35px; height: 35px; font-size: 12px;">VH</div>
+                        <div class="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 35px; height: 35px; font-size: 12px; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;">
+                            {{ session.get('user_name', 'S')[0] | upper }}
+                        </div>
                     </div>
                     <ul class="dropdown-menu dropdown-menu-end border-0 shadow mt-2">
-                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalProfile">Hồ sơ cá nhân</a></li>
-                        <li><a class="dropdown-item text-danger" href="index.html">Đăng xuất</a></li>
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalProfile"><i class="fa-regular fa-id-badge me-2"></i> Hồ sơ cá nhân</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="fa-solid fa-right-from-bracket me-2"></i> Đăng xuất</a></li>
                     </ul>
                 </div>
             </div>
