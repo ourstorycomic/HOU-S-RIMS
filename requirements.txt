@@ -8,6 +8,7 @@ pandas>=2.2.3
 # Numpy bản mới
 numpy>=1.26.4
 openpyxl
+pyreadstat
 
 # Data Visualization
 matplotlib
@@ -15,8 +16,9 @@ seaborn
 
 # Statistical Analysis
 scipy
+statsmodels
 
-# AI/Chatbot
+# Insight & Assistant Engine
 groq
 
 # Environment Variables

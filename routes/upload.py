@@ -4,6 +4,8 @@ import os
 import uuid
 from werkzeug.utils import secure_filename
 import pandas as pd
+import pyreadstat
+from data_store import DATASETS
 
 upload_bp = Blueprint('upload', __name__)
 
@@ -29,9 +31,14 @@ def api_upload():
         # Đọc thử để lấy danh sách cột gửi về cho Frontend
         cols = []
         if ext == '.csv':
-            df = pd.read_csv(save_path, nrows=0) # Chỉ đọc header cho nhanh
+            df = pd.read_csv(save_path)
+        elif ext == '.sav':
+            df, meta = pyreadstat.read_sav(save_path)
         else:
-            df = pd.read_excel(save_path, engine='openpyxl', nrows=0)
+            df = pd.read_excel(save_path, engine='openpyxl')
+        
+        # Store in memory for cleaning/analysis
+        DATASETS[new_name] = {'df': df, 'filename': filename}
         
         cols = df.columns.tolist()
 

@@ -1,3 +1,4 @@
+# routes/plot.py
 from flask import Blueprint, request, jsonify
 from API.main import plot_multiple
 import pandas as pd

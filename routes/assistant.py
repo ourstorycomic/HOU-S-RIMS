@@ -1,12 +1,13 @@
-#routes/chat.py
+# routes/assistant.py
 from flask import Blueprint, request, jsonify
 import os, pandas as pd, re
-from API.ChatbotAI import chatbotai
+from API.InsightEngine import generate_insights
 
-chat_bp = Blueprint('chat', __name__)
+assistant_bp = Blueprint('assistant', __name__)
 
-@chat_bp.route("/api/chat", methods=["POST"])
-def api_chat():
+@assistant_bp.route("/api/assistant", methods=["POST"])
+def api_assistant():
+    """Endpoint xử lý hỗ trợ phân tích thông minh."""
     try:
         data = request.get_json()
         cols = data.get("cols", [])
@@ -31,11 +32,11 @@ def api_chat():
                         s = df[c].astype(str).value_counts().head(5)
                         stats += f"\n- {c}: " + ", ".join([f"{k}({v})" for k,v in s.items()])
 
-        # Gọi AI
+        # Gọi logic xử lý
         prompt = f"{data.get('prompt','')}\nDữ liệu:\n{stats}"
-        reply = chatbotai("Bạn là trợ lý NCKH. Phân tích ngắn gọn.", prompt, data.get("model"))
+        reply = generate_insights("Bạn là trợ lý NCKH chuyên nghiệp. Phân tích nội dung.", prompt, data.get("model"))
         
-        # Tách gợi ý (Logic mới: Bắt mọi thứ sau dấu ///)
+        # Tách gợi ý câu hỏi liên quan
         suggestions = []
         if "///" in reply:
             parts = reply.split("///")

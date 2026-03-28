@@ -35,8 +35,8 @@
         <div class="top-bar">
             <div class="d-flex align-items-center gap-2">
                 {% if request.endpoint == 'web.analysis_page' %}
-                    <i class="fa-solid fa-wand-magic-sparkles text-primary"></i> 
-                    <span class="fw-bold text-uppercase small">HOU AI ANALYTICS TOOL</span>
+                    <i class="fa-solid fa-chart-line text-primary"></i> 
+                    <span class="fw-bold text-uppercase small">HOU DATA ANALYTICS</span>
                 {% else %}
                     <i class="fa-solid fa-database text-primary"></i> 
                     <span class="fw-bold text-uppercase small">HOU DIGITAL REPOSITORY</span>
@@ -143,6 +143,13 @@
                                     <i class="fa-solid fa-pen float-end small text-primary"></i>
                                 </div>
                             </div>
+
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="showPctToggle">
+                                <label class="form-check-label small fw-bold text-primary" for="showPctToggle">
+                                    <i class="fa-solid fa-percent me-1"></i> Hiển thị phần trăm (%)
+                                </label>
+                            </div>
                             
                             <p class="small text-muted mb-1 fw-bold">Biểu đồ Đơn (1 cột):</p>
                             <div class="d-grid gap-1 mb-2">
@@ -164,11 +171,34 @@
                                 <button class="btn btn-dark btn-sm fw-bold" onclick="openMultiModal('stacked_h')"><i class="fa-solid fa-align-left me-1"></i>Cột Chồng (ngang)</button>
                             </div>
                         </div>
+
+                        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white mb-3">
+                            <h6 class="fw-bold mb-3 small text-muted">PHÂN TÍCH CHUYÊN SÂU (SPSS)</h6>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-primary btn-sm fw-bold text-start" onclick="openMultiModal('reliability')">
+                                    <i class="fa-solid fa-check-double me-2"></i> Độ tin cậy (Reliability)
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm fw-bold text-start" onclick="openMultiModal('correlation')">
+                                    <i class="fa-solid fa-table-cells me-2"></i> Tương quan (Correlation)
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm fw-bold text-start" onclick="openMultiModal('regression')">
+                                    <i class="fa-solid fa-chart-line me-2"></i> Hồi quy (Regression)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white mb-3" style="background: linear-gradient(135deg, #fef9c3 0%, #fef3c7 100%) !important; border: 1px solid #fde68a !important;">
+                            <h6 class="fw-bold mb-2 small text-warning-emphasis">KẾT NỐI POWER BI</h6>
+                            <p class="small text-muted mb-2" style="font-size: 11px;">Kết nối dữ liệu đã làm sạch trực tiếp với Power BI Desktop.</p>
+                            <button class="btn btn-warning btn-sm fw-bold w-100" onclick="connectPowerBI()">
+                                <i class="fa-solid fa-share-nodes me-1"></i> Lấy Link Connect
+                            </button>
+                        </div>
                         
                         <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" id="autoAnalyze" checked>
-                                <label class="form-check-label small fw-bold" for="autoAnalyze">AI Tự động phân tích</label>
+                                <label class="form-check-label small fw-bold" for="autoAnalyze">Tự động đề xuất phân tích</label>
                             </div>
                             <hr class="my-2">
                             <button class="btn btn-dark w-100 btn-sm fw-bold" onclick="exportReport()"><i class="fa-solid fa-file-word"></i> Xuất Báo cáo (DOCX)</button>
@@ -205,24 +235,24 @@
     </div>
 
     <div class="chat-container">
-        <button id="aiFab" class="fab-btn shadow-lg" onclick="toggleChat()" style="width: 60px; height: 60px; border-radius: 50%; background: #2563eb; color: white; border: none; font-size: 24px;">
-            <i class="fa-solid fa-robot"></i>
+        <button id="supportFab" class="fab-btn shadow-lg" onclick="toggleChat()" style="width: 60px; height: 60px; border-radius: 50%; background: #2563eb; color: white; border: none; font-size: 24px;">
+            <i class="fa-solid fa-comments"></i>
         </button>
         <div id="chatBox" class="chat-interface bg-white shadow-lg rounded-4 overflow-hidden d-none" style="position: fixed; bottom: 100px; right: 30px; width: 350px; height: 500px; border: 1px solid #e5e7eb; display: flex; flex-direction: column;">
             <div class="chat-header bg-dark text-white p-3 d-flex justify-content-between align-items-center">
-                <div class="fw-bold"><i class="fa-solid fa-brain me-2"></i> Trợ lý AI</div>
+                <div class="fw-bold"><i class="fa-solid fa-lightbulb me-2"></i> Trợ lý hỗ trợ</div>
                 <button class="btn btn-sm text-white" onclick="toggleChat()"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div id="messages" class="chat-body p-3 flex-grow-1 overflow-auto bg-light">
                 <div class="d-flex gap-2 mb-3">
-                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center small" style="width: 30px; height: 30px;">AI</div>
-                    <div class="bg-white p-2 rounded-3 shadow-sm small">Xin chào! Tải file lên để mình phân tích nhé.</div>
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center small" style="width: 30px; height: 30px;">HĐ</div>
+                    <div class="bg-white p-2 rounded-3 shadow-sm small">Xin chào! Hệ thống đã sẵn sàng hỗ trợ bạn.</div>
                 </div>
             </div>
             <div class="suggestion-chips px-3 pb-2 d-flex gap-1 overflow-auto" style="white-space: nowrap;"></div>
             <div class="chat-footer p-3 border-top bg-white">
                 <div class="input-group">
-                    <input type="text" id="chatInput" class="form-control form-control-sm rounded-start-pill" placeholder="Hỏi AI...">
+                    <input type="text" id="chatInput" class="form-control form-control-sm rounded-start-pill" placeholder="Đặt câu hỏi cho hệ thống...">
                     <button class="btn btn-primary btn-sm rounded-end-pill" onclick="sendChat()"><i class="fa-solid fa-paper-plane"></i></button>
                 </div>
             </div>
@@ -279,7 +309,7 @@
                     <div id="cleanResult" style="display:none;" class="rounded-3 p-3 bg-light border">
                         <div class="fw-bold small mb-2 text-success"><i class="fa-solid fa-circle-check me-1"></i> Làm sạch thành công!</div>
                         <table class="table table-sm table-bordered mb-0 small">
-                            <thead class="table-light"><tr><th></th><th>Số dòng</th><th>Số cột</th></tr></thead>
+                            <thead class="table-light"><tr><th>Số dòng</th><th>Số cột</th></tr></thead>
                             <tbody>
                                 <tr><td class="fw-bold">Trước</td><td id="cleanOldRows">-</td><td id="cleanOldCols">-</td></tr>
                                 <tr><td class="fw-bold">Sau</td><td id="cleanNewRows">-</td><td id="cleanNewCols">-</td></tr>
@@ -336,7 +366,7 @@
         // Override toggleChat để dùng class d-none của Bootstrap
         function toggleChat() {
             const box = document.getElementById('chatBox');
-            const fab = document.getElementById('aiFab');
+            const fab = document.getElementById('supportFab');
             if (box.classList.contains('d-none')) {
                 box.classList.remove('d-none');
                 box.classList.add('d-flex'); // Flex để căn chỉnh

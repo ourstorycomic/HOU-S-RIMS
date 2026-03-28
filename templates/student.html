@@ -88,8 +88,8 @@
                     <div class="col-md-8">
                         <div class="card border-0 shadow-sm rounded-4 p-5 h-100 text-white position-relative overflow-hidden" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);">
                             <div class="position-relative z-1" style="max-width: 90%;">
-                                <h3 class="fw-bold mb-3"><i class="fa-solid fa-wand-magic-sparkles me-2"></i> AI Gợi ý đề tài nghiên cứu</h3>
-                                <p class="opacity-90 mb-4">Dựa trên kết quả học tập và sở thích của bạn, hệ thống AI đề xuất các hướng nghiên cứu phù hợp nhất.</p>
+                                <h3 class="fw-bold mb-3"><i class="fa-solid fa-lightbulb me-2"></i> Gợi ý đề tài nghiên cứu</h3>
+                                <p class="opacity-90 mb-4">Dựa trên kết quả học tập và sở thích của bạn, hệ thống đề xuất các hướng nghiên cứu phù hợp nhất.</p>
                                 <div class="d-flex flex-wrap gap-2">
                                     <button class="btn btn-light text-primary fw-bold rounded-pill px-3 shadow-sm border-0 small"># Generative AI in Law</button>
                                     <button class="btn btn-light text-primary fw-bold rounded-pill px-3 shadow-sm border-0 small"># EdTech Gamification</button>
@@ -105,7 +105,7 @@
                             <div class="d-flex flex-column gap-3">
                                 <div class="d-flex align-items-center gap-3 p-2 bg-white border rounded-3 hover-shadow">
                                     <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 40px; height: 40px;">GV</div>
-                                    <div><div class="fw-bold text-dark small">TS. Nguyễn Văn A</div><small class="text-muted" style="font-size: 10px;">AI, NLP, Big Data</small></div>
+                                    <div><div class="fw-bold text-dark small">TS. Nguyễn Văn A</div><small class="text-muted" style="font-size: 10px;">Học máy, NLP, Big Data</small></div>
                                 </div>
                                 <div class="d-flex align-items-center gap-3 p-2 bg-white border rounded-3 hover-shadow">
                                     <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 40px; height: 40px;">GV</div>
@@ -130,7 +130,7 @@
                         <div class="col-md-4">
                             <div class="card border-0 shadow-sm rounded-4 p-3 h-100">
                                 <span class="badge bg-primary-subtle text-primary w-auto mb-2 align-self-start">CNTT</span>
-                                <div class="fw-bold mb-2">Nhận dạng ngôn ngữ ký hiệu bằng AI</div>
+                                <div class="fw-bold mb-2">Nhận dạng ngôn ngữ ký hiệu</div>
                                 <div class="small text-muted mt-auto"><i class="fa-regular fa-clock me-1"></i> 2 tuần trước • <i class="fa-regular fa-user me-1"></i> 3.4k lượt xem</div>
                             </div>
                         </div>
@@ -512,7 +512,7 @@
 
 {% block modals %}
     <div class="modal fade" id="modalAddMember" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Thêm Thành viên Nhóm</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="mb-3"><label class="form-label small fw-bold text-muted">Nhập Mã sinh viên</label><input type="text" class="form-control"></div></div><div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-primary w-100 fw-bold" onclick="showToast('Đã thêm thành viên!')" data-bs-dismiss="modal">Thêm</button></div></div></div></div>
-    <div class="modal fade" id="modalMoreSuggestions" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Gợi ý Đề tài từ AI</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><ul class="list-group list-group-flush"><li class="list-group-item">Ứng dụng Blockchain...</li><li class="list-group-item">Hệ thống IoT...</li></ul></div></div></div></div>
+    <div class="modal fade" id="modalMoreSuggestions" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Gợi ý Đề tài hệ thống</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><ul class="list-group list-group-flush"><li class="list-group-item">Ứng dụng Blockchain...</li><li class="list-group-item">Hệ thống IoT...</li></ul></div></div></div></div>
     <div class="modal fade" id="modalAllMentors" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Danh sách Giảng viên Hướng dẫn</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="row g-3"><div class="col-md-6"><div class="p-3 border rounded-3 d-flex align-items-center gap-3"><div class="bg-light rounded-circle p-2"><i class="fa-solid fa-user-tie"></i></div><div><div class="fw-bold">TS. Nguyễn Văn A</div><div class="small text-muted">Khoa CNTT - AI, Big Data</div></div></div></div></div></div></div></div></div>
     <div class="modal fade" id="modalConfirmRegister" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header bg-success text-white"><h5 class="modal-title fw-bold">Xác nhận Đăng ký</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body p-4">Bạn có chắc chắn muốn gửi hồ sơ đăng ký đề tài này?</div><div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-light fw-bold" data-bs-dismiss="modal">Kiểm tra lại</button><button class="btn btn-success fw-bold px-4" onclick="showToast('Đã gửi hồ sơ đăng ký!')" data-bs-dismiss="modal">Đồng ý gửi</button></div></div></div></div>
     <div class="modal fade" id="modalConfirmSubmit" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header bg-primary text-white"><h5 class="modal-title fw-bold">Xác nhận Nộp bài</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body p-4">Hệ thống sẽ ghi nhận thời gian nộp bài của bạn.</div><div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy</button><button class="btn btn-primary fw-bold px-4" onclick="showToast('Nộp báo cáo thành công!')" data-bs-dismiss="modal">Nộp ngay</button></div></div></div></div>

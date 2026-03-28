@@ -1,4 +1,4 @@
-﻿# API/main.py
+# API/main.py
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -141,21 +141,27 @@ def add_bar_labels(ax):
         ax.bar_label(container, labels=labels, padding=3, fontsize=9)
 
 # 1. COT DUC
-def plot_column(df, cols):
+def plot_column(df, cols, show_pct=False):
     if len(cols) == 1:
         col = cols[0]
         counts = get_value_counts(df[col])
+        total = counts.sum() if show_pct and counts.sum() > 0 else 1
+        display_values = (counts.values / total * 100) if show_pct else counts.values
+        
         col_map = get_col_mapping(col)
         short_codes, legend_lines = apply_col_mapping(counts.index, col_map)
         palette = sns.color_palette(PALETTE_MAIN, len(counts))
         fig, ax = plt.subplots(figsize=(max(8, len(counts) * 1.3), 7))
-        bars = ax.bar(short_codes, counts.values, color=palette, edgecolor='white', width=0.6)
-        ax.set_ylabel("So luong phan hoi", fontsize=11)
+        bars = ax.bar(short_codes, display_values, color=palette, edgecolor='white', width=0.6)
+        
+        ax.set_ylabel("Ti le (%)" if show_pct else "So luong phan hoi", fontsize=11)
         ax.set_title(f"Phan bo: {truncate_label(col, 50)}", fontweight='bold', pad=15)
         ax.set_xticklabels(short_codes, rotation=0, ha='center', fontsize=11)
-        for bar, v in zip(bars, counts.values):
-            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height()+0.3,
-                    str(int(v)), ha='center', va='bottom', fontweight='bold', fontsize=10)
+        
+        for bar, v in zip(bars, display_values):
+            label = f"{v:.1f}%" if show_pct else str(int(v))
+            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + (0.5 if show_pct else 0.3),
+                    label, ha='center', va='bottom', fontweight='bold', fontsize=10)
         add_mapping_legend(fig, ax, legend_lines)
     else:
         counts_list = {}
@@ -166,33 +172,50 @@ def plot_column(df, cols):
         for vc in counts_list.values():
             for v in vc.index:
                 if v not in all_vals: all_vals.append(v)
+        
         df_chart = pd.DataFrame({col: vc.reindex(all_vals, fill_value=0) for col, vc in counts_list.items()})
+        
+        if show_pct:
+            # For multiple columns, we usually calculate % per column
+            df_chart = df_chart.div(df_chart.sum(axis=0), axis=1) * 100
+
         palette = sns.color_palette(PALETTE_MULTI, len(df_chart))
         fig, ax = plt.subplots(figsize=(max(10, len(df_chart.columns)*1.5), 8))
         df_chart.T.plot(kind='bar', ax=ax, color=palette, edgecolor='white', width=0.75)
         ax.set_xticklabels(ax.get_xticklabels(), rotation=35, ha='right', fontsize=9)
-        ax.set_ylabel("So luong phan hoi", fontsize=11)
+        ax.set_ylabel("Ti le (%)" if show_pct else "So luong phan hoi", fontsize=11)
         ax.set_title("So sanh phan bo cac cau hoi", fontweight='bold', pad=15)
         ax.legend(title="Muc do", bbox_to_anchor=(1.01,1), loc='upper left', frameon=False, fontsize=9)
-        add_bar_labels(ax)
+        
+        if show_pct:
+            for container in ax.containers:
+                labels = [f'{v:.1f}%' if v > 0 else "" for v in container.datavalues]
+                ax.bar_label(container, labels=labels, padding=3, fontsize=8)
+        else:
+            add_bar_labels(ax)
+            
     plt.tight_layout()
     return fig
 
 # 2. THANH NGANG
-def plot_bar(df, cols):
+def plot_bar(df, cols, show_pct=False):
     if len(cols) == 1:
         col = cols[0]
         counts = get_value_counts(df[col])
+        total = counts.sum() if show_pct and counts.sum() > 0 else 1
+        display_values = (counts.values / total * 100) if show_pct else counts.values
+        
         col_map = get_col_mapping(col)
         short_codes, legend_lines = apply_col_mapping(counts.index, col_map)
         palette = sns.color_palette(PALETTE_MAIN, len(counts))
         fig, ax = plt.subplots(figsize=(10, max(5, len(counts)*0.7+1)))
-        bars = ax.barh(short_codes, counts.values, color=palette, edgecolor='white', height=0.6)
-        ax.set_xlabel("So luong phan hoi", fontsize=11)
+        bars = ax.barh(short_codes, display_values, color=palette, edgecolor='white', height=0.6)
+        ax.set_xlabel("Ti le (%)" if show_pct else "So luong phan hoi", fontsize=11)
         ax.set_title(f"Phan bo: {truncate_label(col, 50)}", fontweight='bold', pad=15)
-        for bar, v in zip(bars, counts.values):
-            ax.text(bar.get_width()+0.2, bar.get_y()+bar.get_height()/2,
-                    str(int(v)), va='center', fontweight='bold', fontsize=10)
+        for bar, v in zip(bars, display_values):
+            label = f" {v:.1f}%" if show_pct else f" {int(v)}"
+            ax.text(bar.get_width(), bar.get_y()+bar.get_height()/2,
+                    label, va='center', fontweight='bold', fontsize=10)
         ax.invert_yaxis()
         add_mapping_legend(fig, ax, legend_lines)
     else:
@@ -205,18 +228,28 @@ def plot_bar(df, cols):
             for v in vc.index:
                 if v not in all_vals: all_vals.append(v)
         df_chart = pd.DataFrame({col: vc.reindex(all_vals, fill_value=0) for col, vc in counts_list.items()})
+        
+        if show_pct:
+            df_chart = df_chart.div(df_chart.sum(axis=0), axis=1) * 100
+            
         palette = sns.color_palette(PALETTE_MULTI, len(df_chart))
         fig, ax = plt.subplots(figsize=(10, max(6, len(df_chart.columns)*0.9+2)))
         df_chart.T.plot(kind='barh', ax=ax, color=palette, edgecolor='white', width=0.75)
-        ax.set_xlabel("So luong phan hoi", fontsize=11)
+        ax.set_xlabel("Ti le (%)" if show_pct else "So luong phan hoi", fontsize=11)
         ax.set_title("So sanh phan bo cac cau hoi", fontweight='bold', pad=15)
         ax.legend(title="Muc do", bbox_to_anchor=(1.01,1), loc='upper left', frameon=False, fontsize=9)
         ax.invert_yaxis()
+        
+        if show_pct:
+            for container in ax.containers:
+                labels = [f'{v:.1f}%' if v > 0 else "" for v in container.datavalues]
+                ax.bar_label(container, labels=labels, padding=3, fontsize=8)
+                
     plt.tight_layout()
     return fig
 
 # 3. TRON
-def plot_pie(df, cols):
+def plot_pie(df, cols, show_pct=False):
     col = cols[0]
     counts = get_value_counts(df[col], top_n=10)
     col_map = get_col_mapping(col)
@@ -241,7 +274,7 @@ def plot_pie(df, cols):
     return fig
 
 # 4. VONG / DONUT
-def plot_donut(df, cols):
+def plot_donut(df, cols, show_pct=False):
     col = cols[0]
     counts = get_value_counts(df[col], top_n=10)
     col_map = get_col_mapping(col)
@@ -274,7 +307,7 @@ def _get_shared_mapping(cols, df):
     return {}
 
 # 5. GHEP NHOM
-def plot_grouped(df, cols):
+def plot_grouped(df, cols, show_pct=False):
     counts_list = {}
     for c in cols:
         vc = get_value_counts(df[c], top_n=7)
@@ -288,20 +321,31 @@ def plot_grouped(df, cols):
     mapped_vals = [col_map.get(str(v), str(v)) for v in all_vals]
     df_chart = pd.DataFrame({col: vc.reindex(all_vals, fill_value=0) for col, vc in counts_list.items()})
     df_chart.index = mapped_vals
+    
+    if show_pct:
+        df_chart = df_chart.div(df_chart.sum(axis=0), axis=1) * 100
+        
     df_plot = df_chart.T
     palette = sns.color_palette(PALETTE_MULTI, len(df_plot.columns))
     fig, ax = plt.subplots(figsize=(max(10, len(df_plot)*1.4), 8))
     df_plot.plot(kind='bar', ax=ax, color=palette, edgecolor='white', width=0.8)
     ax.set_xticklabels([truncate_label(l, 20) for l in df_plot.index], rotation=35, ha='right', fontsize=9)
-    ax.set_ylabel("So luong phan hoi", fontsize=11)
+    ax.set_ylabel("Ti le (%)" if show_pct else "So luong phan hoi", fontsize=11)
     ax.set_title("Bieu do Cot Ghep Nhom", fontweight='bold', pad=15)
     ax.legend(title="Muc do", bbox_to_anchor=(1.01,1), loc='upper left', frameon=False, fontsize=9)
-    add_bar_labels(ax)
+    
+    if show_pct:
+        for container in ax.containers:
+            labels = [f'{v:.1f}%' if v > 0 else "" for v in container.datavalues]
+            ax.bar_label(container, labels=labels, padding=3, fontsize=8)
+    else:
+        add_bar_labels(ax)
+        
     plt.tight_layout()
     return fig
 
 # 6. COT CHONG DOC
-def plot_stacked(df, cols):
+def plot_stacked(df, cols, show_pct=False):
     counts_list = {}
     for c in cols:
         vc = get_value_counts(df[c], top_n=7)
@@ -331,7 +375,7 @@ def plot_stacked(df, cols):
     return fig
 
 # 7. COT CHONG NGANG
-def plot_stacked_h(df, cols):
+def plot_stacked_h(df, cols, show_pct=False):
     counts_list = {}
     for c in cols:
         vc = get_value_counts(df[c], top_n=7)
@@ -361,18 +405,22 @@ def plot_stacked_h(df, cols):
     return fig
 
 # 8. DUONG
-def plot_line(df, cols):
+def plot_line(df, cols, show_pct=False):
     palette = sns.color_palette(PALETTE_MULTI, len(cols))
     fig, ax = plt.subplots(figsize=(12, 6))
     for i, col in enumerate(cols):
         counts = get_value_counts(df[col], top_n=10)
+        total = counts.sum() if show_pct and counts.sum() > 0 else 1
+        display_values = (counts.values / total * 100) if show_pct else counts.values
+        
         labels = [truncate_label(l, 18) for l in counts.index]
-        ax.plot(labels, counts.values, marker='o', linewidth=2.2,
+        ax.plot(labels, display_values, marker='o', linewidth=2.2,
                 color=palette[i], label=truncate_label(col, 25))
-        for x, y in zip(labels, counts.values):
-            ax.annotate(str(int(y)), (x, y), textcoords="offset points",
+        for x, y in zip(labels, display_values):
+            label = f"{y:.1f}%" if show_pct else str(int(y))
+            ax.annotate(label, (x, y), textcoords="offset points",
                         xytext=(0,8), ha='center', fontsize=9)
-    ax.set_ylabel("So luong phan hoi", fontsize=11)
+    ax.set_ylabel("Ti le (%)" if show_pct else "So luong phan hoi", fontsize=11)
     ax.set_title("Bieu do Duong", fontweight='bold', pad=15)
     ax.set_xticklabels(ax.get_xticklabels(), rotation=35, ha='right', fontsize=9)
     if len(cols) > 1:
@@ -381,7 +429,7 @@ def plot_line(df, cols):
     return fig
 
 # 9. MIEN
-def plot_area(df, cols):
+def plot_area(df, cols, show_pct=False):
     palette = sns.color_palette(PALETTE_MULTI, len(cols))
     fig, ax = plt.subplots(figsize=(12, 6))
     all_vals = []
@@ -394,12 +442,14 @@ def plot_area(df, cols):
     x = range(len(all_vals))
     labels = [truncate_label(str(v), 18) for v in all_vals]
     for i, col in enumerate(cols):
-        y = [counts_dict[col].get(v, 0) for v in all_vals]
+        counts = counts_dict[col]
+        total = counts.sum() if show_pct and counts.sum() > 0 else 1
+        y = [(counts.get(v, 0) / total * 100) if show_pct else counts.get(v, 0) for v in all_vals]
         ax.fill_between(x, y, alpha=0.35, color=palette[i])
         ax.plot(x, y, marker='o', linewidth=2, color=palette[i], label=truncate_label(col, 25))
     ax.set_xticks(list(x))
     ax.set_xticklabels(labels, rotation=35, ha='right', fontsize=9)
-    ax.set_ylabel("So luong phan hoi", fontsize=11)
+    ax.set_ylabel("Ti le (%)" if show_pct else "So luong phan hoi", fontsize=11)
     ax.set_title("Bieu do Mien", fontweight='bold', pad=15)
     if len(cols) > 1:
         ax.legend(bbox_to_anchor=(1.01,1), loc='upper left', frameon=False, fontsize=9)
@@ -425,13 +475,15 @@ def plot_multiple(df, plots_req):
         if not cols and 'col' in req:
             cols = [req['col']]
         chart_type = req.get('type', 'column')
+        show_pct = req.get('show_pct', False)
+        
         if not cols: continue
         cols = [c for c in cols if c in df.columns]
         if not cols: continue
         fig = None
         try:
             fn = CHART_MAP.get(chart_type, plot_column)
-            fig = fn(df, cols)
+            fig = fn(df, cols, show_pct=show_pct)
         except Exception as e:
             import traceback; traceback.print_exc()
             print(f"Loi ve {chart_type}: {e}")

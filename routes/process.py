@@ -21,12 +21,16 @@ def api_clean():
     if data.get("drop_duplicates"):
         df = df.drop_duplicates()
         
+    old_shape = [old_len, len(df.columns)]
     DATASETS[dataset_id]['df'] = df
     new_len = len(df)
+    new_shape = [new_len, len(df.columns)]
     
     return jsonify({
         "message": "Cleaned",
         "removed": old_len - new_len,
         "remaining": new_len,
-        "columns": list(df.columns)
+        "columns": list(df.columns),
+        "old_shape": old_shape,
+        "new_shape": new_shape
     })

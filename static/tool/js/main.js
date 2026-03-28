@@ -9,6 +9,7 @@ let lastUsedCols = [];
 let tempChartType = null;
 let currentMultiModal = null;
 let currentCleanModal = null;
+let showPct = false;
 
 // Hàm lấy Element an toàn (tránh lỗi null)
 const getEl = (id) => document.getElementById(id);
@@ -22,7 +23,7 @@ const els = {
     chatBox: getEl('chatBox'),
     messages: getEl('messages'),
     chatInput: getEl('chatInput'),
-    aiFab: getEl('aiFab'),
+    supportFab: getEl('supportFab'),
     multiModal: getEl('multiModal'),
     cleanModal: getEl('cleanModal'),
     colSearchInput: getEl('colSearchInput'),
@@ -51,10 +52,26 @@ if(els.chatInput) {
     els.chatInput.addEventListener("keypress", (e) => { if(e.key==="Enter"){ e.preventDefault(); sendChat(); }});
 }
 
+// Xử lý nút gạt phần trăm
+document.addEventListener('change', function(e) {
+    if (e.target && e.target.id === 'showPctToggle') {
+        showPct = e.target.checked;
+        if (datasetId && lastUsedCols && lastUsedCols.length > 0) {
+            // Vẽ lại biểu đồ hiện tại với chế độ mới
+            const activeChartType = window.tempChartType || 'column'; 
+            // Nếu đang ở trong modal chọn cột thì không vẽ ngay, 
+            // chỉ vẽ khi đã có dữ liệu và loại biểu đồ được xác định
+            if (activeChartType !== 'selection') {
+                drawPlot(activeChartType, lastUsedCols);
+            }
+        }
+    }
+});
+
 function toggleChat() { 
     if(els.chatBox) {
         els.chatBox.classList.toggle('open'); 
-        if(els.aiFab) els.aiFab.style.display = els.chatBox.classList.contains('open') ? 'none' : 'flex';
+        if(els.supportFab) els.supportFab.style.display = els.chatBox.classList.contains('open') ? 'none' : 'flex';
     }
 }
 
@@ -108,6 +125,9 @@ function openMultiModal(type) {
         'grouped':   { title: 'Cột Ghép nhóm – chọn nhiều cột', btn: 'Vẽ ngay' },
         'stacked':   { title: 'Cột Chồng Dọc – chọn nhiều cột', btn: 'Vẽ ngay' },
         'stacked_h': { title: 'Cột Chồng Ngang – chọn nhiều cột', btn: 'Vẽ ngay' },
+        'reliability': { title: 'Độ tin cậy Cronbach\'s Alpha (Chọn các mục)', btn: 'Tính toán' },
+        'correlation': { title: 'Tương quan Pearson (Chọn các cột)', btn: 'Tính toán' },
+        'regression':  { title: 'Hồi quy (Cột 1: Biến phụ thuộc, còn lại: Độc lập)', btn: 'Chạy hồi quy' },
     };
     const cfg = config[type] || config['selection'];
     document.getElementById('multiTitle').innerText = cfg.title;
@@ -173,7 +193,12 @@ function applyMulti() {
     currentMultiModal = null;
 
     if (chartType && chartType !== 'selection') {
-        drawPlot(chartType, arr);
+        const statsTypes = ['reliability', 'correlation', 'regression'];
+        if (statsTypes.includes(chartType)) {
+            runStatistics(chartType, arr);
+        } else {
+            drawPlot(chartType, arr);
+        }
     }
 }
 
@@ -221,7 +246,10 @@ async function drawPlot(type, cols) {
     const res = await fetch('/api/plot', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dataset_id: datasetId, plots })
+    body: JSON.stringify({ 
+      dataset_id: datasetId, 
+      plots: plots.map(p => ({ ...p, show_pct: showPct })) 
+    })
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
@@ -230,7 +258,7 @@ async function drawPlot(type, cols) {
         `<img src="${data.images[0]}" class="fade-in" style="max-width:100%;height:auto;">`;
       if (document.getElementById('autoAnalyze')?.checked) {
         if (document.getElementById('chatBox')?.classList.contains('d-none')) toggleChat();
-        sendPrompt(`Phân tích biểu đồ ${type} cho dữ liệu: ${cols.slice(0,3).join(', ')}${cols.length > 3 ? '...' : ''}`);
+        sendPrompt(`Phân tích tóm tắt cho dữ liệu: ${cols.slice(0,3).join(', ')}${cols.length > 3 ? '...' : ''}`);
       }
     } else {
       document.getElementById('plotArea').innerHTML =
@@ -250,7 +278,7 @@ async function sendChat() {
   addMsg(txt, 'user');
   input.value = '';
 
-  const modelEl = document.getElementById('aiModel');
+  const modelEl = document.getElementById('engineModel');
   const modelVal = modelEl ? modelEl.value : "llama-3.3-70b-versatile";
 
   const botId = addMsg('<div class="loader" style="width:15px;height:15px;border-width:2px"></div>', 'bot');
@@ -286,7 +314,7 @@ async function sendChat() {
     }
   } catch (e) {
     const botMsg = document.getElementById(botId);
-    if (botMsg) botMsg.innerHTML = `<span style='color:red'>Lỗi AI: ${e.message}</span>`;
+    if (botMsg) botMsg.innerHTML = `<span style='color:red'>Lỗi hệ thống: ${e.message}</span>`;
   }
 }
 
@@ -399,4 +427,97 @@ async function exportReport() {
         });
     } catch(e) { alert("Lỗi: " + e.message); } 
     finally { if(btn) btn.innerHTML = old; }
+}
+
+// --- SPSS STATISTICS ---
+async function runStatistics(type, cols) {
+    const plotArea = document.getElementById('plotArea');
+    plotArea.innerHTML = `<div class="p-5 text-center"><div class="spinner-border text-primary"></div><p class="mt-2 small">Đang chạy thuật toán thống kê...</p></div>`;
+    
+    try {
+        let endpoint = `/api/analysis/${type}`;
+        let body = { dataset_id: datasetId, cols: cols };
+        if (type === 'regression') {
+            body = { dataset_id: datasetId, target: cols[0], predictors: cols.slice(1) };
+        }
+
+        const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        
+        renderStatsResult(type, data);
+    } catch (e) {
+        plotArea.innerHTML = `<div class="alert alert-danger m-3">${e.message}</div>`;
+    }
+}
+
+function renderStatsResult(type, data) {
+    const plotArea = document.getElementById('plotArea');
+    let html = `<div class="stats-result p-4 w-100 overflow-auto animate__animated animate__fadeIn">`;
+    
+    if (type === 'reliability') {
+        html += `<h5 class="fw-bold text-primary mb-3">KẾT QUẢ ĐỘ TIN CẬY (CRONBACH'S ALPHA)</h5>
+        <div class="row mb-4"><div class="col-md-6"><div class="card p-3 border-0 bg-white shadow-sm">
+            <div class="small text-muted">Hệ số Cronbach's Alpha:</div>
+            <div class="display-5 fw-bold text-success">${data.alpha}</div>
+            <div class="badge bg-success mt-2">Mức độ: ${data.status}</div>
+        </div></div>
+        <div class="col-md-6"><ul class="list-group list-group-flush small">
+            <li class="list-group-item d-flex justify-content-between"><span>Số cột quan sát:</span><b>${data.item_count}</b></li>
+            <li class="list-group-item d-flex justify-content-between"><span>Số mẫu (N):</span><b>${data.sample_size}</b></li>
+        </ul></div></div>`;
+    } else if (type === 'correlation') {
+        html += `<h5 class="fw-bold text-primary mb-3">MA TRẬN TƯƠNG QUAN PEARSON</h5>
+        <table class="table table-sm table-bordered small bg-white">
+            <thead class="table-light"><tr><th>Cột</th>${data.columns.map(c => `<th class="text-center">${c.substring(0,10)}...</th>`).join('')}</tr></thead>
+            <tbody>${data.matrix.map(row => `<tr><td class="fw-bold">${row.column}</td>${data.columns.map(c => `<td class="text-center ${row[c] >= 0.5 ? 'bg-info-subtle fw-bold' : ''}">${row[c]}</td>`).join('')}</tr>`).join('')}</tbody>
+        </table>`;
+    } else if (type === 'regression') {
+        html += `<h5 class="fw-bold text-primary mb-3">TÓM TẮT MÔ HÌNH HỒI QUY</h5>
+        <div class="row g-2 mb-3">
+            <div class="col-6 col-md-3"><div class="p-2 border rounded bg-white small text-center">R-Squared: <b>${data.r_squared}</b></div></div>
+            <div class="col-6 col-md-3"><div class="p-2 border rounded bg-white small text-center">Adj R-Squared: <b>${data.adj_r_squared}</b></div></div>
+            <div class="col-6 col-md-3"><div class="p-2 border rounded bg-white small text-center">F-Sig: <b>${data.f_pvalue}</b></div></div>
+        </div>
+        <table class="table table-sm table-striped small bg-white">
+            <thead class="table-dark"><tr><th>Biến</th><th>Hệ số B</th><th>Std.Error</th><th>P-value</th><th>Sig</th></tr></thead>
+            <tbody>${data.coefficients.map(c => `<tr><td class="fw-bold">${c.variable}</td><td>${c.coefficient}</td><td>${c.std_err}</td><td>${c.p_value}</td><td class="text-danger fw-bold">${c.sig}</td></tr>`).join('')}</tbody>
+        </table>`;
+    }
+    
+    html += `</div>`;
+    plotArea.innerHTML = html;
+}
+
+// --- POWER BI CONNECT ---
+async function connectPowerBI() {
+    if(!datasetId) return alert("Chưa có file dữ liệu!");
+    try {
+        const res = await fetch('/api/powerbi/generate_info', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ dataset_id: datasetId })
+        });
+        const data = await res.json();
+        
+        const msg = `
+            <b>KẾT NỐI POWER BI THÀNH CÔNG!</b><br><br>
+            Sử dụng URL sau trong Power BI Desktop (Get Data from Web):<br>
+            <div class="bg-light p-2 my-2 border rounded text-break small" id="pbiUrl">${data.url}</div>
+            <button class="btn btn-sm btn-outline-primary mb-3" onclick="copyPbiUrl()">Copy URL</button><br>
+            <b>Hướng dẫn:</b><br>
+            ${data.instructions.map(i => `<div class="small">${i}</div>`).join('')}
+        `;
+        
+        const plotArea = document.getElementById('plotArea');
+        plotArea.innerHTML = `<div class="p-4">${msg}</div>`;
+    } catch (e) { alert(e.message); }
+}
+
+function copyPbiUrl() {
+    const url = document.getElementById('pbiUrl').innerText;
+    navigator.clipboard.writeText(url).then(() => alert("Đã copy URL!"));
 }
