@@ -27,14 +27,25 @@ except Exception:
     _SURVEY_MAP = {}
 
 def get_col_mapping(col):
-    """Return {raw_value: label_text} for a column, or {} if not found."""
+    """Return {raw_value: label_text} for a column with fuzzy matching support."""
     col = str(col).strip()
+    if not col: return {}
+    
+    # 1. Exact match
     if col in _SURVEY_MAP:
         return _SURVEY_MAP[col]
-    # Try stripping brackets that appear in some column names
-    col_stripped = col.strip('[]').strip()
-    if col_stripped in _SURVEY_MAP:
-        return _SURVEY_MAP[col_stripped]
+        
+    # 2. Case-insensitive & Stripped match
+    col_clean = re.sub(r'[\[\]\n\r\t]', ' ', col.lower()).strip()
+    col_clean = re.sub(r'\s+', ' ', col_clean)
+    
+    for k in _SURVEY_MAP:
+        k_clean = re.sub(r'[\[\]\n\r\t]', ' ', k.lower()).strip()
+        k_clean = re.sub(r'\s+', ' ', k_clean)
+        # Check if one is contained in other (fuzzy)
+        if col_clean == k_clean or col_clean in k_clean or k_clean in col_clean:
+            return _SURVEY_MAP[k]
+            
     return {}
 
 def apply_col_mapping(index, col_mapping):
@@ -57,20 +68,26 @@ def add_mapping_legend(fig, ax, legend_lines, title="Chú giải"):
     """Add a text info panel to the right of the axes."""
     if not legend_lines:
         return
-    text = title + "\n" + "\n".join(legend_lines)
+    # Wrap text if lines are too long
+    wrapped_lines = []
+    for line in legend_lines:
+        if len(line) > 45: wrapped_lines.append(line[:42] + "...")
+        else: wrapped_lines.append(line)
+        
+    text = title + "\n" + "\n".join(wrapped_lines)
     fig.text(
-        0.98, 0.98, text,
+        0.98, 0.95, text,
         transform=fig.transFigure,
-        fontsize=9,
+        fontsize=8.5,
         verticalalignment='top',
         horizontalalignment='right',
-        bbox=dict(boxstyle='round,pad=0.5', facecolor='#f8f8f8',
-                  edgecolor='#cccccc', alpha=0.95),
+        bbox=dict(boxstyle='round,pad=0.3', facecolor='#ffffff',
+                  edgecolor='#dddddd', alpha=0.9),
         fontfamily='Arial'
     )
-    # Shrink axes to make room
+    # Adjust axes to make room for legend on the right
     pos = ax.get_position()
-    ax.set_position([pos.x0, pos.y0, pos.width * 0.72, pos.height])
+    ax.set_position([pos.x0, pos.y0, pos.width * 0.70, pos.height])
 
 LIKERT_ORDER = [
     "hoan toan khong dong y", "rat khong dong y", "khong dong y", "khong",
@@ -140,6 +157,14 @@ def add_bar_labels(ax):
             labels.append(str(int(h)) if h > 0 else "")
         ax.bar_label(container, labels=labels, padding=3, fontsize=9)
 
+def _get_shared_mapping(cols, df):
+    """Get a shared mapping for multiple columns (first col's mapping used for value labels)."""
+    for c in cols:
+        m = get_col_mapping(c)
+        if m:
+            return m
+    return {}
+
 # 1. COT DUC
 def plot_column(df, cols, show_pct=False):
     if len(cols) == 1:
@@ -151,11 +176,11 @@ def plot_column(df, cols, show_pct=False):
         col_map = get_col_mapping(col)
         short_codes, legend_lines = apply_col_mapping(counts.index, col_map)
         palette = sns.color_palette(PALETTE_MAIN, len(counts))
-        fig, ax = plt.subplots(figsize=(max(8, len(counts) * 1.3), 7))
+        fig, ax = plt.subplots(figsize=(max(8, len(counts) * 1.5), 7))
         bars = ax.bar(short_codes, display_values, color=palette, edgecolor='white', width=0.6)
         
-        ax.set_ylabel("Ti le (%)" if show_pct else "So luong phan hoi", fontsize=11)
-        ax.set_title(f"Phan bo: {truncate_label(col, 50)}", fontweight='bold', pad=15)
+        ax.set_ylabel("Tỉ lệ (%)" if show_pct else "Số lượng phản hồi", fontsize=11)
+        ax.set_title(f"Phân bố: {truncate_label(col, 60)}", fontweight='bold', pad=20)
         ax.set_xticklabels(short_codes, rotation=0, ha='center', fontsize=11)
         
         for bar, v in zip(bars, display_values):
@@ -167,32 +192,42 @@ def plot_column(df, cols, show_pct=False):
         counts_list = {}
         for c in cols:
             vc = get_value_counts(df[c])
-            counts_list[truncate_label(c, 22)] = vc
+            counts_list[truncate_label(c, 25)] = vc
         all_vals = []
         for vc in counts_list.values():
             for v in vc.index:
                 if v not in all_vals: all_vals.append(v)
         
         df_chart = pd.DataFrame({col: vc.reindex(all_vals, fill_value=0) for col, vc in counts_list.items()})
+        col_map = _get_shared_mapping(cols, df)
         
+        # KIỂM TRA: Xem các cột có dùng chung 1 hệ mapping không?
+        maps = [get_col_mapping(c) for c in cols]
+        is_same_map = all(m == maps[0] for m in maps) if maps else True
+        
+        if is_same_map:
+            df_chart.index = [col_map.get(str(v), str(v)) for v in all_vals]
+        else:
+            # Khác hệ mapping -> Dùng số làm index và thêm bảng tra cứu ở right panel
+            df_chart.index = [str(v) for v in all_vals]
+            all_legend_lines = []
+            for i, c in enumerate(cols):
+                _, lines = apply_col_mapping(all_vals, maps[i])
+                if lines:
+                    all_legend_lines.append(f"--- {truncate_label(c, 20)} ---")
+                    all_legend_lines.extend(lines)
+            add_mapping_legend(fig, ax, all_legend_lines, title="Bảng tra cứu đa biến")
+
         if show_pct:
-            # For multiple columns, we usually calculate % per column
             df_chart = df_chart.div(df_chart.sum(axis=0), axis=1) * 100
 
         palette = sns.color_palette(PALETTE_MULTI, len(df_chart))
-        fig, ax = plt.subplots(figsize=(max(10, len(df_chart.columns)*1.5), 8))
-        df_chart.T.plot(kind='bar', ax=ax, color=palette, edgecolor='white', width=0.75)
-        ax.set_xticklabels(ax.get_xticklabels(), rotation=35, ha='right', fontsize=9)
-        ax.set_ylabel("Ti le (%)" if show_pct else "So luong phan hoi", fontsize=11)
-        ax.set_title("So sanh phan bo cac cau hoi", fontweight='bold', pad=15)
-        ax.legend(title="Muc do", bbox_to_anchor=(1.01,1), loc='upper left', frameon=False, fontsize=9)
-        
-        if show_pct:
-            for container in ax.containers:
-                labels = [f'{v:.1f}%' if v > 0 else "" for v in container.datavalues]
-                ax.bar_label(container, labels=labels, padding=3, fontsize=8)
-        else:
-            add_bar_labels(ax)
+        fig, ax = plt.subplots(figsize=(max(12, len(df_chart.columns)*1.8), 8))
+        df_chart.T.plot(kind='bar', ax=ax, color=palette, edgecolor='white', width=0.8)
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=30, ha='right', fontsize=9)
+        ax.set_ylabel("Tỉ lệ (%)" if show_pct else "Số lượng", fontsize=11)
+        ax.set_title("So sánh tương quan giữa các tiêu chí", fontweight='bold', pad=20)
+        ax.legend(title="Mức độ", bbox_to_anchor=(1.02, 1), loc='upper left', frameon=True, fontsize=9)
             
     plt.tight_layout()
     return fig
@@ -208,10 +243,10 @@ def plot_bar(df, cols, show_pct=False):
         col_map = get_col_mapping(col)
         short_codes, legend_lines = apply_col_mapping(counts.index, col_map)
         palette = sns.color_palette(PALETTE_MAIN, len(counts))
-        fig, ax = plt.subplots(figsize=(10, max(5, len(counts)*0.7+1)))
+        fig, ax = plt.subplots(figsize=(10, max(5, len(counts)*0.8+1)))
         bars = ax.barh(short_codes, display_values, color=palette, edgecolor='white', height=0.6)
-        ax.set_xlabel("Ti le (%)" if show_pct else "So luong phan hoi", fontsize=11)
-        ax.set_title(f"Phan bo: {truncate_label(col, 50)}", fontweight='bold', pad=15)
+        ax.set_xlabel("Tỉ lệ (%)" if show_pct else "Số lượng", fontsize=11)
+        ax.set_title(f"Phân bố: {truncate_label(col, 60)}", fontweight='bold', pad=20)
         for bar, v in zip(bars, display_values):
             label = f" {v:.1f}%" if show_pct else f" {int(v)}"
             ax.text(bar.get_width(), bar.get_y()+bar.get_height()/2,
@@ -222,28 +257,25 @@ def plot_bar(df, cols, show_pct=False):
         counts_list = {}
         for c in cols:
             vc = get_value_counts(df[c])
-            counts_list[truncate_label(c, 25)] = vc
+            counts_list[truncate_label(c, 30)] = vc
         all_vals = []
         for vc in counts_list.values():
             for v in vc.index:
                 if v not in all_vals: all_vals.append(v)
         df_chart = pd.DataFrame({col: vc.reindex(all_vals, fill_value=0) for col, vc in counts_list.items()})
-        
+        col_map = _get_shared_mapping(cols, df)
+        df_chart.index = [col_map.get(str(v), str(v)) for v in all_vals]
+
         if show_pct:
             df_chart = df_chart.div(df_chart.sum(axis=0), axis=1) * 100
             
         palette = sns.color_palette(PALETTE_MULTI, len(df_chart))
-        fig, ax = plt.subplots(figsize=(10, max(6, len(df_chart.columns)*0.9+2)))
-        df_chart.T.plot(kind='barh', ax=ax, color=palette, edgecolor='white', width=0.75)
-        ax.set_xlabel("Ti le (%)" if show_pct else "So luong phan hoi", fontsize=11)
-        ax.set_title("So sanh phan bo cac cau hoi", fontweight='bold', pad=15)
-        ax.legend(title="Muc do", bbox_to_anchor=(1.01,1), loc='upper left', frameon=False, fontsize=9)
+        fig, ax = plt.subplots(figsize=(12, max(6, len(df_chart.columns)*1.1+2)))
+        df_chart.T.plot(kind='barh', ax=ax, color=palette, edgecolor='white', width=0.8)
+        ax.set_xlabel("Tỉ lệ (%)" if show_pct else "Số lượng", fontsize=11)
+        ax.set_title("So sánh các tiêu chí nghiên cứu", fontweight='bold', pad=20)
+        ax.legend(title="Mức độ", bbox_to_anchor=(1.02, 1), loc='upper left', frameon=True, fontsize=9)
         ax.invert_yaxis()
-        
-        if show_pct:
-            for container in ax.containers:
-                labels = [f'{v:.1f}%' if v > 0 else "" for v in container.datavalues]
-                ax.bar_label(container, labels=labels, padding=3, fontsize=8)
                 
     plt.tight_layout()
     return fig
@@ -254,11 +286,7 @@ def plot_pie(df, cols, show_pct=False):
     counts = get_value_counts(df[col], top_n=10)
     col_map = get_col_mapping(col)
     short_codes, legend_lines = apply_col_mapping(counts.index, col_map)
-    # Use mapped label if available, else short code
-    display_labels = []
-    for code in short_codes:
-        mapped = col_map.get(str(code))
-        display_labels.append(mapped if mapped else code)
+    display_labels = [col_map.get(str(code), str(code)) for code in short_codes]
     palette = sns.color_palette(PALETTE_MULTI, len(counts))
     fig, ax = plt.subplots(figsize=(10, 7))
     wedges, texts, autotexts = ax.pie(
@@ -267,9 +295,9 @@ def plot_pie(df, cols, show_pct=False):
         pctdistance=0.78, wedgeprops={'edgecolor':'white','linewidth':1.5})
     for at in autotexts:
         at.set_fontsize(9); at.set_fontweight('bold')
-    ax.legend(wedges, [f"{truncate_label(l,30)} ({int(v)})" for l,v in zip(display_labels, counts.values)],
-              loc='center left', bbox_to_anchor=(1,0.5), frameon=False, fontsize=10)
-    ax.set_title(truncate_label(col, 55), fontweight='bold', pad=15)
+    ax.legend(wedges, [f"{truncate_label(l,35)} ({int(v)})" for l,v in zip(display_labels, counts.values)],
+              loc='center left', bbox_to_anchor=(1, 0.5), frameon=False, fontsize=9)
+    ax.set_title(truncate_label(col, 60), fontweight='bold', pad=20)
     plt.tight_layout()
     return fig
 
@@ -279,10 +307,7 @@ def plot_donut(df, cols, show_pct=False):
     counts = get_value_counts(df[col], top_n=10)
     col_map = get_col_mapping(col)
     short_codes, legend_lines = apply_col_mapping(counts.index, col_map)
-    display_labels = []
-    for code in short_codes:
-        mapped = col_map.get(str(code))
-        display_labels.append(mapped if mapped else code)
+    display_labels = [col_map.get(str(code), str(code)) for code in short_codes]
     palette = sns.color_palette(PALETTE_MULTI, len(counts))
     fig, ax = plt.subplots(figsize=(10, 7))
     wedges, texts, autotexts = ax.pie(
@@ -291,91 +316,63 @@ def plot_donut(df, cols, show_pct=False):
         pctdistance=0.80, wedgeprops={'edgecolor':'white','linewidth':2,'width':0.55})
     for at in autotexts:
         at.set_fontsize(9); at.set_fontweight('bold')
-    ax.text(0, 0, f"n={counts.sum()}", ha='center', va='center', fontsize=13, fontweight='bold', color='#333')
-    ax.legend(wedges, [f"{truncate_label(l,30)} ({int(v)})" for l,v in zip(display_labels, counts.values)],
-              loc='center left', bbox_to_anchor=(1,0.5), frameon=False, fontsize=10)
-    ax.set_title(truncate_label(col, 55), fontweight='bold', pad=15)
+    ax.text(0, 0, f"n={counts.sum()}", ha='center', va='center', fontsize=13, fontweight='bold')
+    ax.legend(wedges, [f"{truncate_label(l,35)} ({int(v)})" for l,v in zip(display_labels, counts.values)],
+              loc='center left', bbox_to_anchor=(1, 0.5), frameon=False, fontsize=9)
+    ax.set_title(truncate_label(col, 60), fontweight='bold', pad=20)
     plt.tight_layout()
     return fig
-
-def _get_shared_mapping(cols, df):
-    """Get a shared mapping for multiple columns (first col's mapping used for value labels)."""
-    for c in cols:
-        m = get_col_mapping(c)
-        if m:
-            return m
-    return {}
 
 # 5. GHEP NHOM
 def plot_grouped(df, cols, show_pct=False):
     counts_list = {}
     for c in cols:
         vc = get_value_counts(df[c], top_n=7)
-        counts_list[truncate_label(c, 22)] = vc
+        counts_list[truncate_label(c, 25)] = vc
     all_vals = []
     for vc in counts_list.values():
         for v in vc.index:
             if v not in all_vals: all_vals.append(v)
     col_map = _get_shared_mapping(cols, df)
-    # Map column index (value labels) using mapping
     mapped_vals = [col_map.get(str(v), str(v)) for v in all_vals]
     df_chart = pd.DataFrame({col: vc.reindex(all_vals, fill_value=0) for col, vc in counts_list.items()})
-    df_chart.index = mapped_vals
+    
+    # KIỂM TRA: Xem các cột có dùng chung 1 hệ mapping không?
+    maps = [get_col_mapping(c) for c in cols]
+    is_same_map = all(m == maps[0] for m in maps) if maps else True
+    
+    if is_same_map:
+        df_chart.index = [col_map.get(str(v), str(v)) for v in all_vals]
+    else:
+        df_chart.index = [str(v) for v in all_vals]
+        # Thêm bảng tra cứu bên phải
+        all_legend_lines = []
+        for i, c in enumerate(cols):
+            _, lines = apply_col_mapping(all_vals, maps[i])
+            if lines:
+                all_legend_lines.append(f"--- {truncate_label(c, 20)} ---")
+                all_legend_lines.extend(lines)
+        # Sẽ được gọi sau fig, ax
     
     if show_pct:
         df_chart = df_chart.div(df_chart.sum(axis=0), axis=1) * 100
         
     df_plot = df_chart.T
     palette = sns.color_palette(PALETTE_MULTI, len(df_plot.columns))
-    fig, ax = plt.subplots(figsize=(max(10, len(df_plot)*1.4), 8))
-    df_plot.plot(kind='bar', ax=ax, color=palette, edgecolor='white', width=0.8)
-    ax.set_xticklabels([truncate_label(l, 20) for l in df_plot.index], rotation=35, ha='right', fontsize=9)
-    ax.set_ylabel("Ti le (%)" if show_pct else "So luong phan hoi", fontsize=11)
-    ax.set_title("Bieu do Cot Ghep Nhom", fontweight='bold', pad=15)
-    ax.legend(title="Muc do", bbox_to_anchor=(1.01,1), loc='upper left', frameon=False, fontsize=9)
+    fig, ax = plt.subplots(figsize=(max(11, len(df_plot)*1.6), 8))
+    df_plot.plot(kind='bar', ax=ax, color=palette, edgecolor='white', width=0.82)
+    ax.set_xticklabels([truncate_label(l, 25) for l in df_plot.index], rotation=30, ha='right', fontsize=9)
+    ax.set_ylabel("Tỉ lệ (%)" if show_pct else "Số lượng", fontsize=11)
+    ax.set_title("Biểu đồ So sánh các nhóm dữ liệu", fontweight='bold', pad=20)
+    ax.legend(title="Mức độ", bbox_to_anchor=(1.02, 1), loc='upper left', frameon=True, fontsize=9)
     
-    if show_pct:
-        for container in ax.containers:
-            labels = [f'{v:.1f}%' if v > 0 else "" for v in container.datavalues]
-            ax.bar_label(container, labels=labels, padding=3, fontsize=8)
-    else:
-        add_bar_labels(ax)
-        
+    if not is_same_map:
+        add_mapping_legend(fig, ax, all_legend_lines, title="Bảng tra cứu đa biến")
     plt.tight_layout()
     return fig
 
 # 6. COT CHONG DOC
 def plot_stacked(df, cols, show_pct=False):
-    counts_list = {}
-    for c in cols:
-        vc = get_value_counts(df[c], top_n=7)
-        counts_list[truncate_label(c, 22)] = vc
-    all_vals = []
-    for vc in counts_list.values():
-        for v in vc.index:
-            if v not in all_vals: all_vals.append(v)
-    col_map = _get_shared_mapping(cols, df)
-    mapped_vals = [col_map.get(str(v), str(v)) for v in all_vals]
-    df_chart = pd.DataFrame({col: vc.reindex(all_vals, fill_value=0) for col, vc in counts_list.items()})
-    df_chart.index = mapped_vals
-    totals = df_chart.T.sum(axis=1).replace(0, 1)
-    df_pct = (df_chart.T.div(totals, axis=0) * 100)
-    palette = sns.color_palette(PALETTE_MULTI, len(df_pct.columns))
-    fig, ax = plt.subplots(figsize=(max(10, len(df_pct)*1.4), 8))
-    df_pct.plot(kind='bar', stacked=True, ax=ax, color=palette, edgecolor='white', width=0.7)
-    ax.set_xticklabels([truncate_label(l, 20) for l in df_pct.index], rotation=35, ha='right', fontsize=9)
-    ax.set_ylabel("Ti le (%)", fontsize=11)
-    ax.set_ylim(0, 110)
-    ax.set_title("Bieu do Cot Chong (%)", fontweight='bold', pad=15)
-    ax.legend(title="Muc do", bbox_to_anchor=(1.01,1), loc='upper left', frameon=False, fontsize=9)
-    for container in ax.containers:
-        labels_ = [f'{v:.0f}%' if v >= 7 else '' for v in container.datavalues]
-        ax.bar_label(container, labels=labels_, label_type='center', fontsize=9, fontweight='bold')
-    plt.tight_layout()
-    return fig
-
-# 7. COT CHONG NGANG
-def plot_stacked_h(df, cols, show_pct=False):
     counts_list = {}
     for c in cols:
         vc = get_value_counts(df[c], top_n=7)
@@ -385,53 +382,113 @@ def plot_stacked_h(df, cols, show_pct=False):
         for v in vc.index:
             if v not in all_vals: all_vals.append(v)
     col_map = _get_shared_mapping(cols, df)
-    mapped_vals = [col_map.get(str(v), str(v)) for v in all_vals]
+    
+    # KIỂM TRA: Xem các cột có dùng chung 1 hệ mapping không?
+    maps = [get_col_mapping(c) for c in cols]
+    is_same_map = all(m == maps[0] for m in maps) if maps else True
+    
     df_chart = pd.DataFrame({col: vc.reindex(all_vals, fill_value=0) for col, vc in counts_list.items()})
-    df_chart.index = mapped_vals
+    
+    if is_same_map:
+        df_chart.index = [col_map.get(str(v), str(v)) for v in all_vals]
+    else:
+        df_chart.index = [str(v) for v in all_vals]
+        all_legend_lines = []
+        for i, c in enumerate(cols):
+            _, lines = apply_col_mapping(all_vals, maps[i])
+            if lines:
+                all_legend_lines.append(f"--- {truncate_label(c, 21)} ---")
+                all_legend_lines.extend(lines)
     totals = df_chart.T.sum(axis=1).replace(0, 1)
     df_pct = (df_chart.T.div(totals, axis=0) * 100)
     palette = sns.color_palette(PALETTE_MULTI, len(df_pct.columns))
-    fig, ax = plt.subplots(figsize=(11, max(5, len(df_pct)*0.8+1)))
-    df_pct.plot(kind='barh', stacked=True, ax=ax, color=palette, edgecolor='white', width=0.7)
-    ax.set_xlabel("Ti le (%)", fontsize=11)
-    ax.set_xlim(0, 110)
-    ax.set_title("Bieu do Cot Chong Ngang (%)", fontweight='bold', pad=15)
-    ax.legend(title="Muc do", bbox_to_anchor=(1.01,1), loc='upper left', frameon=False, fontsize=9)
+    fig, ax = plt.subplots(figsize=(max(11, len(df_pct)*1.6), 8))
+    df_pct.plot(kind='bar', stacked=True, ax=ax, color=palette, edgecolor='white', width=0.75)
+    ax.set_xticklabels([truncate_label(l, 25) for l in df_pct.index], rotation=30, ha='right', fontsize=9)
+    ax.set_ylabel("Phần trăm (%)", fontsize=11)
+    ax.set_ylim(0, 115)
+    ax.set_title("Biểu đồ Cột Chồng % (So sánh tỷ trọng)", fontweight='bold', pad=20)
+    ax.legend(title="Mức độ", bbox_to_anchor=(1.02, 1), loc='upper left', frameon=True, fontsize=9)
+    for container in ax.containers:
+        labels_ = [f'{v:.0f}%' if v >= 6 else '' for v in container.datavalues]
+        ax.bar_label(container, labels=labels_, label_type='center', fontsize=9, fontweight='bold')
+    
+    if not is_same_map:
+        add_mapping_legend(fig, ax, all_legend_lines, title="Bảng tra cứu đa biến")
+    plt.tight_layout()
+    return fig
+
+# 7. COT CHONG NGANG
+def plot_stacked_h(df, cols, show_pct=False):
+    counts_list = {}
+    for c in cols:
+        vc = get_value_counts(df[c], top_n=7)
+        counts_list[truncate_label(c, 40)] = vc
+    all_vals = []
+    for vc in counts_list.values():
+        for v in vc.index:
+            if v not in all_vals: all_vals.append(v)
+    col_map = _get_shared_mapping(cols, df)
+    
+    # KIỂM TRA: Xem các cột có dùng chung 1 hệ mapping không?
+    maps = [get_col_mapping(c) for c in cols]
+    is_same_map = all(m == maps[0] for m in maps) if maps else True
+    
+    df_chart = pd.DataFrame({col: vc.reindex(all_vals, fill_value=0) for col, vc in counts_list.items()})
+    
+    if is_same_map:
+        df_chart.index = [col_map.get(str(v), str(v)) for v in all_vals]
+    else:
+        df_chart.index = [str(v) for v in all_vals]
+        all_legend_lines = []
+        for i, c in enumerate(cols):
+            _, lines = apply_col_mapping(all_vals, maps[i])
+            if lines:
+                all_legend_lines.append(f"--- {truncate_label(c, 21)} ---")
+                all_legend_lines.extend(lines)
+
+    totals = df_chart.T.sum(axis=1).replace(0, 1)
+    df_pct = (df_chart.T.div(totals, axis=0) * 100)
+    palette = sns.color_palette(PALETTE_MULTI, len(df_pct.columns))
+    fig, ax = plt.subplots(figsize=(12, max(5, len(df_pct)*0.9+1.5)))
+    df_pct.plot(kind='barh', stacked=True, ax=ax, color=palette, edgecolor='white', width=0.75)
+    ax.set_xlabel("Phần trăm (%)", fontsize=11)
+    ax.set_xlim(0, 115)
+    ax.set_title("Biểu đồ Cột Chồng Ngang (So sánh đa biến)", fontweight='bold', pad=20)
+    ax.legend(title="Mức độ", bbox_to_anchor=(1.02, 1), loc='upper left', frameon=True, fontsize=9)
     ax.invert_yaxis()
     for container in ax.containers:
-        labels_ = [f'{v:.0f}%' if v >= 7 else '' for v in container.datavalues]
+        labels_ = [f'{v:.0f}%' if v >= 6 else '' for v in container.datavalues]
         ax.bar_label(container, labels=labels_, label_type='center', fontsize=9, fontweight='bold')
+    
+    if not is_same_map:
+        add_mapping_legend(fig, ax, all_legend_lines, title="Bảng tra cứu đa biến")
     plt.tight_layout()
     return fig
 
 # 8. DUONG
 def plot_line(df, cols, show_pct=False):
     palette = sns.color_palette(PALETTE_MULTI, len(cols))
-    fig, ax = plt.subplots(figsize=(12, 6))
+    fig, ax = plt.subplots(figsize=(12, 6.5))
     for i, col in enumerate(cols):
         counts = get_value_counts(df[col], top_n=10)
         total = counts.sum() if show_pct and counts.sum() > 0 else 1
-        display_values = (counts.values / total * 100) if show_pct else counts.values
-        
-        labels = [truncate_label(l, 18) for l in counts.index]
-        ax.plot(labels, display_values, marker='o', linewidth=2.2,
-                color=palette[i], label=truncate_label(col, 25))
-        for x, y in zip(labels, display_values):
-            label = f"{y:.1f}%" if show_pct else str(int(y))
-            ax.annotate(label, (x, y), textcoords="offset points",
-                        xytext=(0,8), ha='center', fontsize=9)
-    ax.set_ylabel("Ti le (%)" if show_pct else "So luong phan hoi", fontsize=11)
-    ax.set_title("Bieu do Duong", fontweight='bold', pad=15)
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=35, ha='right', fontsize=9)
-    if len(cols) > 1:
-        ax.legend(bbox_to_anchor=(1.01,1), loc='upper left', frameon=False, fontsize=9)
+        vals = (counts.values / total * 100) if show_pct else counts.values
+        labels = [truncate_label(l, 20) for l in counts.index]
+        ax.plot(labels, vals, marker='o', linewidth=2.5,
+                color=palette[i], label=truncate_label(col, 28))
+    ax.set_ylabel("Tỉ lệ (%)" if show_pct else "Số lượng", fontsize=11)
+    ax.set_title("Biểu đồ Xu hướng / Đường", fontweight='bold', pad=20)
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=30, ha='right', fontsize=9)
+    if len(cols) > 0:
+        ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left', frameon=False, fontsize=9)
     plt.tight_layout()
     return fig
 
 # 9. MIEN
 def plot_area(df, cols, show_pct=False):
     palette = sns.color_palette(PALETTE_MULTI, len(cols))
-    fig, ax = plt.subplots(figsize=(12, 6))
+    fig, ax = plt.subplots(figsize=(12, 6.5))
     all_vals = []
     counts_dict = {}
     for col in cols:
@@ -440,19 +497,19 @@ def plot_area(df, cols, show_pct=False):
         for v in vc.index:
             if v not in all_vals: all_vals.append(v)
     x = range(len(all_vals))
-    labels = [truncate_label(str(v), 18) for v in all_vals]
+    labels = [truncate_label(str(v), 20) for v in all_vals]
     for i, col in enumerate(cols):
         counts = counts_dict[col]
         total = counts.sum() if show_pct and counts.sum() > 0 else 1
         y = [(counts.get(v, 0) / total * 100) if show_pct else counts.get(v, 0) for v in all_vals]
-        ax.fill_between(x, y, alpha=0.35, color=palette[i])
-        ax.plot(x, y, marker='o', linewidth=2, color=palette[i], label=truncate_label(col, 25))
+        ax.fill_between(x, y, alpha=0.3, color=palette[i])
+        ax.plot(x, y, marker='o', linewidth=2, color=palette[i], label=truncate_label(col, 28))
     ax.set_xticks(list(x))
-    ax.set_xticklabels(labels, rotation=35, ha='right', fontsize=9)
-    ax.set_ylabel("Ti le (%)" if show_pct else "So luong phan hoi", fontsize=11)
-    ax.set_title("Bieu do Mien", fontweight='bold', pad=15)
-    if len(cols) > 1:
-        ax.legend(bbox_to_anchor=(1.01,1), loc='upper left', frameon=False, fontsize=9)
+    ax.set_xticklabels(labels, rotation=30, ha='right', fontsize=9)
+    ax.set_ylabel("Tỉ lệ (%)" if show_pct else "Số lượng", fontsize=11)
+    ax.set_title("Biểu đồ Miền (Area Chart)", fontweight='bold', pad=20)
+    if len(cols) > 0:
+        ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left', frameon=False, fontsize=9)
     plt.tight_layout()
     return fig
 

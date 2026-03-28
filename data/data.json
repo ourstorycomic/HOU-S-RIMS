@@ -1,5 +1,5 @@
 {
-  "__comment__": "FILE ĐƯỢC SINH TỰ ĐỘNG - FULL MAPPING",
+  "__comment__": "FILE ĐƯỢC CẬP NHẬT TỰ ĐỘNG TỪ EXCEL KHẢO SÁT SÁCH FINAL",
   "default_likert": {
     "1": "Hoàn toàn không đồng ý",
     "2": "Không đồng ý",
@@ -15,59 +15,59 @@
     "5": "Năm cuối/Khác"
   },
   "Mức độ hiểu biết của bạn về hoạt động nghiên cứu khoa học dành cho sinh viên ngành CNTT tại Trường Đại học Mở Hà Nội là như thế nào?": {
-    "1": "Không biết",
-    "2": "Biết sơ",
-    "3": "Biết cơ bản",
-    "4": "Biết rõ",
-    "5": "Rất rõ"
+    "1": "Hoàn toàn không đồng ý",
+    "2": "Không đồng ý",
+    "3": "Phân vân",
+    "4": "Đồng ý",
+    "5": "Hoàn toàn đồng ý"
   },
   "Mức độ bạn đánh giá tầm quan trọng của hoạt động nghiên cứu khoa học đối với sinh viên ngành CNTT là như thế nào?": {
-    "1": "Hoàn toàn không quan trọng",
-    "2": "Không quan trọng",
-    "3": "Bình thường",
-    "4": "Quan trọng",
-    "5": "Rất quan trọng"
-  },
-  "Mức độ mong muốn của bạn trong việc tham gia hoạt động nghiên cứu khoa học ngành CNTT trong thời gian tới là như thế nào?": {
     "1": "Hoàn toàn không đồng ý",
     "2": "Không đồng ý",
     "3": "Phân vân",
     "4": "Đồng ý",
     "5": "Hoàn toàn đồng ý"
   },
-  "Bạn đã từng tham gia đề tài NCKH thuộc lĩnh vực CNTT tại trường chưa?": {
-    "0": "Chưa từng",
-    "1": "Đã từng"
-  },
-  "[Bạn có gặp khó khăn về thời gian khi tham gia NCKH không? (Do lịch học, công việc cá nhân, học thêm,...)]": {
+  "Mức độ mong 4 của bạn trong việc tham gia hoạt động nghiên cứu khoa học ngành CNTT trong thời gian tới là như thế nào?": {
     "1": "Hoàn toàn không đồng ý",
     "2": "Không đồng ý",
     "3": "Phân vân",
     "4": "Đồng ý",
     "5": "Hoàn toàn đồng ý"
   },
-  "[Bạn có gặp khó khăn về thiết bị, phần mềm, tài liệu chuyên ngành khi làm đề tài không?]": {
+  "Bạn 1 đề tài nghiên cứu khoa học thuộc lĩnh vực CNTT tại trường chưa?": {
+    "0": "Không",
+    "1": "Có"
+  },
+  " [Bạn có gặp khó khăn về thời gian khi tham gia NCKH không? (Do lịch học, công việc cá nhân, học thêm,...)]": {
     "1": "Hoàn toàn không đồng ý",
     "2": "Không đồng ý",
     "3": "Phân vân",
     "4": "Đồng ý",
     "5": "Hoàn toàn đồng ý"
   },
-  "[Bạn có được giảng viên ngành CNTT hướng dẫn kỹ trong quá trình làm NCKH không?]": {
+  " [Bạn có gặp khó khăn về thiết bị, phần mềm, tài liệu chuyên ngành khi làm đề tài không?]": {
     "1": "Hoàn toàn không đồng ý",
     "2": "Không đồng ý",
     "3": "Phân vân",
     "4": "Đồng ý",
     "5": "Hoàn toàn đồng ý"
   },
-  "[Bạn có thấy hoạt động NCKH ở trường được truyền thông và giới thiệu đầy đủ đến sinh viên ngành CNTT không?]": {
+  " [Bạn có được giảng viên ngành CNTT hướng dẫn kỹ trong quá trình làm NCKH không?]": {
     "1": "Hoàn toàn không đồng ý",
     "2": "Không đồng ý",
     "3": "Phân vân",
     "4": "Đồng ý",
     "5": "Hoàn toàn đồng ý"
   },
-  "[Theo bạn, tâm lý sợ khó, sợ thất bại có ảnh hưởng đến việc sinh viên CNTT không tham gia NCKH không?]": {
+  " [Bạn có thấy hoạt động NCKH ở trường được truyền thông và giới thiệu đầy đủ đến sinh viên ngành CNTT không?]": {
+    "1": "Hoàn toàn không đồng ý",
+    "2": "Không đồng ý",
+    "3": "Phân vân",
+    "4": "Đồng ý",
+    "5": "Hoàn toàn đồng ý"
+  },
+  " [Theo bạn, tâm lý sợ khó, sợ thất bại có ảnh hưởng đến việc sinh viên CNTT không tham gia NCKH không?]": {
     "1": "Hoàn toàn không đồng ý",
     "2": "Không đồng ý",
     "3": "Phân vân",
@@ -82,11 +82,11 @@
     "5": "Hoàn toàn đồng ý"
   },
   "Trường/Khoa có tổ chức lớp tập huấn kỹ năng NCKH cho sinh viên CNTT không?": {
-    "1": "Không bao giờ",
-    "2": "Hiếm khi",
-    "3": "Thỉnh thoảng",
-    "4": "Thường xuyên",
-    "5": "Rất thường xuyên"
+    "1": "Hoàn toàn không đồng ý",
+    "2": "Không đồng ý",
+    "3": "Phân vân",
+    "4": "Đồng ý",
+    "5": "Hoàn toàn đồng ý"
   },
   "Bạn có nhận được sự hỗ trợ từ các CLB học thuật ngành CNTT trong quá trình nghiên cứu không?": {
     "1": "Hoàn toàn không đồng ý",
@@ -109,56 +109,56 @@
     "4": "Đồng ý",
     "5": "Hoàn toàn đồng ý"
   },
-  "[Sau khi tham gia NCKH, bạn cảm thấy kỹ năng chuyên ngành (lập trình, thiết kế hệ thống, làm việc nhóm...) có cải thiện không?]": {
+  " [Sau khi tham gia NCKH, bạn cảm thấy kỹ năng chuyên ngành (lập trình, thiết kế hệ thống, làm việc nhóm...) có cải thiện không?]": {
     "1": "Hoàn toàn không đồng ý",
     "2": "Không đồng ý",
     "3": "Phân vân",
     "4": "Đồng ý",
     "5": "Hoàn toàn đồng ý"
   },
-  "[Bạn cảm thấy tự tin hơn trong học tập hoặc trình bày ý tưởng sau khi tham gia NCKH không?]": {
+  " [Bạn cảm thấy tự tin hơn trong học tập hoặc trình bày ý tưởng sau khi tham gia NCKH không?]": {
     "1": "Hoàn toàn không đồng ý",
     "2": "Không đồng ý",
     "3": "Phân vân",
     "4": "Đồng ý",
     "5": "Hoàn toàn đồng ý"
   },
-  "[Việc tham gia NCKH giúp bạn tăng cơ hội nhận học bổng, thực tập hoặc du học không?]": {
+  " [Việc tham gia NCKH giúp bạn tăng cơ hội nhận học bổng, thực tập hoặc du học không?]": {
     "1": "Hoàn toàn không đồng ý",
     "2": "Không đồng ý",
     "3": "Phân vân",
     "4": "Đồng ý",
     "5": "Hoàn toàn đồng ý"
   },
-  "[NCKH có ảnh hưởng tích cực đến định hướng nghề nghiệp tương lai của bạn trong ngành CNTT không?]": {
+  " [NCKH có ảnh hưởng tích cực đến định hướng nghề nghiệp tương lai của bạn trong ngành CNTT không?]": {
     "1": "Hoàn toàn không đồng ý",
     "2": "Không đồng ý",
     "3": "Phân vân",
     "4": "Đồng ý",
     "5": "Hoàn toàn đồng ý"
   },
-  "[Bạn có 4 được hướng dẫn làm đề tài từ giảng viên theo mô hình cố vấn cá nhân (mentor) không?]": {
+  " [Bạn có 4 được hướng dẫn làm đề tài từ giảng viên theo mô hình cố vấn cá nhân (mentor) không?]": {
     "1": "Hoàn toàn không đồng ý",
     "2": "Không đồng ý",
     "3": "Phân vân",
     "4": "Đồng ý",
     "5": "Hoàn toàn đồng ý"
   },
-  "[Bạn có 4 đề tài nghiên cứu khoa học gắn với thực tiễn hoặc doanh nghiệp trong ngành CNTT không?]": {
+  " [Bạn có 4 đề tài nghiên cứu khoa học gắn với thực tiễn hoặc doanh nghiệp trong ngành CNTT không?]": {
     "1": "Hoàn toàn không đồng ý",
     "2": "Không đồng ý",
     "3": "Phân vân",
     "4": "Đồng ý",
     "5": "Hoàn toàn đồng ý"
   },
-  "[Bạn có mong 4 được hợp tác với sinh viên các ngành 5 để cùng làm đề tài liên ngành không?]": {
+  " [Bạn có mong 4 được hợp tác với sinh viên các ngành 5 để cùng làm đề tài liên ngành không?]": {
     "1": "Hoàn toàn không đồng ý",
     "2": "Không đồng ý",
     "3": "Phân vân",
     "4": "Đồng ý",
     "5": "Hoàn toàn đồng ý"
   },
-  "[Bạn có 4 với việc cần có một hệ thống quản lý đề tài NCKH trực tuyến dành cho sinh viên?]": {
+  " [Bạn có 4 với việc cần có một hệ thống quản lý đề tài NCKH trực tuyến dành cho sinh viên?]": {
     "1": "Hoàn toàn không đồng ý",
     "2": "Không đồng ý",
     "3": "Phân vân",
@@ -7300,379 +7300,5 @@
   "Theo bạn, Nhà trường/Khoa nên làm gì để quy trình từ ý tưởng → đề tài → sản phẩm NCKH được hỗ trợ hiệu quả hơn? - ….1": {
     "0": "Không",
     "1": "Có"
-  },
-  "thủ tục đăng ký đề tài NCKH ở Khoa CNTT có đơn giản không?": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "__gv_survey__": "=== KHẢO SÁT GIẢNG VIÊN HƯỚNG DẪN NCKH SV & ỨNG DỤNG CNTT (HOU) ===",
-  "Giới tính": {
-    "Nam": "Nam",
-    "Nữ": "Nữ"
-  },
-  "Học vị/Học hàm": {
-    "Cử nhân/Kỹ sư": "Cử nhân / Kỹ sư",
-    "ThS": "Thạc sĩ (ThS)",
-    "TS": "Tiến sĩ (TS)",
-    "PGS": "Phó Giáo sư (PGS)",
-    "GS": "Giáo sư (GS)"
-  },
-  "Đơn vị công tác": {
-    "Khoa Kinh tế": "Khoa Kinh tế",
-    "Khoa Tài chính Ngân hàng": "Khoa Tài chính Ngân hàng",
-    "Khoa Tạo dáng công nghiệp": "Khoa Tạo dáng công nghiệp",
-    "Khoa Luật": "Khoa Luật",
-    "Viện Công nghệ Sinh học & Công nghệ thực phẩm": "Viện Công nghệ Sinh học & Công nghệ thực phẩm",
-    "Khoa Công nghệ Thông tin": "Khoa Công nghệ Thông tin",
-    "Khoa Điện - Điện tử": "Khoa Điện - Điện tử",
-    "Khoa Du lịch": "Khoa Du lịch",
-    "Khoa Tiếng Anh": "Khoa Tiếng Anh",
-    "Khoa Tiếng Trung Quốc": "Khoa Tiếng Trung Quốc",
-    "Khoa Đào tạo cơ bản": "Khoa Đào tạo cơ bản"
-  },
-  "Thâm niên giảng dạy": {
-    "<5": "Dưới 5 năm",
-    "5–9": "5 – 9 năm",
-    "10–14": "10 – 14 năm",
-    "≥15": "Từ 15 năm trở lên"
-  },
-  "Số SV đang hướng dẫn NCKH trong kỳ hiện tại": {
-    "0": "Không hướng dẫn SV nào",
-    "1–2": "1 – 2 sinh viên",
-    "3–5": "3 – 5 sinh viên",
-    ">5": "Hơn 5 sinh viên"
-  },
-  "GioTinh": {
-    "Nam": "Nam",
-    "Nữ": "Nữ"
-  },
-  "HocVi": {
-    "Cử nhân/Kỹ sư": "Cử nhân / Kỹ sư",
-    "ThS": "Thạc sĩ (ThS)",
-    "TS": "Tiến sĩ (TS)",
-    "PGS": "Phó Giáo sư (PGS)",
-    "GS": "Giáo sư (GS)"
-  },
-  "Khoa": {
-    "Khoa Kinh tế": "Khoa Kinh tế",
-    "Khoa Tài chính Ngân hàng": "Khoa Tài chính Ngân hàng",
-    "Khoa Tạo dáng công nghiệp": "Khoa Tạo dáng công nghiệp",
-    "Khoa Luật": "Khoa Luật",
-    "Viện Công nghệ Sinh học & Công nghệ thực phẩm": "Viện Công nghệ Sinh học & Công nghệ thực phẩm",
-    "Khoa Công nghệ Thông tin": "Khoa Công nghệ Thông tin",
-    "Khoa Điện - Điện tử": "Khoa Điện - Điện tử",
-    "Khoa Du lịch": "Khoa Du lịch",
-    "Khoa Tiếng Anh": "Khoa Tiếng Anh",
-    "Khoa Tiếng Trung Quốc": "Khoa Tiếng Trung Quốc",
-    "Khoa Đào tạo cơ bản": "Khoa Đào tạo cơ bản"
-  },
-  "ThamNien": {
-    "<5": "Dưới 5 năm",
-    "5–9": "5 – 9 năm",
-    "10–14": "10 – 14 năm",
-    "≥15": "Từ 15 năm trở lên"
-  },
-  "SoSV_dang_HD": {
-    "0": "Không hướng dẫn SV nào",
-    "1–2": "1 – 2 sinh viên",
-    "3–5": "3 – 5 sinh viên",
-    ">5": "Hơn 5 sinh viên"
-  },
-  "Đánh giá mức độ đồng ý với các phát biểu sau: [Thầy/Cô thường xuyên dùng công cụ quản lý tài liệu tham khảo (Zotero/ Mendeley/ EndNote) khi hướng dẫn SV.]": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "Đánh giá mức độ đồng ý với các phát biểu sau: [Thầy/Cô thường xuyên dùng công cụ kiểm tra đạo văn (Turnitin/iThenticate) trong quy trình hướng dẫn.]": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "Đánh giá mức độ đồng ý với các phát biểu sau: [Thầy/Cô thường xuyên dùng nền tảng soạn thảo cộng tác (Google Docs/ Overleaf/ Microsoft 365) với SV để chỉnh sửa đề cương, báo cáo.]": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "Đánh giá mức độ đồng ý với các phát biểu sau: [Thầy/Cô thường xuyên theo dõi tiến độ đề tài qua công cụ quản lý dự án (Trello/ Asana/ Notion/Jira).]": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "Đánh giá mức độ đồng ý với các phát biểu sau: [Thầy/Cô thường xuyên hướng dẫn sinh viên sử dụng công cụ số để thu thập dữ liệu khảo sát (Google Forms/ Qualtrics)]": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "Đánh giá mức độ đồng ý với các phát biểu sau: [Thầy/Cô thường xuyên hướng dẫn SV phân tích dữ liệu bằng phần mềm chuyên biệt (Excel/ SPSS/R/ Python/ Power BI).]": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "Đánh giá mức độ đồng ý với các phát biểu sau: [Thầy/Cô thường xuyên dùng hệ thống quản lý học tập (LMS - Moodle/ Canvas) để giao nhiệm vụ, phản hồi và lưu trữ kết quả hướng dẫn.]": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "Đánh giá mức độ đồng ý với các phát biểu sau: [Thầy/Cô có sử dụng AI hỗ trợ (ví dụ ChatGPT/Copilot) một cách có kiểm soát và minh bạch trong hướng dẫn.]": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "Đánh giá mức độ đồng ý với các phát biểu sau: [Việc tăng cường/ duy trì ứng dụng CNTT là cần thiết để nâng cao chất lượng sản phẩm nghiên cứu của SV.]": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "Đánh giá mức độ đồng ý với các phát biểu sau: [Việc sử dụng CNTT là cấp thiết để tối ưu hóa quy trình làm việc và rút ngắn thời gian quản lý đề tài.]": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "Đánh giá mức độ đồng ý với các phát biểu sau: [Ứng dụng CNTT là yếu tố bắt buộc để đảm bảo tính minh bạch và liêm chính học thuật (kiểm tra đạo văn, trích dẫn) trong hướng dẫn.]": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "Đánh giá mức độ đồng ý với các phát biểu sau: [Để bắt kịp xu thế chuyển đổi số và đáp ứng mong đợi của sinh viên, thầy/ cô cần phải tích hợp các công cụ số mới vào quy trình hướng dẫn.]": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "Đánh giá mức độ đồng ý với các phát biểu sau: [Thầy/cô dự định sẽ duy trì hoặc mở rộng mức độ ứng dụng CNTT trong các hoạt động hướng dẫn NCKH SV sắp tới.]": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "[Nhà trường cung cấp tài khoản/ hạ tầng/ bản quyền các công cụ cần thiết (phần mềm, kho tài liệu số) đủ cho công việc hướng dẫn.]": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "[Thầy/cô nhận được sự hỗ trợ kỹ thuật kịp thời khi gặp trục trặc trong quá trình sử dụng hệ thống/ nền tảng số.]": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "[Hiện tại, đơn vị công tác của Thầy/cô đã có quy trình chuẩn cho hướng dẫn NCKH SV trên nền tảng số.]": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "[Cơ chế khuyến khích/ghi nhận (giờ định mức, kinh phí, khen thưởng) đối với hoạt động hướng dẫn NCKH có ứng dụng CNTT đã được quy định  rõ ràng và thỏa đáng.]": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "[Thiếu thời gian do khối lượng công việc lớn khiến thày/ cô khó áp dụng CNTT trong hướng dẫn.]": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "[Thiếu kỹ năng số khiến thầy/cô ngại sử dụng/khai thác hết tiềm năng của công cụ mới.]": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "[Thủ tục hành chính (đăng ký, nghiệm thu) phức tạp làm thầy/ cô nản khi chuyển đổi quy trình sang nền tảng số.]": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "[Chi phí/bản quyền công cụ quá cao hoặc không được cấp khiến thầy/ cô không thể duy trì việc ứng dụng.]": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "Muc_Do_SD_CongCu_QL_TLTK": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "Muc_Do_SD_CongCu_KT_Dao_Van": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "Muc_Do_SD_nen_tang_soan_thao_cong_tac": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "Muc_Do_SD_Cong_cu_QL_DuAn": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "Muc_Do_SD_Cong_cu_so_thu_thap_dl_khao_sat": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "Muc_Do_SD_PM_chuyen_biet_phan_tich_dl": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "Muc_Do_SD_PM_QL_hoc_tap_luu_kq_huong_dan": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "Muc_Do_SD_AI_ho_tro": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "Viec_UD_CNTT_la_can_thiet_de_nang_cao_chat_luong": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "Viec_UD_CNTT_la_can_thiet_de_toi_uu_hoa_quy_trinh": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "UD_CNTT_la_bat_buoc_de_liem_chinh_hoc_thuat": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "Can_tich_hop_cong_cu_so_moi_vao_quy_trinh_hd": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "thay_co_du_dinh_se_duy_tri_hoac_mo_rong_muc_do_ung_dung_cntt_trong_cac_hoat_dong_huong_dan_nckh_sv_sap_toi": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "nha_truong_cung_cap_tai_khoan_ha_tang_ban_quyen_cac_cong_cu_can_thiet_phan_mem_kho_tai_lieu_so_du_cho_cong_viec_huong_dan": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "thay_co_nhan_duoc_su_ho_tro_ky_thuat_kip_thoi_khi_gap_truc_trac_trong_qua_trinh_su_dung_he_thong_nen_tang_so": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "hien_tai_don_vi_cong_tac_cua_thay_co_da_co_quy_trinh_chuan_cho_huong_dan_nckh_sv_tren_nen_tang_so": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "co_che_khuyen_khich_ghi_nhan_gio_dinh_muc_kinh_phi_khen_thuong_doi_voi_hoat_dong_huong_dan_nckh_co_ung_dung_cntt_da_duoc_quy_dinh_ro_rang_va_thoa_dang": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "thieu_thoi_gian_do_khoi_luong_cong_viec_lon_khien_thay_co_kho_ap_dung_cntt_trong_huong_dan": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "thieu_ky_nang_so_khien_thay_co_ngai_su_dung_khai_thac_het_tiem_nang_cua_cong_cu_moi": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "thu_tuc_hanh_chinh_dang_ky_nghiem_thu_phuc_tap_lam_thay_co_nan_khi_chuyen_doi_quy_trinh_sang_nen_tang_so": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
-  },
-  "chi_phi_ban_quyen_cong_cu_qua_cao_hoac_khong_duoc_cap_khien_thay_co_khong_the_duy_tri_viec_ung_dung": {
-    "1": "Hoàn toàn không đồng ý",
-    "2": "Không đồng ý",
-    "3": "Phân vân / Trung lập",
-    "4": "Đồng ý",
-    "5": "Hoàn toàn đồng ý"
   }
 }

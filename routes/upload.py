@@ -46,7 +46,9 @@ def api_upload():
             "message": "Upload thành công",
             "dataset_id": new_name,
             "original_filename": filename,
-            "columns": cols
+            "columns": cols,
+            "row_count": len(df),
+            "col_count": len(df.columns)
         })
 
     except Exception as e:

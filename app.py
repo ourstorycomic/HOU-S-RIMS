@@ -4,7 +4,7 @@ from routes import init_routes
 from dotenv import load_dotenv
 import os
 
-load_dotenv()
+load_dotenv(override=True)
 
 # Chuyển về thư mục chuẩn 'templates' và 'static'
 app = Flask(__name__, template_folder='templates', static_folder='static')

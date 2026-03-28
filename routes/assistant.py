@@ -13,38 +13,42 @@ def api_assistant():
         cols = data.get("cols", [])
         if not cols and data.get("selected_col"): cols = [data.get("selected_col")]
         
-        # Đọc dữ liệu nhanh
+        # Đọc dữ liệu nhanh và tạo tóm tắt chi tiết cho AI
         stats = ""
         dataset_id = data.get("dataset_id")
         if dataset_id:
             path = os.path.join(os.getcwd(), 'uploads', dataset_id)
             if not os.path.exists(path):
-                if os.path.exists(path+'.xlsx'): path+='.xlsx'
-                elif os.path.exists(path+'.csv'): path+='.csv'
+                for ext in ['.xlsx', '.csv', '.sav']:
+                    if os.path.exists(path + ext): path += ext; break
             
             if os.path.exists(path):
                 if path.endswith('.csv'): df = pd.read_csv(path)
+                elif path.endswith('.sav'): 
+                    import pyreadstat
+                    df, _ = pyreadstat.read_sav(path)
                 else: df = pd.read_excel(path, engine='openpyxl')
                 
-                # Tóm tắt 3 cột đầu
-                for c in cols[:3]:
+                # Tóm tắt các cột quan trọng (tối đa 5 cột)
+                target_cols = cols if cols else df.columns[:5]
+                for c in target_cols[:5]:
                     if c in df.columns:
-                        s = df[c].astype(str).value_counts().head(5)
-                        stats += f"\n- {c}: " + ", ".join([f"{k}({v})" for k,v in s.items()])
+                        counts = df[c].value_counts().head(5)
+                        total = len(df)
+                        stats += f"\n- Biến '{c}': " + ", ".join([f"{k} (n={v}, {v/total*100:.1f}%)" for k,v in counts.items()])
 
-        # Gọi logic xử lý
-        prompt = f"{data.get('prompt','')}\nDữ liệu:\n{stats}"
-        reply = generate_insights("Bạn là trợ lý NCKH chuyên nghiệp. Phân tích nội dung.", prompt, data.get("model"))
+        # Gọi logic xử lý với Prompt giàu ngữ cảnh
+        base_prompt = data.get('prompt','')
+        full_prompt = f"{base_prompt}\n\nDỮ LIỆU THỐNG KÊ CHI TIẾT:\n{stats}\n\n(Yêu cầu: Phân tích sâu sắc, dùng văn phong NCKH chuẩn mực)"
+        reply = generate_insights("Bạn là một Chuyên gia phân tích dữ liệu cao cấp. Hãy đưa ra các nhận xét chuyên môn, logic và thực tiễn.", full_prompt, data.get("model"))
         
         # Tách gợi ý câu hỏi liên quan
         suggestions = []
         if "///" in reply:
             parts = reply.split("///")
-            reply = parts[0].strip() # Nội dung chính
-            # Lấy phần gợi ý
+            reply = parts[0].strip()
             if len(parts) > 1:
-                raw_sug = parts[1]
-                suggestions = [s.strip() for s in re.split(r'[|\n]', raw_sug) if s.strip()]
+                suggestions = [s.strip() for s in re.split(r'[|\n]', parts[1]) if s.strip()]
 
         return jsonify({"reply": reply, "suggestions": suggestions})
     except Exception as e:
