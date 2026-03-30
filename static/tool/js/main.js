@@ -129,6 +129,8 @@ function openMultiModal(type) {
         'grouped': { title: 'Cột Ghép nhóm – chọn nhiều cột', btn: 'Vẽ ngay' },
         'stacked': { title: 'Cột Chồng Dọc – chọn nhiều cột', btn: 'Vẽ ngay' },
         'stacked_h': { title: 'Cột Chồng Ngang – chọn nhiều cột', btn: 'Vẽ ngay' },
+        'line': { title: 'Biểu đồ Đường (So sánh nhiều cột)', btn: 'Vẽ ngay' },
+        'area': { title: 'Biểu đồ Miền (So sánh nhiều cột)', btn: 'Vẽ ngay' },
         'reliability': { title: 'Độ tin cậy Cronbach\'s Alpha (Chọn các mục)', btn: 'Tính toán' },
         'correlation': { title: 'Tương quan Pearson (Chọn các cột)', btn: 'Tính toán' },
         'regression': { title: 'Hồi quy (Cột 1: Biến phụ thuộc, còn lại: Độc lập)', btn: 'Chạy hồi quy' },
@@ -178,10 +180,15 @@ function applyMulti() {
     const arr = Array.from(selectedMultiCols);
     // Đọc từ cả window.tempChartType (set bởi override trong HTML) lẫn biến let
     const chartType = window.tempChartType || tempChartType;
-    const multiColTypes = ['grouped', 'stacked', 'stacked_h'];
+    const multiColTypes = ['grouped', 'stacked', 'stacked_h', 'line', 'area'];
     if (arr.length < 1) return alert("Chọn ít nhất 1 cột!");
-    if (multiColTypes.includes(chartType) && arr.length < 2)
-        return alert("Biểu đồ so sánh cần chọn ít nhất 2 cột!");
+    if (multiColTypes.includes(chartType) && arr.length < 2) {
+        if (['line', 'area'].includes(chartType)) {
+            // Cho phép vẽ biểu đồ đơn nếu chỉ chọn 1 cột cho line/area
+        } else {
+            return alert("Biểu đồ so sánh cần chọn ít nhất 2 cột!");
+        }
+    }
         
     // Chặn biểu đồ đơn khi chọn nhiều cột
     const singleColTypes = ['pie', 'donut'];

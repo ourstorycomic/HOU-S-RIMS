@@ -58,12 +58,12 @@ def run_advanced_analysis(df, cols):
         
         if s1.nunique() < 20 and s2.nunique() < 20:
             crosstab = pd.crosstab(s1, s2)
-            output.append(f"\n>>> Bảng chéo (Crosstab) giữa [{col1}] và [{col2}]:")
+            output.append(f"\n>>> Bảng chéo [{col1}] và [{col2}]:")
             output.append(crosstab.to_string())
             
             try:
                 chi2, p, dof, expected = stats.chi2_contingency(crosstab)
-                sig = "SIGNIFICANT (Có ý nghĩa)" if p < 0.05 else "NOT SIGNIFICANT (Không ý nghĩa)"
+                sig = "có nghĩa" if p < 0.05 else "ko ý nghĩa"
                 star = "***" if p < 0.001 else ("**" if p < 0.01 else ("*" if p < 0.05 else ""))
                 
                 output.append(f"\n>>> KIỂM ĐỊNH PEARSON CHI-SQUARE:")

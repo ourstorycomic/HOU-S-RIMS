@@ -287,10 +287,16 @@ def plot_pie(df, cols, show_pct=False):
     col_map = get_col_mapping(col)
     short_codes, legend_lines = apply_col_mapping(counts.index, col_map)
     display_labels = [col_map.get(str(code), str(code)) for code in short_codes]
+    total = counts.sum()
+    def pct_func(pct):
+        if show_pct: return f'{pct:.1f}%'
+        val = int(round(pct * total / 100.0))
+        return str(val) if val > 0 else ""
+
     palette = sns.color_palette(PALETTE_MULTI, len(counts))
     fig, ax = plt.subplots(figsize=(10, 7))
     wedges, texts, autotexts = ax.pie(
-        counts.values, labels=None, autopct='%1.1f%%',
+        counts.values, labels=None, autopct=pct_func,
         startangle=90, colors=palette,
         pctdistance=0.78, wedgeprops={'edgecolor':'white','linewidth':1.5})
     for at in autotexts:
@@ -298,6 +304,7 @@ def plot_pie(df, cols, show_pct=False):
     ax.legend(wedges, [f"{truncate_label(l,35)} ({int(v)})" for l,v in zip(display_labels, counts.values)],
               loc='center left', bbox_to_anchor=(1, 0.5), frameon=False, fontsize=9)
     ax.set_title(truncate_label(col, 60), fontweight='bold', pad=20)
+    add_mapping_legend(fig, ax, legend_lines)
     plt.tight_layout()
     return fig
 
@@ -308,10 +315,16 @@ def plot_donut(df, cols, show_pct=False):
     col_map = get_col_mapping(col)
     short_codes, legend_lines = apply_col_mapping(counts.index, col_map)
     display_labels = [col_map.get(str(code), str(code)) for code in short_codes]
+    total = counts.sum()
+    def pct_func(pct):
+        if show_pct: return f'{pct:.1f}%'
+        val = int(round(pct * total / 100.0))
+        return str(val) if val > 0 else ""
+
     palette = sns.color_palette(PALETTE_MULTI, len(counts))
     fig, ax = plt.subplots(figsize=(10, 7))
     wedges, texts, autotexts = ax.pie(
-        counts.values, labels=None, autopct='%1.1f%%',
+        counts.values, labels=None, autopct=pct_func,
         startangle=90, colors=palette,
         pctdistance=0.80, wedgeprops={'edgecolor':'white','linewidth':2,'width':0.55})
     for at in autotexts:
@@ -320,6 +333,7 @@ def plot_donut(df, cols, show_pct=False):
     ax.legend(wedges, [f"{truncate_label(l,35)} ({int(v)})" for l,v in zip(display_labels, counts.values)],
               loc='center left', bbox_to_anchor=(1, 0.5), frameon=False, fontsize=9)
     ax.set_title(truncate_label(col, 60), fontweight='bold', pad=20)
+    add_mapping_legend(fig, ax, legend_lines)
     plt.tight_layout()
     return fig
 
@@ -407,10 +421,19 @@ def plot_stacked(df, cols, show_pct=False):
     ax.set_xticklabels([truncate_label(l, 25) for l in df_pct.index], rotation=30, ha='right', fontsize=9)
     ax.set_ylabel("Phần trăm (%)", fontsize=11)
     ax.set_ylim(0, 115)
-    ax.set_title("Biểu đồ Cột Chồng % (So sánh tỷ trọng)", fontweight='bold', pad=20)
+    ax.set_title("Biểu đồ Cột Chồng (So sánh tỷ trọng)", fontweight='bold', pad=20)
     ax.legend(title="Mức độ", bbox_to_anchor=(1.02, 1), loc='upper left', frameon=True, fontsize=9)
+    
+    # Lấy thông tin counts gốc để ghi đè label nếu không phải %
     for container in ax.containers:
-        labels_ = [f'{v:.0f}%' if v >= 6 else '' for v in container.datavalues]
+        if show_pct:
+            labels_ = [f'{v:.0f}%' if v >= 6 else '' for v in container.datavalues]
+        else:
+            labels_ = []
+            # zip sẽ tự động lấy đúng cặp dữ liệu giữa phần trăm và tổng số của mỗi thanh
+            for v_pct, total_n in zip(container.datavalues, totals):
+                val_n = int(round(v_pct * total_n / 100.0))
+                labels_.append(str(val_n) if val_n > 0 else "")
         ax.bar_label(container, labels=labels_, label_type='center', fontsize=9, fontweight='bold')
     
     if not is_same_map:
@@ -457,8 +480,15 @@ def plot_stacked_h(df, cols, show_pct=False):
     ax.set_title("Biểu đồ Cột Chồng Ngang (So sánh đa biến)", fontweight='bold', pad=20)
     ax.legend(title="Mức độ", bbox_to_anchor=(1.02, 1), loc='upper left', frameon=True, fontsize=9)
     ax.invert_yaxis()
+    
     for container in ax.containers:
-        labels_ = [f'{v:.0f}%' if v >= 6 else '' for v in container.datavalues]
+        if show_pct:
+            labels_ = [f'{v:.0f}%' if v >= 6 else '' for v in container.datavalues]
+        else:
+            labels_ = []
+            for v_pct, total_n in zip(container.datavalues, totals):
+                val_n = int(round(v_pct * total_n / 100.0))
+                labels_.append(str(val_n) if val_n > 0 else "")
         ax.bar_label(container, labels=labels_, label_type='center', fontsize=9, fontweight='bold')
     
     if not is_same_map:
@@ -482,6 +512,30 @@ def plot_line(df, cols, show_pct=False):
     ax.set_xticklabels(ax.get_xticklabels(), rotation=30, ha='right', fontsize=9)
     if len(cols) > 0:
         ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left', frameon=False, fontsize=9)
+    
+    # GHI CHÚ MAPPING (CHÚ GIẢI)
+    maps = [get_col_mapping(c) for c in cols]
+    is_same_map = all(m == maps[0] for m in maps) if maps else True
+    all_legend_lines = []
+    if is_same_map and maps[0]:
+        # Lấy nhãn từ tất cả giá trị xuất hiện trong các cột
+        all_indices = []
+        for col in cols:
+            all_indices.extend(list(df[col].dropna().unique()))
+        all_indices = list(set(all_indices))
+        _, legend_lines = apply_col_mapping(all_indices, maps[0])
+        add_mapping_legend(fig, ax, legend_lines)
+    else:
+        for i, c in enumerate(cols):
+            if maps[i]:
+                indices = list(df[c].dropna().unique())
+                _, lines = apply_col_mapping(indices, maps[i])
+                if lines:
+                    all_legend_lines.append(f"--- {truncate_label(c, 20)} ---")
+                    all_legend_lines.extend(lines)
+        if all_legend_lines:
+            add_mapping_legend(fig, ax, all_legend_lines, title="Bảng tra cứu đa biến")
+
     plt.tight_layout()
     return fig
 
@@ -510,6 +564,28 @@ def plot_area(df, cols, show_pct=False):
     ax.set_title("Biểu đồ Miền (Area Chart)", fontweight='bold', pad=20)
     if len(cols) > 0:
         ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left', frameon=False, fontsize=9)
+    
+    # GHI CHÚ MAPPING (CHÚ GIẢI)
+    maps = [get_col_mapping(c) for c in cols]
+    is_same_map = all(m == maps[0] for m in maps) if maps else True
+    all_legend_lines = []
+    if is_same_map and maps[0]:
+        all_indices = []
+        for col in cols: all_indices.extend(list(df[col].dropna().unique()))
+        all_indices = list(set(all_indices))
+        _, legend_lines = apply_col_mapping(all_indices, maps[0])
+        add_mapping_legend(fig, ax, legend_lines)
+    else:
+        for i, c in enumerate(cols):
+            if maps[i]:
+                indices = list(df[c].dropna().unique())
+                _, lines = apply_col_mapping(indices, maps[i])
+                if lines:
+                    all_legend_lines.append(f"--- {truncate_label(c, 20)} ---")
+                    all_legend_lines.extend(lines)
+        if all_legend_lines:
+            add_mapping_legend(fig, ax, all_legend_lines, title="Bảng tra cứu đa biến")
+
     plt.tight_layout()
     return fig
 

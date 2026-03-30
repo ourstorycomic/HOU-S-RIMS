@@ -1,5 +1,12 @@
 // assets/js/script.js
+
+// Hàm đóng/mở sidebar trên mobile
+function toggleSidebar() {
+    document.body.classList.toggle('sidebar-open');
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+
     console.log("HOU S-RIMS Scripts Loaded Successfully!");
     
     // Khởi tạo tất cả Tooltip của Bootstrap (nếu có sử dụng data-bs-toggle="tooltip")

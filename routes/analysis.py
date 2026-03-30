@@ -59,15 +59,16 @@ def api_descriptive():
         return jsonify({"error": "Dataset not found"}), 404
         
     df = DATASETS[dataset_id]['df']
+    # Tính toán thống kê cơ bản (Mean, Std, Min, Max)
     stats_df = df[cols].describe().round(3)
     
-    # Thêm variance, kurtosis, skewness nếu cần chuyên nghiệp hơn
     more_stats = pd.DataFrame({
-        "variance": df[cols].var(),
-        "skewness": df[cols].skew(),
-        "kurtosis": df[cols].kurtosis()
+        "variance": df[cols].var(), # Phương sai
+        "skewness": df[cols].skew(), # Độ lệch chuẩn
+        "kurtosis": df[cols].kurtosis() # Độ nhọn
     }).T.round(3)
     
+    # Gộp kết quả để trả về API
     full_stats = pd.concat([stats_df, more_stats])
     
     return jsonify({

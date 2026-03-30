@@ -37,13 +37,52 @@
         bottom: 30px;
         right: 30px;
     }
+
+    /* MOBILE RESPONSIVE CHO TRANG PHÂN TÍCH */
+    @media (max-width: 991.98px) {
+        body {
+            overflow: auto; /* Cho phép cuộn trang trên mobile */
+        }
+        .tool-wrapper {
+            height: auto;
+            padding: 10px;
+        }
+        .plot-card {
+            min-height: 300px;
+            padding: 10px;
+        }
+        .chat-interface {
+            width: 90vw;
+            height: 80vh;
+            right: -20px;
+            bottom: 70px;
+        }
+        .top-bar {
+            height: auto;
+            min-height: 60px;
+            flex-wrap: wrap;
+            padding: 10px 15px;
+            gap: 10px;
+        }
+        .top-actions {
+            width: 100%;
+            justify-content: space-between;
+        }
+        .file-status {
+            font-size: 12px;
+        }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="top-bar">
     <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-light border-0 d-lg-none me-2" onclick="toggleSidebar()">
+            <i class="fa-solid fa-bars fs-5"></i>
+        </button>
         {% if request.endpoint == 'web.analysis_page' %}
+
         <i class="fa-solid fa-chart-line text-primary"></i>
         <span class="fw-bold text-uppercase small">HOU DATA ANALYTICS</span>
         {% else %}
@@ -188,12 +227,6 @@
                                 style="background:#8b5cf6;color:#fff" onclick="setType('donut')"><i
                                     class="fa-solid fa-circle-half-stroke me-1"></i>Vòng</button>
                         </div>
-                        <div class="d-flex gap-1">
-                            <button class="btn btn-success btn-sm fw-bold flex-fill" onclick="setType('line')"><i
-                                    class="fa-solid fa-chart-line me-1"></i>Đường</button>
-                            <button class="btn btn-teal btn-sm fw-bold flex-fill" style="background:#0d9488;color:#fff"
-                                onclick="setType('area')"><i class="fa-solid fa-chart-area me-1"></i>Miền</button>
-                        </div>
                     </div>
                     <p class="small text-muted mb-1 fw-bold">Biểu đồ So sánh (nhiều cột):</p>
                     <div class="d-grid gap-1">
@@ -203,6 +236,13 @@
                                 class="fa-solid fa-chart-bar me-1"></i>Cột Chồng (dọc)</button>
                         <button class="btn btn-dark btn-sm fw-bold" onclick="openMultiModal('stacked_h')"><i
                                 class="fa-solid fa-align-left me-1"></i>Cột Chồng (ngang)</button>
+
+                        <div class="d-flex gap-1 mt-1">
+                            <button class="btn btn-success btn-sm fw-bold flex-fill" onclick="openMultiModal('line')"><i
+                                    class="fa-solid fa-chart-line me-1"></i>Đường</button>
+                            <button class="btn btn-teal btn-sm fw-bold flex-fill" style="background:#0d9488;color:#fff"
+                                onclick="openMultiModal('area')"><i class="fa-solid fa-chart-area me-1"></i>Miền</button>
+                        </div>
                     </div>
                 </div>
 
