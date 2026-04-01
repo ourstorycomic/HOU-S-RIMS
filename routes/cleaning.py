@@ -37,11 +37,12 @@ def api_clean():
 
         new_len = len(df)
 
-        # [TỐI ƯU] Chỉ ghi file nếu có sự thay đổi
+        # CHỈ ghi đè file xuống ổ đĩa (Disk I/O) nếu thực sự có sự thay đổi dữ liệu
         if new_len < old_len:
             if real_path.endswith('.csv'): df.to_csv(real_path, index=False)
             else: df.to_excel(real_path, index=False)
 
+        # Trả về kích thước dữ liệu cũ
         return jsonify({
             "message": "OK", 
             "old_shape": (old_len, df.shape[1]), 

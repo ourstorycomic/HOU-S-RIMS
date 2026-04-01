@@ -6,9 +6,8 @@ import os
 
 load_dotenv(override=True)
 
-# Chuyển về thư mục chuẩn 'templates' và 'static'
-app = Flask(__name__, template_folder='templates', static_folder='static')
-app.secret_key = 'super_secret_key_change_me' # <--- THÊM DÒNG NÀY
+app = Flask(__name__)
+app.secret_key = 'secret_key'
 app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
 if not os.path.exists(app.config['UPLOAD_FOLDER']): os.makedirs(app.config['UPLOAD_FOLDER'])
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024 # 50MB

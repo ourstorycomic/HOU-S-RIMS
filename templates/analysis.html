@@ -250,6 +250,18 @@
                     <h6 class="fw-bold mb-3 small text-muted">PHÂN TÍCH CHUYÊN SÂU (SPSS)</h6>
                     <div class="d-grid gap-2">
                         <button class="btn btn-outline-primary btn-sm fw-bold text-start"
+                            onclick="openMultiModal('descriptive')">
+                            <i class="fa-solid fa-list-check me-2"></i> Thống kê mô tả (Chi tiết)
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm fw-bold text-start"
+                            onclick="openMultiModal('chi2')">
+                            <i class="fa-solid fa-square-poll-vertical me-2"></i> Kiểm định Chi-Square
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm fw-bold text-start"
+                            onclick="openMultiModal('anova')">
+                            <i class="fa-solid fa-chart-line me-2"></i> Phân tích ANOVA
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm fw-bold text-start"
                             onclick="openMultiModal('reliability')">
                             <i class="fa-solid fa-check-double me-2"></i> Độ tin cậy (Reliability)
                         </button>
@@ -451,6 +463,12 @@
             'grouped': ['Cột Ghép nhóm – chọn nhiều cột', 'Vẽ ngay'],
             'stacked': ['Cột Chồng Dọc – chọn nhiều cột', 'Vẽ ngay'],
             'stacked_h': ['Cột Chồng Ngang – chọn nhiều cột', 'Vẽ ngay'],
+            'descriptive': ['Thống kê mô tả (Chọn các cột)', 'Chạy thống kê'],
+            'chi2': ['Kiểm định Chi-Square (Chọn 2 cột)', 'Chạy kiểm định'],
+            'anova': ['Phân tích ANOVA (Cột 1: Nhóm, Cột 2: Giá trị)', 'Chạy ANOVA'],
+            'reliability': ['Độ tin cậy Alpha (Chọn các mục)', 'Tính toán'],
+            'correlation': ['Tương quan Pearson (Chọn các cột)', 'Tính toán'],
+            'regression': ['Hồi quy (Cột 1: Phụ thuộc, còn lại: Độc lập)', 'Chạy hồi quy'],
         };
         const [title, btn] = titles[type] || ['Vẽ biểu đồ', 'Vẽ ngay'];
         document.getElementById('multiTitle').innerText = title;

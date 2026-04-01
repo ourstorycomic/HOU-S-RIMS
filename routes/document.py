@@ -171,19 +171,100 @@ def generate_doc():
 
         if stats_type and stats_data:
             doc.add_heading('3.3. Kết quả các kiểm định SPSS nâng cao', level=2)
-            if stats_type == 'reliability':
-                doc.add_paragraph(f"Hệ số Cronbach's Alpha: {stats_data.get('alpha')} ({stats_data.get('status')})").bold = True
+            
+            if stats_type == 'descriptive':
+                doc.add_paragraph("Bảng: Thống kê mô tả chi tiết các biến định lượng").bold = True
+                t = doc.add_table(rows=1, cols=9); t.style = 'Table Grid'
+                h = t.rows[0].cells
+                headings = ["Biến", "N", "Mean", "Median", "Std.Dev", "Min", "Max", "Skew", "Kurt"]
+                for i, text in enumerate(headings):
+                    h[i].text = text
+                    set_cell_background(h[i], "E7E6E6")
+                for s in stats_data.get('stats', []):
+                    r = t.add_row().cells
+                    r[0].text, r[1].text = str(s['column']), str(s['n'])
+                    r[2].text, r[3].text = str(s['mean']), str(s['median'])
+                    r[4].text, r[5].text = str(s['std']), str(s['min'])
+                    r[6].text, r[7].text = str(s['max']), str(s['skewness'])
+                    r[8].text = str(s['kurtosis'])
+
+            elif stats_type == 'chi2':
+                doc.add_paragraph(f"Kiểm định Chi-Square giữa: {stats_data.get('col1')} và {stats_data.get('col2')}").bold = True
+                p_val = stats_data.get('p_value', 1.0)
+                doc.add_paragraph(f"Giá trị Chi-square: {stats_data.get('chi2')} | P-value (Sig): {p_val} ({stats_data.get('sig')})")
+                
+                doc.add_paragraph("Bảng Crosstabulation:").italic = True
+                cols = stats_data.get('columns', [])
+                t = doc.add_table(rows=1, cols=len(cols)+1); t.style = 'Table Grid'
+                h = t.rows[0].cells
+                h[0].text = stats_data.get('col1')
+                for i, cname in enumerate(cols): h[i+1].text = str(cname)
+                for cell in h: set_cell_background(cell, "E7E6E6")
+                
+                for row_data in stats_data.get('matrix', []):
+                    r = t.add_row().cells
+                    r[0].text = str(row_data['row'])
+                    for i, cname in enumerate(cols):
+                        r[i+1].text = str(row_data.get(str(cname), 0))
+
+            elif stats_type == 'anova':
+                doc.add_paragraph(f"Phân tích ANOVA: Biến {stats_data.get('value_col')} theo {stats_data.get('group_col')}").bold = True
+                doc.add_paragraph(f"F-statistic: {stats_data.get('f_statistic')} | P-value (Sig): {stats_data.get('p_value')} ({stats_data.get('sig')})")
+                
+                t = doc.add_table(rows=1, cols=4); t.style = 'Table Grid'
+                h = t.rows[0].cells
+                h[0].text, h[1].text, h[2].text, h[3].text = "Nhóm", "N", "Mean", "Std.Dev"
+                for cell in h: set_cell_background(cell, "E7E6E6")
+                for s in stats_data.get('group_stats', []):
+                    r = t.add_row().cells
+                    r[0].text, r[1].text, r[2].text, r[3].text = str(s['group']), str(s['n']), str(s['mean']), str(s['std'])
+
+            elif stats_type == 'reliability':
+                doc.add_paragraph("Kiểm định độ tin cậy thang đo (Reliability Analysis)").bold = True
+                t = doc.add_table(rows=2, cols=2); t.style = 'Table Grid'
+                t.cell(0, 0).text = "Hệ số Cronbach's Alpha"
+                t.cell(0, 1).text = str(stats_data.get('alpha'))
+                t.cell(1, 0).text = "Số biến quan sát"
+                t.cell(1, 1).text = str(stats_data.get('item_count'))
+                for i in range(2): set_cell_background(t.cell(i, 0), "F2F2F2")
+                doc.add_paragraph(f"Kết luận: Thang đo đạt mức độ '{stats_data.get('status')}'.")
+
+            elif stats_type == 'correlation':
+                doc.add_heading('Ma trận hệ số tương quan Pearson', level=3)
+                cols = stats_data.get('columns', [])
+                t = doc.add_table(rows=1, cols=len(cols)+1); t.style = 'Table Grid'
+                h = t.rows[0].cells
+                h[0].text = "Biến số"
+                for i, cname in enumerate(cols): h[i+1].text = str(cname)[:15]
+                for cell in h: set_cell_background(cell, "E7E6E6")
+                
+                for row_data in stats_data.get('matrix', []):
+                    r = t.add_row().cells
+                    r[0].text = str(row_data['column'])
+                    for i, cname in enumerate(cols):
+                        val = row_data.get(cname, 1.0)
+                        r[i+1].text = str(val)
+                        if isinstance(val, (int, float)) and abs(val) >= 0.5 and val != 1.0:
+                            r[i+1].paragraphs[0].runs[0].bold = True
+
             elif stats_type == 'regression':
-                doc.add_paragraph(f"Mô hình Hồi quy (R2={stats_data.get('r_squared')})").bold = True
+                doc.add_paragraph(f"Mô hình Hồi quy tuyến tính (R2={stats_data.get('r_squared')})").bold = True
+                doc.add_paragraph(f"Giá trị Sig mô hình: {stats_data.get('f_pvalue')}").italic = True
                 t = doc.add_table(rows=1, cols=5); t.style = 'Table Grid'
                 h = t.rows[0].cells; h[0].text, h[1].text, h[2].text, h[3].text, h[4].text = "Biến", "Beta", "S.E", "P", "Sig"
                 for c in h: set_cell_background(c, "E7E6E6")
                 for c in stats_data.get('coefficients', []):
-                    r = t.add_row().cells; r[0].text, r[1].text, r[2].text, r[3].text, r[4].text = str(c['variable']), str(c['coefficient']), str(c['std_err']), str(c['p_value']), str(c['sig'])
-                    if float(str(c['sig']).replace('<','')) < 0.05:
-                        for cell in r: 
-                            for p in cell.paragraphs: 
-                                for run in p.runs: run.bold = True
+                    r = t.add_row().cells
+                    r[0].text, r[1].text = str(c['variable']), str(c['coefficient'])
+                    r[2].text, r[3].text = str(c['std_err']), str(c['p_value'])
+                    r[4].text = str(c['sig'])
+                    try:
+                        p_float = float(str(c['p_value']))
+                        if p_float < 0.05:
+                            for cell in r: 
+                                for p in cell.paragraphs: 
+                                    if p.runs: p.runs[0].bold = True
+                    except: pass
 
         # IV.
         add_heading(doc, 'PHÂN TÍCH CHUYÊN SÂU & BIỆN LUẬN', 1, "IV.")

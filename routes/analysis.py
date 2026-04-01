@@ -1,11 +1,12 @@
 # routes/analysis.py
 from flask import Blueprint, request, jsonify
 from data_store import DATASETS
-from API.statistics import calculate_reliability, calculate_correlation, calculate_regression
+from API.statistics import calculate_reliability, calculate_correlation, calculate_regression, calculate_chi2, calculate_anova, calculate_descriptive_detailed
 import pandas as pd
 
 analysis_bp = Blueprint('analysis_bp', __name__)
 
+# 1. API ĐỘ TIN CẬY (CRONBACH'S ALPHA)
 @analysis_bp.route("/api/analysis/reliability", methods=["POST"])
 def api_reliability():
     data = request.get_json()
@@ -20,6 +21,7 @@ def api_reliability():
     
     return jsonify(result)
 
+# 2. API TƯƠNG QUAN (CORRELATION)
 @analysis_bp.route("/api/analysis/correlation", methods=["POST"])
 def api_correlation():
     data = request.get_json()
@@ -34,6 +36,7 @@ def api_correlation():
     
     return jsonify(result)
 
+# 3. API HỒI QUY (REGRESSION)
 @analysis_bp.route("/api/analysis/regression", methods=["POST"])
 def api_regression():
     data = request.get_json()
@@ -49,6 +52,36 @@ def api_regression():
     
     return jsonify(result)
 
+@analysis_bp.route("/api/analysis/chi2", methods=["POST"])
+def api_chi2():
+    data = request.get_json()
+    dataset_id = data.get("dataset_id")
+    cols = data.get("cols", [])
+    
+    if not dataset_id or dataset_id not in DATASETS:
+        return jsonify({"error": "Dataset not found"}), 404
+    if len(cols) < 2:
+        return jsonify({"error": "Cần ít nhất 2 cột"}), 400
+        
+    df = DATASETS[dataset_id]['df']
+    result = calculate_chi2(df, cols[0], cols[1])
+    return jsonify(result)
+
+@analysis_bp.route("/api/analysis/anova", methods=["POST"])
+def api_anova():
+    data = request.get_json()
+    dataset_id = data.get("dataset_id")
+    cols = data.get("cols", [])
+    
+    if not dataset_id or dataset_id not in DATASETS:
+        return jsonify({"error": "Dataset not found"}), 404
+    if len(cols) < 2:
+        return jsonify({"error": "Cần ít nhất 2 cột (Nhóm và Giá trị)"}), 400
+        
+    df = DATASETS[dataset_id]['df']
+    result = calculate_anova(df, cols[0], cols[1])
+    return jsonify(result)
+
 @analysis_bp.route("/api/analysis/descriptive", methods=["POST"])
 def api_descriptive():
     data = request.get_json()
@@ -59,19 +92,5 @@ def api_descriptive():
         return jsonify({"error": "Dataset not found"}), 404
         
     df = DATASETS[dataset_id]['df']
-    # Tính toán thống kê cơ bản (Mean, Std, Min, Max)
-    stats_df = df[cols].describe().round(3)
-    
-    more_stats = pd.DataFrame({
-        "variance": df[cols].var(), # Phương sai
-        "skewness": df[cols].skew(), # Độ lệch chuẩn
-        "kurtosis": df[cols].kurtosis() # Độ nhọn
-    }).T.round(3)
-    
-    # Gộp kết quả để trả về API
-    full_stats = pd.concat([stats_df, more_stats])
-    
-    return jsonify({
-        "columns": cols,
-        "stats": full_stats.to_dict()
-    })
+    result = calculate_descriptive_detailed(df, cols)
+    return jsonify(result)

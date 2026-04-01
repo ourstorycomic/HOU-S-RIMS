@@ -212,7 +212,7 @@ function applyMulti() {
     currentMultiModal = null;
 
     if (chartType && chartType !== 'selection') {
-        const statsTypes = ['reliability', 'correlation', 'regression'];
+        const statsTypes = ['reliability', 'correlation', 'regression', 'chi2', 'anova', 'descriptive'];
         if (statsTypes.includes(chartType)) {
             runStatistics(chartType, arr);
         } else {
@@ -562,10 +562,10 @@ function renderStatsResult(type, data) {
         </ul></div></div>`;
     } else if (type === 'correlation') {
         html += `<h5 class="fw-bold text-primary mb-3">MA TRẬN TƯƠNG QUAN PEARSON</h5>
-        <table class="table table-sm table-bordered small bg-white">
-            <thead class="table-light"><tr><th>Cột</th>${data.columns.map(c => `<th class="text-center">${c.substring(0, 10)}...</th>`).join('')}</tr></thead>
-            <tbody>${data.matrix.map(row => `<tr><td class="fw-bold">${row.column}</td>${data.columns.map(c => `<td class="text-center ${row[c] >= 0.5 ? 'bg-info-subtle fw-bold' : ''}">${row[c]}</td>`).join('')}</tr>`).join('')}</tbody>
-        </table>`;
+        <div class="table-responsive"><table class="table table-sm table-bordered small bg-white">
+            <thead class="bg-light text-dark fw-bold"><tr><th>Cột</th>${data.columns.map(c => `<th class="text-center">${c.substring(0, 15)}</th>`).join('')}</tr></thead>
+            <tbody>${data.matrix.map(row => `<tr><td class="fw-bold">${row.column}</td>${data.columns.map(c => `<td class="text-center ${row[c] >= 0.5 && row[c] < 1.0 ? 'bg-primary-subtle fw-bold text-primary' : ''}">${row[c]}</td>`).join('')}</tr>`).join('')}</tbody>
+        </table></div>`;
     } else if (type === 'regression') {
         html += `<h5 class="fw-bold text-primary mb-3">TÓM TẮT MÔ HÌNH HỒI QUY</h5>
         <div class="row g-2 mb-3">
@@ -574,9 +574,42 @@ function renderStatsResult(type, data) {
             <div class="col-6 col-md-3"><div class="p-2 border rounded bg-white small text-center">F-Sig: <b>${data.f_pvalue}</b></div></div>
         </div>
         <table class="table table-sm table-striped small bg-white">
-            <thead class="table-dark"><tr><th>Biến</th><th>Hệ số B</th><th>Std.Error</th><th>P-value</th><th>Sig</th></tr></thead>
+            <thead class="bg-light text-dark fw-bold"><tr><th>Biến</th><th>Hệ số B</th><th>Std.Error</th><th>P-value</th><th>Sig</th></tr></thead>
             <tbody>${data.coefficients.map(c => `<tr><td class="fw-bold">${c.variable}</td><td>${c.coefficient}</td><td>${c.std_err}</td><td>${c.p_value}</td><td class="text-danger fw-bold">${c.sig}</td></tr>`).join('')}</tbody>
         </table>`;
+    } else if (type === 'chi2') {
+        html += `<h5 class="fw-bold text-primary mb-3">KIỂM ĐỊNH CHI-SQUARE: ${data.col1} & ${data.col2}</h5>
+        <div class="row mb-3"><div class="col-md-4"><div class="card p-2 border-0 bg-white shadow-sm text-center">
+            <div class="small text-muted">Chi-square val:</div><div class="h4 fw-bold">${data.chi2}</div>
+        </div></div>
+        <div class="col-md-4"><div class="card p-2 border-0 bg-white shadow-sm text-center">
+            <div class="small text-muted">P-value (Sig):</div><div class="h4 fw-bold ${data.p_value < 0.05 ? 'text-danger' : ''}">${data.p_value}</div>
+        </div></div>
+        <div class="col-md-4"><div class="card p-2 border-0 bg-white shadow-sm text-center">
+            <div class="small text-muted">Kết luận:</div><div class="small fw-bold">${data.sig}</div>
+        </div></div></div>
+        <div class="table-responsive"><table class="table table-sm table-bordered small bg-white">
+            <thead class="bg-light text-dark fw-bold"><tr><th>${data.col1}</th>${data.columns.map(c => `<th>${c}</th>`).join('')}</tr></thead>
+            <tbody>${data.matrix.map(row => `<tr><td class="fw-bold">${row.row}</td>${data.columns.map(c => `<td>${row[c]}</td>`).join('')}</tr>`).join('')}</tbody>
+        </table></div>`;
+    } else if (type === 'anova') {
+        html += `<h5 class="fw-bold text-primary mb-3">PHÂN TÍCH ANOVA: ${data.value_col} theo ${data.group_col}</h5>
+        <div class="row mb-3"><div class="col-md-6"><div class="card p-2 border-0 bg-white shadow-sm text-center">
+            <div class="small text-muted">F-statistic:</div><div class="h4 fw-bold">${data.f_statistic}</div>
+        </div></div>
+        <div class="col-md-6"><div class="card p-2 border-0 bg-white shadow-sm text-center">
+            <div class="small text-muted">P-value (Sig):</div><div class="h4 fw-bold ${data.p_value < 0.05 ? 'text-danger' : ''}">${data.p_value}</div>
+        </div></div></div>
+        <table class="table table-sm table-striped small bg-white">
+            <thead class="bg-light text-dark fw-bold"><tr><th>Nhóm</th><th>N</th><th>Trung bình</th><th>Độ lệch chuẩn</th></tr></thead>
+            <tbody>${data.group_stats.map(s => `<tr><td>${s.group}</td><td>${s.n}</td><td>${s.mean}</td><td>${s.std}</td></tr>`).join('')}</tbody>
+        </table>`;
+    } else if (type === 'descriptive') {
+        html += `<h5 class="fw-bold text-primary mb-3">THỐNG KÊ MÔ TẢ CHI TIẾT</h5>
+        <div class="table-responsive"><table class="table table-sm table-bordered small bg-white">
+            <thead class="bg-light text-dark fw-bold"><tr><th>Biến</th><th>N</th><th>Mean</th><th>Median</th><th>Std.Dev</th><th>Min</th><th>Max</th><th>Skew</th><th>Kurt</th></tr></thead>
+            <tbody>${data.stats.map(s => `<tr><td class="fw-bold">${s.column}</td><td>${s.n}</td><td>${s.mean}</td><td>${s.median}</td><td>${s.std}</td><td>${s.min}</td><td>${s.max}</td><td>${s.skewness}</td><td>${s.kurtosis}</td></tr>`).join('')}</tbody>
+        </table></div>`;
     }
 
     html += `</div>`;

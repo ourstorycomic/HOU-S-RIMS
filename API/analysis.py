@@ -81,13 +81,17 @@ def run_advanced_analysis(df, cols):
                 # Gom nhóm dữ liệu
                 for name, group in df.groupby(col1):
                     vals = pd.to_numeric(group[col2], errors='coerce').dropna()
-                    if len(vals) > 5: # Cần ít nhất 5 mẫu để test
+                    if len(vals) > 5: # Cần ít nhất 5 mẫu
                         groups.append(vals)
                         group_labels.append(name)
                 
                 if len(groups) >= 2:
                     f_val, p_val = stats.f_oneway(*groups)
-                    star = "***" if p_val < 0.001 else ("**" if p_val < 0.01 else ("*" if p_val < 0.05 else ""))
+                    star = "***" if p_val < 0.001 else (
+                        "**" 
+                        if p_val < 0.01 else (
+                            "*" 
+                            if p_val < 0.05 else ""))
                     
                     output.append(f"\n>>> ONE-WAY ANOVA (So sánh trung bình):")
                     output.append(f"   - Biến phân nhóm: {col1}")
