@@ -339,8 +339,23 @@ async function sendChat() {
 
 function addMsg(txt, role) {
     const id = 'msg-' + Date.now();
+    const isBot = (role === 'bot');
+    const avatar = isBot ? 
+        '<div class="chat-avatar bg-primary text-white">HĐ</div>' : 
+        '<div class="chat-avatar bg-secondary text-white">Tôi</div>';
+    
+    // Tạo cấu trúc tin nhắn linh hoạt hơn
+    const html = `
+        <div class="message ${role}">
+            ${avatar}
+            <div class="bubble shadow-sm small" id="${id}">
+                ${txt}
+            </div>
+        </div>
+    `;
+    
     if (els.messages) {
-        els.messages.innerHTML += `<div class="message ${role}"><div class="bubble" id="${id}">${txt}</div></div>`;
+        els.messages.insertAdjacentHTML('beforeend', html);
         els.messages.scrollTop = els.messages.scrollHeight;
     }
     return id;
@@ -540,6 +555,19 @@ async function runStatistics(type, cols) {
         lastStatsType = type;
         lastStatsData = data;
         renderStatsResult(type, data);
+
+        // Tự động kích hoạt AI phân tích cho các chỉ số thống kê
+        if (document.getElementById('autoAnalyze')?.checked) {
+            if (document.getElementById('chatBox')?.classList.contains('d-none')) toggleChat();
+            
+            let promptText = `Hãy phân tích kết quả ${type} cho tôi.`;
+            if (type === 'chi2') promptText = `Hãy phân tích kết quả kiểm định Chi-Square giữa ${data.col1} và ${data.col2} với P-value = ${data.p_value}.`;
+            if (type === 'anova') promptText = `Hãy phân tích kết quả ANOVA cho biến ${data.value_col} theo nhóm ${data.group_col} với Sig = ${data.p_value}.`;
+            if (type === 'descriptive') promptText = `Hãy phân tích tóm tắt các chỉ số thống kê mô tả vừa thực hiện.`;
+            if (type === 'reliability') promptText = `Hãy phân tích độ tin cậy Cronbach's Alpha = ${data.alpha} của các thang đo.`;
+            
+            sendPrompt(promptText);
+        }
     } catch (e) {
         plotArea.innerHTML = `<div class="alert alert-danger m-3">${e.message}</div>`;
     }

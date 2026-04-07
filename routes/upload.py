@@ -39,6 +39,8 @@ def api_upload():
         
         # Store in memory for cleaning/analysis
         DATASETS[new_name] = {'df': df, 'filename': filename}
+        if ext == '.sav' and 'meta' in locals():
+            DATASETS[new_name]['meta'] = meta
         
         cols = df.columns.tolist()
 

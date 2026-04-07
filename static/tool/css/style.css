@@ -117,11 +117,12 @@ body { display: flex; height: 100vh; background: #f0f2f5; overflow: hidden; }
 .bot-avatar { width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 .model-select { background: #334155; border: 1px solid #475569; color: white; font-size: 11px; border-radius: 4px; padding: 4px; outline: none; }
 .chat-body { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #f9fafb; }
-.message { display: flex; gap: 8px; font-size: 13px; max-width: 85%; }
-.message.user { align-self: flex-end; flex-direction: row-reverse; }
-.bubble { padding: 10px 14px; border-radius: 12px; line-height: 1.5; word-wrap: break-word; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-.message.bot .bubble { background: white; border: 1px solid #e5e7eb; color: #374151; border-top-left-radius: 2px; }
-.message.user .bubble { background: #3b82f6; color: white; border-top-right-radius: 2px; }
+.message { display: flex; gap: 10px; margin-bottom: 15px; font-size: 13px; max-width: 90%; }
+.message.user { flex-direction: row-reverse; text-align: right; margin-left: auto; }
+.bubble { padding: 8px 14px; border-radius: 12px; line-height: 1.5; word-wrap: break-word; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); position: relative; }
+.message.bot .bubble { background: white; border: 1px solid #e5e7eb; color: #1f2937; border-top-left-radius: 2px; }
+.message.user .bubble { background: #2563eb; color: white; border-top-right-radius: 2px; }
+.chat-avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 11px; flex-shrink: 0; }
 .suggestion-chips { padding: 10px 15px; display: flex; gap: 8px; overflow-x: auto; white-space: nowrap; border-top: 1px solid #e5e7eb; background: white; }
 .suggestion-chips span { padding: 6px 12px; background: #f3f4f6; color: #1f2937; border: 1px solid #d1d5db; border-radius: 16px; font-size: 11px; font-weight: 500; cursor: pointer; transition: 0.2s; }
 .suggestion-chips span:hover { background: #e5e7eb; color: black; border-color: #9ca3af; }

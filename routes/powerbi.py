@@ -3,6 +3,13 @@ from flask import Blueprint, request, jsonify, Response
 from data_store import DATASETS
 import pandas as pd
 import io
+import re
+
+def normalize_text(text):
+    """Normalize text for fuzzy matching."""
+    if not text or not isinstance(text, str): return ""
+    text = re.sub(r'[\[\]\n\r\t]', ' ', text.lower()).strip()
+    return re.sub(r'\s+', ' ', text)
 
 powerbi_bp = Blueprint('powerbi', __name__)
 
@@ -26,8 +33,48 @@ def api_powerbi_data():
     if not dataset_id or dataset_id not in DATASETS:
         return jsonify({"error": "Dataset not found."}), 404
         
-    df = DATASETS[dataset_id]['df']
+    df = DATASETS[dataset_id]['df'].copy()
     
+    # [SMART HEADERS] Attempt to use descriptive headers
+    use_labels = request.args.get("labels", "true").lower() == "true"
+    
+    if use_labels:
+        # 1. Try to find SPSS labels if available
+        meta = DATASETS[dataset_id].get('meta')
+        if meta and hasattr(meta, 'column_names_to_labels'):
+            df.rename(columns=meta.column_names_to_labels, inplace=True)
+        else:
+            # 2. Try to match with survey mapping keys from data.json
+            from API.main import _SURVEY_MAP
+            
+            # Pre-normalize map keys for faster fuzzy matching
+            normalized_map = {normalize_text(k): k for k in _SURVEY_MAP.keys()}
+            
+            new_cols = {}
+            found_promotion = False
+            
+            for col in df.columns:
+                col_norm = normalize_text(str(col))
+                
+                # Check if column name itself is a match
+                if col_norm in normalized_map:
+                    new_cols[col] = normalized_map[col_norm]
+                    continue
+                
+                # If column is generic, check the first row value
+                if str(col).startswith("Column") and len(df) > 0:
+                    val = str(df[col].iloc[0]).strip()
+                    val_norm = normalize_text(val)
+                    if val_norm in normalized_map:
+                        new_cols[col] = normalized_map[val_norm]
+                        found_promotion = True
+            
+            if new_cols:
+                df.rename(columns=new_cols, inplace=True)
+                # If we promoted a first row, we MUST drop it
+                if found_promotion:
+                    df = df.iloc[1:].reset_index(drop=True)
+
     # Check output format - Default to CSV for Power BI Web source
     format = request.args.get("format", "csv")
     
