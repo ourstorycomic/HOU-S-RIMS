@@ -5,7 +5,27 @@ topics_bp = Blueprint('topics', __name__, url_prefix='/api/topics')
 
 @topics_bp.route('', methods=['GET'])
 def get_topics():
-    topics = Topic.query.all()
+    query = Topic.query
+    
+    # Filter by mentor
+    mentor_id = request.args.get('mentor_id')
+    if mentor_id:
+        query = query.filter_by(mentor_id=mentor_id)
+        
+    # Filter by status (e.g. pending)
+    status = request.args.get('status')
+    if status:
+        query = query.filter_by(status=status)
+        
+    # Filter by group_id
+    group_id = request.args.get('group_id')
+    if group_id:
+        if group_id.lower() == 'null' or group_id == '0':
+            query = query.filter(Topic.group_id.is_(None))
+        else:
+            query = query.filter_by(group_id=group_id)
+            
+    topics = query.all()
     result = []
     for topic in topics:
         result.append({
