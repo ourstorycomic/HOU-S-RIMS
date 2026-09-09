@@ -1,6 +1,7 @@
 # app.py
 from flask import Flask, render_template, send_from_directory
 from routes import init_routes
+from routes.submissions import submissions_bp
 from dotenv import load_dotenv
 import os
 
@@ -20,5 +21,6 @@ def index(): return render_template('index.html')
 @app.route('/<path:filename>')
 def serve_static(filename): return send_from_directory('Models', filename)
 
+app.register_blueprint(submissions_bp)
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5000)
