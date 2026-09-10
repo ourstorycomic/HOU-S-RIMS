@@ -1,21 +1,9 @@
 import os
-import json
 from flask import Blueprint, jsonify
-
+from sqlalchemy import func
+from models import db, Topic, Progress, Council, Submission 
 dashboard_bp = Blueprint('dashboard', __name__)
 
-BASE_DIR = os.getcwd()
-PROGRESS_FILE = os.path.join(BASE_DIR, 'data', 'progress.json')
-COUNCILS_FILE = os.path.join(BASE_DIR, 'data', 'councils.json')
-
-def read_json(filepath, default_val):
-    if not os.path.exists(filepath):
-        return default_val
-    with open(filepath, 'r', encoding='utf-8') as f:
-        try:
-            return json.load(f)
-        except:
-            return default_val
 @dashboard_bp.route('/api/dashboard/progress', methods=['GET'])
 def get_dashboard_progress():
     """
@@ -28,20 +16,18 @@ def get_dashboard_progress():
         description: Thành công
     """
     try:
-        progress_data = read_json(PROGRESS_FILE, {})
+        results = db.session.query(
+            Progress.topic_id,
+            func.avg(Progress.percentage).label('avg_percentage'),
+            func.count(Progress.id).label('milestone_count')
+        ).group_by(Progress.topic_id).all()
+
         topic_summaries = []
-        
-        for topic_id, milestones in progress_data.items():
-            if milestones and isinstance(milestones, list):
-                total_pct = sum(m.get('percentage', 0) for m in milestones)
-                avg_percentage = round(total_pct / len(milestones), 2)
-            else:
-                avg_percentage = 0
-                
+        for row in results:
             topic_summaries.append({
-                "topic_id": topic_id,
-                "average_percentage": avg_percentage,
-                "milestone_count": len(milestones) if isinstance(milestones, list) else 0
+                "topic_id": row.topic_id,
+                "average_percentage": round(row.avg_percentage, 2) if row.avg_percentage else 0,
+                "milestone_count": row.milestone_count
             })
             
         return jsonify({
@@ -63,13 +49,23 @@ def get_dashboard_stats():
         description: Thành công
     """
     try:
-        progress_data = read_json(PROGRESS_FILE, {})
-        councils_data = read_json(COUNCILS_FILE, [])
+        total_topics = Topic.query.count()
+        total_councils = Council.query.count()
+        try:
+            total_submissions = Submission.query.count()
+        except Exception:
+            total_submissions = 15
+
+        completed_topics = db.session.query(Progress.topic_id)\
+                                     .filter(Progress.percentage == 100)\
+                                     .distinct()\
+                                     .count()
+
         stats = {
-            "total_topics": len(progress_data) if len(progress_data) > 0 else 5,
-            "total_councils": len(councils_data) if len(councils_data) > 0 else 3,
-            "total_submissions": 15,
-            "completed_topics": sum(1 for milestones in progress_data.values() if any(m.get('percentage') == 100 for m in milestones))
+            "total_topics": total_topics if total_topics > 0 else 5,
+            "total_councils": total_councils if total_councils > 0 else 3,
+            "total_submissions": total_submissions,
+            "completed_topics": completed_topics
         }
         
         return jsonify({

@@ -1,5 +1,6 @@
 import os
-from flask import Blueprint, send_file, jsonify
+from flask import Blueprint, send_from_directory, jsonify
+from werkzeug.exceptions import NotFound
 
 documents_bp = Blueprint('documents', __name__)
 
@@ -28,15 +29,13 @@ def get_document_template(filename):
         description: Không tìm thấy file
     """
     try:
-        file_path = os.path.join(TEMPLATES_FOLDER, filename)
+        return send_from_directory(TEMPLATES_FOLDER, filename, as_attachment=True)
         
-        if not os.path.exists(file_path):
-            return jsonify({
-                "success": False, 
-                "message": f"Không tìm thấy file mẫu '{filename}' trong hệ thống."
-            }), 404
-            
-        return send_file(file_path, as_attachment=True)
+    except NotFound:
+        return jsonify({
+            "success": False, 
+            "message": f"Không tìm thấy file mẫu '{filename}' trong hệ thống hoặc truy cập bị từ chối."
+        }), 404
         
     except Exception as e:
         return jsonify({"success": False, "message": f"Lỗi server: {str(e)}"}), 500

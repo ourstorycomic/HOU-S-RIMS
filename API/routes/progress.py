@@ -1,25 +1,7 @@
-import os
-import json
 from datetime import datetime
 from flask import Blueprint, request, jsonify
-
+from models import db, Progress 
 progress_bp = Blueprint('progress', __name__)
-
-BASE_DIR = os.getcwd()
-PROGRESS_FILE = os.path.join(BASE_DIR, 'data', 'progress.json')
-
-def read_progress():
-    if not os.path.exists(PROGRESS_FILE):
-        return {}
-    with open(PROGRESS_FILE, 'r', encoding='utf-8') as f:
-        try:
-            return json.load(f)
-        except:
-            return {}
-
-def write_progress(data):
-    with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
 
 @progress_bp.route('/api/topics/<id>/progress', methods=['GET'])
 def get_topic_progress(id):
@@ -39,9 +21,18 @@ def get_topic_progress(id):
         description: Thành công
     """
     try:
-        all_data = read_progress()
-        topic_progress = all_data.get(str(id), [])
+        milestones_db = Progress.query.filter_by(topic_id=id).all()
         
+        topic_progress = []
+        for m in milestones_db:
+            topic_progress.append({
+                "id": m.id,
+                "title": getattr(m, 'title', 'Cập nhật tiến độ'),
+                "percentage": m.percentage,
+                "note": getattr(m, 'note', ''),
+                "created_at": m.created_at.strftime("%Y-%m-%d %H:%M:%S") if hasattr(m, 'created_at') and m.created_at else None
+            })
+            
         return jsonify({
             "success": True,
             "topic_id": id,
@@ -90,28 +81,32 @@ def add_topic_progress(id):
         title = data.get("title", "Cập nhật tiến độ")
         percentage = data.get("percentage", 0)  
         note = data.get("note", "")
+        current_time = datetime.now()
 
-        all_data = read_progress()
-        topic_key = str(id)
+        new_milestone = Progress(
+            topic_id=id,
+            title=title,
+            percentage=percentage,
+            note=note
+        )
         
-        if topic_key not in all_data:
-            all_data[topic_key] = []
+        if hasattr(new_milestone, 'created_at'):
+            new_milestone.created_at = current_time
 
-        new_milestone = {
-            "id": len(all_data[topic_key]) + 1,
-            "title": title,
-            "percentage": percentage,
-            "note": note,
-            "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
-
-        all_data[topic_key].append(new_milestone)
-        write_progress(all_data)
+        db.session.add(new_milestone)
+        db.session.commit()
 
         return jsonify({
             "success": True,
             "message": "Cập nhật tiến độ thành công",
-            "data": new_milestone
+            "data": {
+                "id": new_milestone.id,
+                "title": title,
+                "percentage": percentage,
+                "note": note,
+                "created_at": current_time.strftime("%Y-%m-%d %H:%M:%S")
+            }
         }), 201
     except Exception as e:
+        db.session.rollback()
         return jsonify({"success": False, "message": f"Lỗi server: {str(e)}"}), 500

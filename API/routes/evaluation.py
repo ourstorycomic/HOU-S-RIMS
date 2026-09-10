@@ -1,28 +1,9 @@
-import os
-import json
 import uuid
+import json
 from flask import Blueprint, request, jsonify
+from models import db, Council, Rubric
 
 evaluation_bp = Blueprint('evaluation', __name__)
-
-BASE_DIR = os.getcwd()
-DATA_DIR = os.path.join(BASE_DIR, 'data')
-
-COUNCILS_FILE = os.path.join(DATA_DIR, 'councils.json')
-RUBRICS_FILE = os.path.join(DATA_DIR, 'rubrics.json')
-
-def read_json(filepath):
-    if not os.path.exists(filepath):
-        return []
-    with open(filepath, 'r', encoding='utf-8') as f:
-        try:
-            return json.load(f)
-        except:
-            return []
-
-def write_json(filepath, data):
-    with open(filepath, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
 
 @evaluation_bp.route('/api/councils', methods=['POST'])
 def create_council():
@@ -55,23 +36,32 @@ def create_council():
         if not data:
             return jsonify({"success": False, "message": "Không có dữ liệu JSON được gửi lên"}), 400
             
-        councils = read_json(COUNCILS_FILE)
+        council_id = str(uuid.uuid4())
+        name = data.get("name", "Hội đồng chưa đặt tên")
         
-        new_council = {
-            "id": str(uuid.uuid4()),
-            "name": data.get("name", "Hội đồng chưa đặt tên"),
-            "members": data.get("members", [])
-        }
+        members = data.get("members", [])
+        members_json = json.dumps(members, ensure_ascii=False)
         
-        councils.append(new_council)
-        write_json(COUNCILS_FILE, councils)
+        new_council = Council(
+            id=council_id, 
+            name=name,
+            members=members_json
+        )
+        
+        db.session.add(new_council)
+        db.session.commit()
         
         return jsonify({
             "success": True, 
             "message": "Tạo hội đồng thành công", 
-            "data": new_council
+            "data": {
+                "id": council_id,
+                "name": name,
+                "members": members
+            }
         }), 201
     except Exception as e:
+        db.session.rollback()
         return jsonify({"success": False, "message": f"Lỗi server: {str(e)}"}), 500
 
 @evaluation_bp.route('/api/rubrics', methods=['PUT'])
@@ -105,20 +95,25 @@ def update_rubric():
         if not data or 'id' not in data:
             return jsonify({"success": False, "message": "Vui lòng cung cấp JSON có chứa trường 'id' của rubric"}), 400
             
-        rubrics = read_json(RUBRICS_FILE)
         rubric_id = data['id']
+        criteria = data.get("criteria", [])
+        criteria_json = json.dumps(criteria, ensure_ascii=False)
         
-        updated = False
-        for i, rubric in enumerate(rubrics):
-            if rubric.get('id') == rubric_id:
-                rubrics[i].update(data) 
-                updated = True
-                break
+        rubric = Rubric.query.filter_by(id=rubric_id).first()
         
-        if not updated:
-            rubrics.append(data)
+        if rubric:
+            rubric.criteria = criteria_json
+            for key, value in data.items():
+                if hasattr(rubric, key) and key not in ['id', 'criteria']:
+                    setattr(rubric, key, value)
+        else:
+            rubric = Rubric(id=rubric_id, criteria=criteria_json)
+            for key, value in data.items():
+                if hasattr(rubric, key) and key not in ['id', 'criteria']:
+                    setattr(rubric, key, value)
+            db.session.add(rubric)
             
-        write_json(RUBRICS_FILE, rubrics)
+        db.session.commit()
         
         return jsonify({
             "success": True, 
@@ -126,4 +121,5 @@ def update_rubric():
             "data": data
         }), 200
     except Exception as e:
+        db.session.rollback() 
         return jsonify({"success": False, "message": f"Lỗi server: {str(e)}"}), 500
