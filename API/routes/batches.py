@@ -6,6 +6,33 @@ batches_bp = Blueprint('batches', __name__, url_prefix='/api/batches')
 
 @batches_bp.route('', methods=['POST'])
 def create_batch():
+    """
+    Create a new batch
+    ---
+    tags:
+      - Batches
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            name:
+              type: string
+              example: Đợt 1 NCKH 2026
+            start_date:
+              type: string
+              example: 2026-09-01
+            end_date:
+              type: string
+              example: 2026-12-31
+    responses:
+      201:
+        description: Batch created successfully
+      400:
+        description: Invalid input
+    """
     data = request.get_json()
     
     if not data or not 'name' in data or not 'start_date' in data or not 'end_date' in data:
@@ -42,6 +69,15 @@ def create_batch():
 
 @batches_bp.route('', methods=['GET'])
 def get_batches():
+    """
+    Get all batches
+    ---
+    tags:
+      - Batches
+    responses:
+      200:
+        description: List of all batches
+    """
     batches = Batch.query.all()
     result = []
     for batch in batches:

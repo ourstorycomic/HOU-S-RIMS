@@ -29,3 +29,5 @@ gunicorn
 
 python-docx
 Flask-SQLAlchemy
+
+flasgger

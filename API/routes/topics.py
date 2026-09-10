@@ -5,6 +5,28 @@ topics_bp = Blueprint('topics', __name__, url_prefix='/api/topics')
 
 @topics_bp.route('', methods=['GET'])
 def get_topics():
+    """
+    Get list of topics (with optional filtering)
+    ---
+    tags:
+      - Topics
+    parameters:
+      - in: query
+        name: mentor_id
+        type: integer
+        description: Filter by mentor ID
+      - in: query
+        name: status
+        type: string
+        description: Filter by status (e.g., pending, approved)
+      - in: query
+        name: group_id
+        type: string
+        description: Filter by group ID (use 'null' or '0' for topics without a group)
+    responses:
+      200:
+        description: List of topics
+    """
     query = Topic.query
     
     # Filter by mentor
@@ -45,6 +67,15 @@ mentors_bp = Blueprint('mentors', __name__, url_prefix='/api/mentors')
 
 @mentors_bp.route('', methods=['GET'])
 def get_mentors():
+    """
+    Get list of mentors
+    ---
+    tags:
+      - Mentors
+    responses:
+      200:
+        description: List of mentors
+    """
     mentors = User.query.filter_by(role='Mentor').all()
     result = []
     for mentor in mentors:
@@ -60,6 +91,34 @@ def get_mentors():
 
 @topics_bp.route('/register', methods=['POST'])
 def register_topic():
+    """
+    Register a new topic
+    ---
+    tags:
+      - Topics
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            name:
+              type: string
+            description:
+              type: string
+            batch_id:
+              type: integer
+            mentor_id:
+              type: integer
+            group_id:
+              type: integer
+    responses:
+      201:
+        description: Topic registered successfully
+      400:
+        description: Invalid input or Group already registered
+    """
     data = request.get_json()
     if not data or 'name' not in data or 'batch_id' not in data or 'mentor_id' not in data or 'group_id' not in data:
         return jsonify({'error': 'Missing required fields'}), 400
@@ -98,6 +157,33 @@ def register_topic():
 
 @topics_bp.route('/<int:topic_id>/approve', methods=['POST'])
 def approve_topic(topic_id):
+    """
+    Approve or reject a topic
+    ---
+    tags:
+      - Topics
+    parameters:
+      - in: path
+        name: topic_id
+        type: integer
+        required: true
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: approved
+    responses:
+      200:
+        description: Topic status updated
+      400:
+        description: Missing status
+      404:
+        description: Topic not found
+    """
     data = request.get_json()
     if not data or 'status' not in data:
         return jsonify({'error': 'Missing status'}), 400
