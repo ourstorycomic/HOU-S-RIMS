@@ -68,27 +68,32 @@ async function approveTopic(topicId, status) {
 
 // Khi DOM load xong, gán sự kiện cho các nút nếu có
 document.addEventListener('DOMContentLoaded', () => {
-    // Ví dụ gán sự kiện cho form đăng ký
+    // Gán sự kiện cho nút đăng ký trong student.html
     const btnRegister = document.getElementById('btnSubmitRegister');
     if (btnRegister) {
         btnRegister.addEventListener('click', () => {
+            // Thay vì lấy dữ liệu từ input không tồn tại, mock dữ liệu để test luồng
             const topicData = {
-                name: document.getElementById('topicName')?.value,
-                description: document.getElementById('topicDesc')?.value,
-                batch_id: parseInt(document.getElementById('batchId')?.value),
-                mentor_id: parseInt(document.getElementById('mentorId')?.value),
-                group_id: parseInt(document.getElementById('groupId')?.value) // Lấy từ auth user
+                name: "Đề tài Test Đăng ký từ Giao diện Sinh viên",
+                description: "Nội dung mô tả đề tài được gửi từ UI.",
+                batch_id: 1,
+                mentor_id: 2,
+                group_id: 1
             };
-            registerTopic(topicData);
+            registerTopic(topicData).then(() => {
+                if(typeof showToast === 'function') showToast('Đã gửi hồ sơ đăng ký thành công qua API!');
+            });
         });
     }
 
-    // Ví dụ gán sự kiện cho nút Duyệt
+    // Gán sự kiện cho nút Duyệt trong lecturer.html
     const btnApprove = document.getElementById('btnApproveTopic');
     if (btnApprove) {
         btnApprove.addEventListener('click', () => {
-            const topicId = parseInt(document.getElementById('currentTopicId')?.value);
-            approveTopic(topicId, 'approved');
+            // Giả sử duyệt topic số 1
+            approveTopic(1, 'approved').then(() => {
+                if(typeof showToast === 'function') showToast('Đã gọi API xác nhận hướng dẫn đề tài #1!');
+            });
         });
     }
 
