@@ -517,7 +517,75 @@
     <div class="modal fade" id="modalAddMember" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Thêm Thành viên Nhóm</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="mb-3"><label class="form-label small fw-bold text-muted">Nhập Mã sinh viên</label><input type="text" class="form-control"></div></div><div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-primary w-100 fw-bold" onclick="showToast('Đã thêm thành viên!')" data-bs-dismiss="modal">Thêm</button></div></div></div></div>
     <div class="modal fade" id="modalMoreSuggestions" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Gợi ý Đề tài hệ thống</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><ul class="list-group list-group-flush"><li class="list-group-item">Ứng dụng Blockchain...</li><li class="list-group-item">Hệ thống IoT...</li></ul></div></div></div></div>
     <div class="modal fade" id="modalAllMentors" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Danh sách Giảng viên Hướng dẫn</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="row g-3"><div class="col-md-6"><div class="p-3 border rounded-3 d-flex align-items-center gap-3"><div class="bg-light rounded-circle p-2"><i class="fa-solid fa-user-tie"></i></div><div><div class="fw-bold">TS. Nguyễn Văn A</div><div class="small text-muted">Khoa CNTT - AI, Big Data</div></div></div></div></div></div></div></div></div>
-    <div class="modal fade" id="modalConfirmRegister" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header bg-success text-white"><h5 class="modal-title fw-bold">Xác nhận Đăng ký</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body p-4">Bạn có chắc chắn muốn gửi hồ sơ đăng ký đề tài này?</div><div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-light fw-bold" data-bs-dismiss="modal">Kiểm tra lại</button><button id="btnSubmitRegister" class="btn btn-success fw-bold px-4" data-bs-dismiss="modal">Đồng ý gửi</button></div></div></div></div>
-    <div class="modal fade" id="modalConfirmSubmit" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header bg-primary text-white"><h5 class="modal-title fw-bold">Xác nhận Nộp bài</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body p-4">Hệ thống sẽ ghi nhận thời gian nộp bài của bạn.</div><div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy</button><button class="btn btn-primary fw-bold px-4" onclick="showToast('Nộp báo cáo thành công!')" data-bs-dismiss="modal">Nộp ngay</button></div></div></div></div>
+    <div class="modal fade" id="modalConfirmRegister" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title fw-bold">Đăng ký Đề tài Mới</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Tên đề tài</label>
+                        <input type="text" id="topicName" class="form-control" placeholder="Nhập tên đề tài..." required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Mô tả tóm tắt</label>
+                        <textarea id="topicDesc" class="form-control" rows="3" placeholder="Mô tả mục tiêu, công nghệ..."></textarea>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">Đợt NCKH</label>
+                            <select id="batchId" class="form-select">
+                                <option value="1">Đợt 1 - 2026</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">Giảng viên HD</label>
+                            <select id="mentorId" class="form-select">
+                                <option value="2">TS. Nguyễn Văn A (ID: 2)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <input type="hidden" id="groupId" value="1">
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy</button>
+                    <button id="btnSubmitRegister" class="btn btn-success fw-bold px-4" data-bs-dismiss="modal">Đồng ý gửi</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="modalConfirmSubmit" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold">Nộp báo cáo / Tài liệu</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Loại tài liệu</label>
+                        <select id="submissionType" class="form-select">
+                            <option value="report">Báo cáo định kỳ</option>
+                            <option value="final">Báo cáo tổng kết</option>
+                            <option value="other">Tài liệu khác</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Chọn file</label>
+                        <input type="file" id="submissionFile" class="form-control" required>
+                        <div class="form-text">Hỗ trợ: PDF, DOCX, ZIP (Tối đa 50MB)</div>
+                    </div>
+                    <input type="hidden" id="submissionTopicId" value="1">
+                    <input type="hidden" id="submissionUploaderId" value="3">
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy</button>
+                    <button id="btnUploadSubmission" class="btn btn-primary fw-bold px-4" data-bs-dismiss="modal">Nộp ngay</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="modal fade" id="modalProfile" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Hồ sơ Sinh viên</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="mb-3"><label class="form-label small fw-bold text-muted">Họ tên</label><input type="text" class="form-control" value="Nguyễn Văn Học" readonly></div><div class="mb-3"><label class="form-label small fw-bold text-muted">Mã sinh viên</label><input type="text" class="form-control" value="21010042" readonly></div></div><div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-primary w-100 fw-bold" onclick="showToast('Cập nhật hồ sơ thành công!')" data-bs-dismiss="modal">Lưu thay đổi</button></div></div></div></div>
 {% endblock %}

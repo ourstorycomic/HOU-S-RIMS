@@ -191,14 +191,17 @@ function switchTab(tabName, element) {
 /**
  * 2. HÀM HIỂN THỊ THÔNG BÁO (TOAST)
  */
-function showToast(message) {
-    const toastElement = document.getElementById('liveToast');
-    const toastBody = document.getElementById('toastMessage');
-    
-    if (toastElement && toastBody) {
-        toastBody.innerText = message;
-        const toast = new bootstrap.Toast(toastElement);
-        toast.show();
+function showToast(message, type = 'success') {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: message,
+            icon: type,
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
+        });
     } else {
         alert(message);
     }

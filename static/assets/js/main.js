@@ -19,17 +19,14 @@ async function registerTopic(data) {
         const result = await response.json();
         
         if (response.ok) {
-            alert('Đăng ký đề tài thành công!');
-            // Reload trang hoặc đóng Modal tại đây
-            // $('#registerModal').modal('hide');
-            // location.reload();
+            Swal.fire('Thành công', 'Đăng ký đề tài thành công!', 'success');
             return result;
         } else {
-            alert('Lỗi: ' + result.error);
+            Swal.fire('Lỗi', result.error, 'error');
         }
     } catch (error) {
         console.error('Lỗi khi đăng ký đề tài:', error);
-        alert('Đã xảy ra lỗi hệ thống khi đăng ký.');
+        Swal.fire('Lỗi', 'Đã xảy ra lỗi hệ thống khi đăng ký.', 'error');
     }
 }
 
@@ -53,16 +50,14 @@ async function approveTopic(topicId, status) {
         const result = await response.json();
         
         if (response.ok) {
-            alert(`Đã cập nhật trạng thái thành: ${status}`);
-            // Reload hoặc đóng Modal
-            // location.reload();
+            Swal.fire('Thành công', `Đã cập nhật trạng thái thành: ${status}`, 'success');
             return result;
         } else {
-            alert('Lỗi: ' + result.error);
+            Swal.fire('Lỗi', result.error, 'error');
         }
     } catch (error) {
         console.error('Lỗi khi xét duyệt:', error);
-        alert('Đã xảy ra lỗi hệ thống khi xét duyệt.');
+        Swal.fire('Lỗi', 'Đã xảy ra lỗi hệ thống khi xét duyệt.', 'error');
     }
 }
 
@@ -72,16 +67,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnRegister = document.getElementById('btnSubmitRegister');
     if (btnRegister) {
         btnRegister.addEventListener('click', () => {
-            // Thay vì lấy dữ liệu từ input không tồn tại, mock dữ liệu để test luồng
+            const nameField = document.getElementById('topicName');
+            if (!nameField || !nameField.value.trim()) {
+                Swal.fire('Lỗi', 'Vui lòng nhập tên đề tài!', 'warning');
+                return;
+            }
+
             const topicData = {
-                name: "Đề tài Test Đăng ký từ Giao diện Sinh viên",
-                description: "Nội dung mô tả đề tài được gửi từ UI.",
-                batch_id: 1,
-                mentor_id: 2,
-                group_id: 1
+                name: document.getElementById('topicName').value.trim(),
+                description: document.getElementById('topicDesc').value.trim(),
+                batch_id: parseInt(document.getElementById('batchId').value),
+                mentor_id: parseInt(document.getElementById('mentorId').value),
+                group_id: parseInt(document.getElementById('groupId').value)
             };
-            registerTopic(topicData).then(() => {
-                if(typeof showToast === 'function') showToast('Đã gửi hồ sơ đăng ký thành công qua API!');
+
+            registerTopic(topicData).then((res) => {
+                if (res && res.topic_id) {
+                    if(typeof showToast === 'function') showToast('Đã gửi hồ sơ đăng ký thành công qua API!');
+                }
             });
         });
     }
@@ -97,12 +100,47 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Ví dụ gán sự kiện cho nút Từ chối
+    // Gán sự kiện cho nút Từ chối
     const btnReject = document.getElementById('btnRejectTopic');
     if (btnReject) {
         btnReject.addEventListener('click', () => {
             const topicId = parseInt(document.getElementById('currentTopicId')?.value);
             approveTopic(topicId, 'rejected');
+        });
+    }
+
+    // Gán sự kiện cho nút Nộp báo cáo trong student.html
+    const btnUpload = document.getElementById('btnUploadSubmission');
+    if (btnUpload) {
+        btnUpload.addEventListener('click', async () => {
+            const fileInput = document.getElementById('submissionFile');
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                Swal.fire('Lỗi', 'Vui lòng chọn file để nộp!', 'warning');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('type', document.getElementById('submissionType').value);
+            formData.append('topic_id', document.getElementById('submissionTopicId').value);
+            formData.append('uploader_id', document.getElementById('submissionUploaderId').value);
+
+            try {
+                const response = await fetch('/api/submissions/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    Swal.fire('Thành công', 'Nộp báo cáo/tài liệu thành công!', 'success');
+                } else {
+                    Swal.fire('Lỗi', result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Lỗi khi nộp bài:', error);
+                Swal.fire('Lỗi', 'Đã xảy ra lỗi hệ thống khi nộp bài.', 'error');
+            }
         });
     }
 });
