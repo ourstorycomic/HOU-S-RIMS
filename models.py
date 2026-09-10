@@ -20,3 +20,15 @@ class User(db.Model):
             'bio': self.bio,
             'phone': self.phone
         }
+
+class Meeting(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    date_time = db.Column(db.String(50), nullable=False)
+    notes = db.Column(db.String(500))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'date_time': self.date_time,
+            'notes': self.notes
+        }

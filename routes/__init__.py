@@ -11,6 +11,7 @@ def init_routes(app):
     from .powerbi import powerbi_bp
     from .process import process_bp
     from .student import student_bp
+    from .calendar import calendar_bp
 
     app.register_blueprint(upload_bp)
     app.register_blueprint(plot_bp)
@@ -23,3 +24,4 @@ def init_routes(app):
     app.register_blueprint(powerbi_bp)
     app.register_blueprint(process_bp)
     app.register_blueprint(student_bp)
+    app.register_blueprint(calendar_bp)
