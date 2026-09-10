@@ -17,14 +17,21 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         
-        user = USERS.get(username)
-        if user and user['pass'] == password:
+        from models import User
+        user = User.query.filter_by(username=username).first()
+        
+        if user and user.password == password:
             # Lưu session
-            session['user_id'] = username
-            session['role'] = user['role']
-            session['user_name'] = user['name']
+            session['user_id'] = user.username
+            session['role'] = user.role
+            session['user_name'] = user.name
             
-            return redirect(url_for(user['redirect']))
+            # Chuyển hướng theo role
+            if user.role == 'admin': return redirect(url_for('web.admin_page'))
+            if user.role == 'faculty': return redirect(url_for('web.faculty_page'))
+            if user.role == 'lecturer': return redirect(url_for('web.lecturer_page'))
+            if user.role == 'student': return redirect(url_for('web.student_page'))
+            return redirect(url_for('web.admin_page'))
         else:
             flash('Sai tên đăng nhập hoặc mật khẩu!')
             
