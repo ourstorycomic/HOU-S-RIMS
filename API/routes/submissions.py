@@ -16,6 +16,23 @@ def allowed_file(filename):
 
 @submissions_bp.route('/api/submissions/upload', methods=['POST'])
 def upload_submission_file():
+    """
+    Upload file báo cáo/tài liệu
+    ---
+    tags:
+      - Submissions
+    consumes:
+      - multipart/form-data
+    parameters:
+      - in: formData
+        name: file
+        type: file
+        required: true
+        description: Chọn file cần tải lên
+    responses:
+      200:
+        description: Upload thành công
+    """
     if 'file' not in request.files:
         return jsonify({"success": False, "message": "Không tìm thấy file gửi lên."}), 400
     

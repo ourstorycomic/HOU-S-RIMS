@@ -26,6 +26,30 @@ def write_json(filepath, data):
 
 @evaluation_bp.route('/api/councils', methods=['POST'])
 def create_council():
+    """
+    Tạo hội đồng đánh giá mới
+    ---
+    tags:
+      - Evaluation
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            name:
+              type: string
+              example: "Hội đồng 1"
+            members:
+              type: array
+              items:
+                type: string
+              example: ["Thầy A", "Cô B"]
+    responses:
+      201:
+        description: Tạo thành công
+    """ 
     try:
         data = request.get_json()
         if not data:
@@ -52,6 +76,30 @@ def create_council():
 
 @evaluation_bp.route('/api/rubrics', methods=['PUT'])
 def update_rubric():
+    """
+    Cập nhật Rubric đánh giá
+    ---
+    tags:
+      - Evaluation
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            id:
+              type: string
+              example: "rubric-001"
+            criteria:
+              type: array
+              items:
+                type: string
+              example: ["Code: 7", "Trình bày: 3"]
+    responses:
+      200:
+        description: Cập nhật thành công
+    """
     try:
         data = request.get_json()
         if not data or 'id' not in data:

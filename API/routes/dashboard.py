@@ -18,6 +18,15 @@ def read_json(filepath, default_val):
             return default_val
 @dashboard_bp.route('/api/dashboard/progress', methods=['GET'])
 def get_dashboard_progress():
+    """
+    Lấy trung bình tiến độ các đề tài để vẽ biểu đồ
+    ---
+    tags:
+      - Dashboard
+    responses:
+      200:
+        description: Thành công
+    """
     try:
         progress_data = read_json(PROGRESS_FILE, {})
         topic_summaries = []
@@ -44,6 +53,15 @@ def get_dashboard_progress():
 
 @dashboard_bp.route('/api/dashboard/stats', methods=['GET'])
 def get_dashboard_stats():
+    """
+    Lấy số liệu thống kê tổng quan
+    ---
+    tags:
+      - Dashboard
+    responses:
+      200:
+        description: Thành công
+    """
     try:
         progress_data = read_json(PROGRESS_FILE, {})
         councils_data = read_json(COUNCILS_FILE, [])

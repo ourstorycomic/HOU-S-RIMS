@@ -10,6 +10,23 @@ os.makedirs(TEMPLATES_FOLDER, exist_ok=True)
 
 @documents_bp.route('/api/documents/templates/<path:filename>', methods=['GET'])
 def get_document_template(filename):
+    """
+    Tải file tài liệu mẫu
+    ---
+    tags:
+      - Documents
+    parameters:
+      - in: path
+        name: filename
+        type: string
+        required: true
+        description: Tên file mẫu (VD: BÀI LÀM CHÍNH.docx)
+    responses:
+      200:
+        description: Tải file thành công
+      404:
+        description: Không tìm thấy file
+    """
     try:
         file_path = os.path.join(TEMPLATES_FOLDER, filename)
         

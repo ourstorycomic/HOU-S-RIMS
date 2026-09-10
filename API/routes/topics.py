@@ -20,7 +20,6 @@ def get_topics():
         })
     return jsonify(result), 200
 
-# Task 3: Lấy danh sách mentor
 mentors_bp = Blueprint('mentors', __name__, url_prefix='/api/mentors')
 
 @mentors_bp.route('', methods=['GET'])
@@ -45,7 +44,6 @@ def register_topic():
         return jsonify({'error': 'Missing required fields'}), 400
         
     try:
-        # Check if group already has a topic in this batch
         existing_topic = Topic.query.filter_by(group_id=data['group_id'], batch_id=data['batch_id']).first()
         if existing_topic:
             return jsonify({'error': 'Group already registered a topic for this batch'}), 400
@@ -59,7 +57,7 @@ def register_topic():
             status='pending'
         )
         db.session.add(new_topic)
-        db.session.flush() # To get new_topic.id
+        db.session.flush() 
         
         from models import TopicRegistration
         registration = TopicRegistration(
@@ -69,7 +67,7 @@ def register_topic():
             status='pending'
         )
         db.session.add(registration)
-        db.session.commit() # Transaction completed
+        db.session.commit() 
         
         return jsonify({'message': 'Topic registered successfully', 'topic_id': new_topic.id}), 201
     except Exception as e:
