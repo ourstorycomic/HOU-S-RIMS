@@ -34,7 +34,7 @@ def dashboard():
         'total_mentors': len(mentors),
         'total_students': len(students)
     }
-    return render_template('faculty/dashboard.html', stats=stats)
+    return render_template('faculty/dashboard.html', stats=stats, topics=topics)
 
 @faculty_bp.route('/batches')
 def batches():
