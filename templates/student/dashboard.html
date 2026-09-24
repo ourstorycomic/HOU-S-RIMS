@@ -1,0 +1,64 @@
+{% extends "layouts/student_layout.html" %}
+
+{% block student_content %}
+<div id="view-s-explore" class="fade-in">
+            <div class="row g-4">
+                    <div class="col-md-8">
+                        <div class="card border-0 shadow-sm rounded-4 p-5 h-100 text-white position-relative overflow-" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);">
+                            <div class="position-relative z-1" style="max-width: 90%;">
+                                <h3 class="fw-bold mb-3"><i class="fa-solid fa-lightbulb me-2"></i> Gợi ý đề tài nghiên cứu</h3>
+                                <p class="opacity-90 mb-4">Dựa trên kết quả học tập và sở thích của bạn, hệ thống đề xuất các hướng nghiên cứu phù hợp nhất.</p>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button class="btn btn-light text-primary fw-bold rounded-pill px-3 shadow-sm border-0 small"># Generative AI in Law</button>
+                                    <button class="btn btn-light text-primary fw-bold rounded-pill px-3 shadow-sm border-0 small"># EdTech Gamification</button>
+                                    <button class="btn btn-outline-light fw-bold rounded-pill px-3 small text-white" style="border: 1px solid rgba(255,255,255,0.5);">Xem thêm...</button>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-bolt position-absolute" style="font-size: 180px; right: -20px; bottom: -40px; opacity: 0.15; transform: rotate(-15deg);"></i>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                            <h6 class="fw-bold mb-3"><i class="fa-solid fa-user-plus me-2 text-primary"></i> Tìm Mentor</h6>
+                            <div class="d-flex flex-column gap-3">
+                                {% for mentor in mentors %}
+                                <div class="d-flex align-items-center gap-3 p-2 bg-white border rounded-3 hover-shadow">
+                                    <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 40px; height: 40px;">{{ mentor.full_name[0] | upper }}</div>
+                                    <div><div class="fw-bold text-dark small">{{ mentor.full_name }}</div><small class="text-muted" style="font-size: 10px;">{{ mentor.bio or 'Khoa CNTT' }}</small></div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <button class="btn btn-primary-subtle text-primary fw-bold w-100 mt-auto rounded-pill py-2 small" data-bs-toggle="modal" data-bs-target="#modalAllMentors">Tất cả giảng viên</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <h6 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-arrow-trend-up me-2"></i> Xu hướng NCKH sinh viên 2025-2026</h6>
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="card border-0 shadow-sm rounded-4 p-3 h-100">
+                                <span class="badge bg-primary-subtle text-primary w-auto mb-2 align-self-start">KINH TẾ</span>
+                                <div class="fw-bold mb-2">Kinh tế tuần hoàn trong doanh nghiệp nhỏ</div>
+                                <div class="small text-muted mt-auto"><i class="fa-regular fa-clock me-1"></i> 2 tuần trước • <i class="fa-regular fa-user me-1"></i> 1.2k lượt xem</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-0 shadow-sm rounded-4 p-3 h-100">
+                                <span class="badge bg-primary-subtle text-primary w-auto mb-2 align-self-start">CNTT</span>
+                                <div class="fw-bold mb-2">Nhận dạng ngôn ngữ ký hiệu</div>
+                                <div class="small text-muted mt-auto"><i class="fa-regular fa-clock me-1"></i> 2 tuần trước • <i class="fa-regular fa-user me-1"></i> 3.4k lượt xem</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-0 shadow-sm rounded-4 p-3 h-100">
+                                <span class="badge bg-primary-subtle text-primary w-auto mb-2 align-self-start">EDTECH</span>
+                                <div class="fw-bold mb-2">Chuyển đổi số trong đào tạo từ xa</div>
+                                <div class="small text-muted mt-auto"><i class="fa-regular fa-clock me-1"></i> 2 tuần trước • <i class="fa-regular fa-user me-1"></i> 2.1k lượt xem</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+{% endblock %}

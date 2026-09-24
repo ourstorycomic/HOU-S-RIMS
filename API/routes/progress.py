@@ -76,3 +76,25 @@ def update_progress(topic_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+@progress_bp.route('/<int:topic_id>/milestones', methods=['POST'])
+def add_milestone(topic_id):
+    from datetime import datetime
+    data = request.get_json()
+    if not data or 'name' not in data or 'deadline' not in data:
+        return jsonify({'error': 'Missing required fields'}), 400
+        
+    try:
+        deadline_date = datetime.strptime(data['deadline'], '%Y-%m-%d')
+        new_milestone = Milestone(
+            topic_id=topic_id,
+            name=data['name'],
+            deadline=deadline_date,
+            description=data.get('description', '')
+        )
+        db.session.add(new_milestone)
+        db.session.commit()
+        return jsonify({'message': 'Milestone created', 'id': new_milestone.id}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500

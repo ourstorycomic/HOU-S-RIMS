@@ -1,4 +1,11 @@
-# app.py
+# app.py
+import numpy as np
+np.long = np.int64
+np.ulong = np.uint64
+np.longlong = np.int64
+np.ulonglong = np.uint64
+np.float = np.float64
+np.bool = np.bool_
 from flask import Flask, render_template, send_from_directory
 from routes import init_routes
 from dotenv import load_dotenv
@@ -28,18 +35,6 @@ init_api_routes(app)
 
 @app.route('/')
 def index(): return render_template('index.html')
-
-@app.route('/student')
-def student(): return render_template('student.html')
-
-@app.route('/lecturer')
-def lecturer(): return render_template('lecturer.html')
-
-@app.route('/admin')
-def admin(): return render_template('admin.html')
-
-@app.route('/faculty')
-def faculty(): return render_template('faculty.html')
 
 @app.route('/<path:filename>')
 def serve_static(filename): return send_from_directory('Models', filename)

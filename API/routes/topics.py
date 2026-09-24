@@ -76,7 +76,7 @@ def get_mentors():
       200:
         description: List of mentors
     """
-    mentors = User.query.filter_by(role='Mentor').all()
+    mentors = User.query.filter_by(role='Lecturer').all()
     result = []
     for mentor in mentors:
         result.append({
@@ -120,21 +120,45 @@ def register_topic():
         description: Invalid input or Group already registered
     """
     data = request.get_json()
-    if not data or 'name' not in data or 'batch_id' not in data or 'mentor_id' not in data or 'group_id' not in data:
+    if not data or 'name' not in data or 'batch_id' not in data or 'mentor_id' not in data:
         return jsonify({'error': 'Missing required fields'}), 400
         
     try:
-        # Check if group already has a topic in this batch
-        existing_topic = Topic.query.filter_by(group_id=data['group_id'], batch_id=data['batch_id']).first()
-        if existing_topic:
-            return jsonify({'error': 'Group already registered a topic for this batch'}), 400
+        from flask import session
+        from models import Group, GroupMember
+        
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'Unauthorized'}), 401
+            
+        group_id = data.get('group_id', 0)
+        
+        if group_id == 0:
+            # Auto-create group
+            new_group = Group(
+                name=f"Nhóm của {session.get('user_name', 'SV')}",
+                batch_id=data['batch_id'],
+                leader_id=user_id
+            )
+            db.session.add(new_group)
+            db.session.flush() # To get new_group.id
+            group_id = new_group.id
+            
+            # Add leader as member
+            new_member = GroupMember(group_id=group_id, student_id=user_id)
+            db.session.add(new_member)
+        else:
+            # Check if group already has a topic in this batch
+            existing_topic = Topic.query.filter_by(group_id=group_id, batch_id=data['batch_id']).first()
+            if existing_topic:
+                return jsonify({'error': 'Group already registered a topic for this batch'}), 400
             
         new_topic = Topic(
-            name=data['name'],
+            title=data['name'], # Note: Model uses 'title'
             description=data.get('description', ''),
             batch_id=data['batch_id'],
             mentor_id=data['mentor_id'],
-            group_id=data['group_id'],
+            group_id=group_id,
             status='pending'
         )
         db.session.add(new_topic)
@@ -155,6 +179,60 @@ def register_topic():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+@topics_bp.route('/<int:topic_id>', methods=['PUT'])
+def update_topic(topic_id):
+    """
+    Update topic details (title, description, mentor_id)
+    """
+    from flask import session
+    if session.get('role') not in ['faculty', 'admin']:
+        return jsonify({'error': 'Unauthorized'}), 403
+        
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+        
+    try:
+        topic = Topic.query.get(topic_id)
+        if not topic:
+            return jsonify({'error': 'Topic not found'}), 404
+            
+        if 'title' in data:
+            topic.title = data['title']
+        if 'description' in data:
+            topic.description = data['description']
+        if 'mentor_id' in data:
+            topic.mentor_id = data['mentor_id'] if data['mentor_id'] else None
+        if 'batch_id' in data:
+            topic.batch_id = data['batch_id'] if data['batch_id'] else None
+        if 'status' in data:
+            topic.status = data['status']
+            
+        db.session.commit()
+        return jsonify({'message': 'Topic updated successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+@topics_bp.route('/<int:topic_id>/faculty-approve', methods=['POST'])
+def faculty_approve_topic(topic_id):
+    """
+    Faculty approves a topic
+    """
+    from flask import session
+    if session.get('role') != 'faculty':
+        return jsonify({'error': 'Unauthorized'}), 403
+        
+    try:
+        topic = Topic.query.get(topic_id)
+        if not topic:
+            return jsonify({'error': 'Topic not found'}), 404
+            
+        topic.status = 'approved'
+        db.session.commit()
+        return jsonify({'message': 'Topic approved by faculty'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 @topics_bp.route('/<int:topic_id>/approve', methods=['POST'])
 def approve_topic(topic_id):
     """
@@ -192,6 +270,9 @@ def approve_topic(topic_id):
         topic = Topic.query.get(topic_id)
         if not topic:
             return jsonify({'error': 'Topic not found'}), 404
+        # Only allow specific statuses
+        if data['status'] not in ['faculty_pending', 'approved', 'rejected']:
+            return jsonify({'error': 'Invalid status'}), 400
             
         topic.status = data['status']
         db.session.commit()

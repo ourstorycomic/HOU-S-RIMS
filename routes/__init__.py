@@ -10,6 +10,10 @@ def init_routes(app):
     from .analysis import analysis_bp
     from .powerbi import powerbi_bp
     from .process import process_bp
+    
+    from .student_bp import student_bp
+    from .lecturer_bp import lecturer_bp
+    from .faculty_bp import faculty_bp
 
     app.register_blueprint(upload_bp)
     app.register_blueprint(plot_bp)
@@ -21,3 +25,7 @@ def init_routes(app):
     app.register_blueprint(analysis_bp)
     app.register_blueprint(powerbi_bp)
     app.register_blueprint(process_bp)
+    
+    app.register_blueprint(student_bp)
+    app.register_blueprint(lecturer_bp)
+    app.register_blueprint(faculty_bp)

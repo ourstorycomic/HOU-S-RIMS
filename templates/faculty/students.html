@@ -1,0 +1,42 @@
+{% extends "layouts/faculty_layout.html" %}
+
+{% block faculty_content %}
+<div id="view-f-students" class="fade-in ">
+                <div class="bg-white p-4 rounded-4 shadow-sm mb-4 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0">DANH SÁCH SINH VIÊN</h5>
+                    <div class="d-flex gap-2">
+                        <input type="text" class="form-control rounded-pill px-3" placeholder="Tìm kiếm SV..." style="width: 200px;">
+                        <button class="btn btn-outline-primary fw-bold rounded-pill px-3"><i class="fa-solid fa-file-excel me-1"></i> IMPORT</button>
+                    </div>
+                </div>
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="bg-light"><tr class="text-muted small text-uppercase fw-bold"><th class="ps-4 py-3">MSSV</th><th>Họ và Tên</th><th>Chuyên ngành</th><th>Email</th><th class="text-end pe-4">Thao tác</th></tr></thead>
+                        <tbody>
+                            {% if students %}
+                                {% for s in students %}
+                                <tr>
+                                    <td class="ps-4 fw-bold text-primary">{{ s.student_id or 'SV00' ~ s.id }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px; font-size: 12px;">{{ s.full_name[0] | upper if s.full_name else 'S' }}</div>
+                                            <span class="fw-bold text-dark">{{ s.full_name }}</span>
+                                        </div>
+                                    </td>
+                                    <td><span class="badge bg-secondary-subtle text-secondary">{{ s.faculty or 'Chưa phân ngành' }}</span></td>
+                                    <td class="text-muted small">{{ s.email }}</td>
+                                    <td class="text-end pe-4">
+                                        <button class="btn btn-sm btn-light text-info border" onclick="viewPublicProfile({{ s.id }})" title="Xem hồ sơ"><i class="fa-regular fa-address-card"></i></button>
+                                        <button class="btn btn-sm btn-light text-primary border"><i class="fa-solid fa-pen"></i></button>
+                                        <button class="btn btn-sm btn-light text-danger border"><i class="fa-solid fa-trash"></i></button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr><td colspan="5" class="text-center text-muted py-5">Chưa có dữ liệu Sinh viên</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+        </div>
+{% endblock %}

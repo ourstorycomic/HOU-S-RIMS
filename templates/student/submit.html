@@ -1,0 +1,121 @@
+{% extends "layouts/student_layout.html" %}
+
+{% block student_content %}
+<div id="view-s-submit" class="fade-in ">
+        <div class="card border-0 shadow-sm rounded-4 p-5 text-center">
+            <h4 class="fw-bold mb-2">Nộp báo cáo tiến độ</h4>
+            <div class="mb-4 text-start">
+                <label class="form-label small fw-bold text-muted">Chọn Cột mốc (Milestone)</label>
+                <select class="form-select" id="milestone-select">
+                    {% if milestones %}
+                        {% for m in milestones %}
+                        <option value="{{ m.id }}">{{ m.name }} (Hạn: {{ m.deadline.strftime('%d/%m/%Y') }})</option>
+                        {% endfor %}
+                    {% else %}
+                        <option value="">Chưa có cột mốc nào được tạo</option>
+                    {% endif %}
+                </select>
+            </div>
+            <div id="report-upload-zone" class="upload-zone p-5 rounded-4 mb-4 d-flex flex-column align-items-center justify-content-center cursor-pointer" style="cursor:pointer; border: 2px dashed #6366f1;">
+    <input type="file" id="report-file-input" class="d-none">
+    <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+        <i class="fa-solid fa-cloud-arrow-up fs-3"></i>
+    </div>
+    <h6 class="fw-bold mb-1" id="report-file-name">Kéo thả hoặc click để chọn file</h6>
+</div>
+            <div class="text-start mb-4"><label class="form-label small fw-bold text-muted">GHI CHÚ</label><textarea class="form-control bg-light" rows="3"></textarea></div>
+            <button class="btn btn-primary w-100 py-3 fw-bold rounded-3 shadow-sm" style="background: linear-gradient(90deg, #6366f1 0%, #4f46e5 100%); border: none;" data-bs-toggle="modal" data-bs-target="#modalConfirmSubmit">XÁC NHẬN NỘP BÁO CÁO</button>
+        </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const uploadZone = document.getElementById('report-upload-zone');
+    const fileInput = document.getElementById('report-file-input');
+    const fileNameDisplay = document.getElementById('report-file-name');
+    const submitBtn = document.querySelector('button[data-bs-target="#modalConfirmSubmit"]');
+    
+    let selectedFile = null;
+
+    if (uploadZone) {
+        uploadZone.addEventListener('click', () => fileInput.click());
+        uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.style.backgroundColor = '#f8f9fa'; });
+        uploadZone.addEventListener('dragleave', () => { uploadZone.style.backgroundColor = 'transparent'; });
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.style.backgroundColor = 'transparent';
+            if (e.dataTransfer.files.length) {
+                selectedFile = e.dataTransfer.files[0];
+                fileNameDisplay.textContent = selectedFile.name;
+            }
+        });
+    }
+
+    if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                selectedFile = e.target.files[0];
+                fileNameDisplay.textContent = selectedFile.name;
+            }
+        });
+    }
+
+    if (submitBtn) {
+        submitBtn.removeAttribute('data-bs-toggle');
+        submitBtn.removeAttribute('data-bs-target');
+        
+        submitBtn.addEventListener('click', async () => {
+            if (!selectedFile) {
+                if (typeof Swal !== 'undefined') Swal.fire('Lỗi', 'Vui lòng chọn file báo cáo', 'error');
+                else alert('Vui lòng chọn file báo cáo');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            
+            const currentUserIdMeta = document.querySelector('meta[name="current-user-id"]');
+            const uploaderId = currentUserIdMeta ? currentUserIdMeta.content : 1;
+            
+            formData.append('topic_id', '{{ topic_id }}');
+            formData.append('uploader_id', uploaderId);
+            formData.append('type', 'report');
+            
+            const milestoneSelect = document.getElementById('milestone-select');
+            if (milestoneSelect && milestoneSelect.value) {
+                formData.append('milestone_id', milestoneSelect.value);
+            }
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Đang tải lên...';
+            
+            try {
+                const res = await fetch('/api/submissions/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (res.ok) {
+                    if (typeof Swal !== 'undefined') Swal.fire('Thành công', 'Đã nộp báo cáo thành công!', 'success');
+                    else alert('Đã nộp báo cáo thành công!');
+                    selectedFile = null;
+                    fileNameDisplay.textContent = 'Kéo thả hoặc click để chọn file';
+                    fileInput.value = '';
+                } else {
+                    const data = await res.json();
+                    if (typeof Swal !== 'undefined') Swal.fire('Lỗi', data.error || 'Đã xảy ra lỗi', 'error');
+                    else alert(data.error || 'Đã xảy ra lỗi');
+                }
+            } catch(e) {
+                if (typeof Swal !== 'undefined') Swal.fire('Lỗi', 'Lỗi kết nối', 'error');
+                else alert('Lỗi kết nối');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'XÁC NHẬN NỘP BÁO CÁO';
+            }
+        });
+    }
+});
+</script>
+
+{% endblock %}

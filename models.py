@@ -12,7 +12,9 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     phone = db.Column(db.String(20), nullable=True)
     bio = db.Column(db.Text, nullable=True)
-    role = db.Column(db.String(20), nullable=False) # Admin, Mentor, Student
+    role = db.Column(db.String(20), nullable=False) # Admin, Lecturer, Student
+    student_id = db.Column(db.String(20), nullable=True)   # MSSV for students
+    faculty = db.Column(db.String(100), nullable=True)      # faculty / department
     
     # Relationships
     topics_mentored = db.relationship('Topic', backref='mentor', lazy=True)
@@ -22,9 +24,12 @@ class Batch(db.Model):
     __tablename__ = 'batches'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    start_date = db.Column(db.DateTime, nullable=False)
-    end_date = db.Column(db.DateTime, nullable=False)
+    type = db.Column(db.String(50), nullable=True, default='NCKH')
+    start_date = db.Column(db.DateTime, nullable=True)
+    end_date = db.Column(db.DateTime, nullable=True)
+    submission_deadline = db.Column(db.DateTime, nullable=True)
     status = db.Column(db.String(20), default='active') # active, completed
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     topics = db.relationship('Topic', backref='batch', lazy=True)
     groups = db.relationship('Group', backref='batch', lazy=True)
@@ -48,13 +53,17 @@ class GroupMember(db.Model):
 class Topic(db.Model):
     __tablename__ = 'topics'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(200), nullable=False)
+    title = db.Column(db.String(200), nullable=False)   # renamed from 'name'
     description = db.Column(db.Text, nullable=True)
-    batch_id = db.Column(db.Integer, db.ForeignKey('batches.id'), nullable=False)
-    mentor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    batch_id = db.Column(db.Integer, db.ForeignKey('batches.id'), nullable=True)
+    mentor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     group_id = db.Column(db.Integer, db.ForeignKey('groups.id'), nullable=True)
-    status = db.Column(db.String(20), default='pending') # pending, approved, rejected
+    status = db.Column(db.String(20), default='pending') # pending, faculty_pending, approved, rejected
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    meetings = db.relationship('Meeting', backref='topic', lazy=True)
+    milestones = db.relationship('Milestone', backref='topic', lazy=True)
 
 class TopicRegistration(db.Model):
     __tablename__ = 'topic_registrations'
@@ -75,14 +84,21 @@ class Meeting(db.Model):
     end_time = db.Column(db.DateTime, nullable=False)
     organizer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=True)
+    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
 
 class Message(db.Model):
     __tablename__ = 'messages'
     id = db.Column(db.Integer, primary_key=True)
     sender_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     receiver_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('groups.id'), nullable=True)
     content = db.Column(db.Text, nullable=False)
+    message_type = db.Column(db.String(20), default='text') # text, image, file, emoji
+    file_url = db.Column(db.String(255), nullable=True)
+    file_name = db.Column(db.String(255), nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    sender = db.relationship('User', foreign_keys=[sender_id])
 
 class Notification(db.Model):
     __tablename__ = 'notifications'
@@ -97,10 +113,12 @@ class Submission(db.Model):
     __tablename__ = 'submissions'
     id = db.Column(db.Integer, primary_key=True)
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
+    milestone_id = db.Column(db.Integer, db.ForeignKey('milestones.id'), nullable=True)
     uploader_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     file_url = db.Column(db.String(255), nullable=False)
     type = db.Column(db.String(50), nullable=False)
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    milestone = db.relationship('Milestone', backref='submissions')
 
 class DocumentTemplate(db.Model):
     __tablename__ = 'documents'
@@ -144,7 +162,32 @@ class Milestone(db.Model):
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
     name = db.Column(db.String(100), nullable=False)
     deadline = db.Column(db.DateTime, nullable=False)
+    description = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(20), default='pending')
+
+# Portfolio Models
+class Skill(db.Model):
+    __tablename__ = 'skills'
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+
+class Achievement(db.Model):
+    __tablename__ = 'achievements'
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    name = db.Column(db.String(200), nullable=False)
+    year = db.Column(db.String(20), nullable=True)
+    description = db.Column(db.Text, nullable=True)
+
+class Experience(db.Model):
+    __tablename__ = 'experiences'
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    project_name = db.Column(db.String(200), nullable=False)
+    role = db.Column(db.String(100), nullable=True)
+    duration = db.Column(db.String(100), nullable=True)
+    description = db.Column(db.Text, nullable=True)
 
 class Progress(db.Model):
     __tablename__ = 'progresses'

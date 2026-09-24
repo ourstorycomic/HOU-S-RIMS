@@ -1,0 +1,96 @@
+{% extends "layouts/lecturer_layout.html" %}
+
+{% block lecturer_content %}
+<div id="view-l-progress" class="fade-in ">
+                <div class="card border-0 shadow-sm rounded-4 p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+                        <div>
+                            <h5 class="fw-bold mb-1">Theo dõi tiến độ NCKH SV</h5>
+                            <div class="small text-muted">Quản lý các đề tài đang hướng dẫn ({{ all_mentored_topics|length }} đề tài)</div>
+                        </div>
+                        <button class="btn btn-light border btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalCreateMeeting">
+                            <i class="fa-regular fa-calendar me-2"></i> Lịch họp định kỳ
+                        </button>
+                    </div>
+
+                    {% if all_mentored_topics %}
+                        {% for t in all_mentored_topics %}
+                        {% set status_map = {'pending': 1, 'faculty_pending': 2, 'approved': 3} %}
+                        {% set step = status_map.get(t.status, 1) %}
+                        {% set pct = (step / 3 * 100) | round | int %}
+                        <div class="bg-white border rounded-4 p-4 mb-3 shadow-sm">
+                            <div class="d-flex justify-content-between mb-3">
+                                <div>
+                                    <h6 class="fw-bold text-primary mb-1">{{ t.title }}</h6>
+                                    <small class="text-muted fw-bold">Nhóm ID: {{ t.group_id or 'N/A' }} | Trạng thái: <span class="badge {% if t.status == 'approved' %}bg-success{% else %}bg-warning text-dark{% endif %}">{{ t.status | upper }}</span></small>
+                                </div>
+                                <div class="text-end">
+                                    <div class="h4 fw-bold text-primary mb-0">{{ t.total_progress | default(0) }}%</div>
+                                    <div class="small text-muted fw-bold">TIẾN ĐỘ TỔNG THỂ</div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="fw-bold mb-0 small"><i class="fa-solid fa-list-check me-2"></i>Danh sách Cột mốc (Milestones)</h6>
+                                    <button class="btn btn-sm btn-outline-primary rounded-pill fw-bold" onclick="openAddMilestoneModal({{ t.id }})">+ Thêm Mốc</button>
+                                </div>
+                                
+                                <div class="mt-4">
+                                    <h6 class="fw-bold mb-3 small"><i class="fa-solid fa-file-arrow-down me-2"></i>Báo cáo đã nộp</h6>
+                                    {% if t.submissions %}
+                                        <div class="list-group list-group-flush border rounded-3">
+                                        {% for sub in t.submissions %}
+                                            <div class="list-group-item p-3 d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <div class="fw-bold text-dark">Báo cáo {{ sub.submitted_at.strftime('%d/%m/%Y %H:%M') }}</div>
+                                                    <small class="text-muted">Sinh viên nộp (ID: {{ sub.uploader_id }})
+                                                    {% if sub.milestone %} | Cột mốc: <span class="fw-bold text-primary">{{ sub.milestone.name }}</span>{% endif %}
+                                                    </small>
+                                                </div>
+                                                <a href="/api/submissions/download/{{ sub.id }}" class="btn btn-sm btn-outline-primary rounded-pill fw-bold"><i class="fa-solid fa-download me-1"></i> Tải về</a>
+                                            </div>
+                                        {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <div class="text-center p-3 border rounded-3 bg-light text-muted small">Chưa có báo cáo nào được nộp.</div>
+                                    {% endif %}
+                                </div>
+                                {% if t.milestones_list %}
+                                <div class="list-group list-group-flush border rounded-3">
+                                    {% for m in t.milestones_list %}
+                                    <div class="list-group-item p-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <div class="fw-bold {{ 'text-success' if m.progress_pct == 100 else 'text-dark' }}">{{ m.name }}</div>
+                                            <div class="d-flex gap-2 align-items-center">
+                                                <span class="badge bg-light text-muted border">{{ m.deadline.strftime('%d/%m/%Y') }}</span>
+                                                <button class="btn btn-sm btn-light text-primary border" onclick="updateMilestoneProgress({{ m.id }}, {{ m.progress_pct }}, '{{ m.name|replace('\'', '\\\'') }}')"><i class="fa-solid fa-pen"></i> Cập nhật</button>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="progress flex-grow-1" style="height: 6px;">
+                                                <div class="progress-bar {{ 'bg-success' if m.progress_pct == 100 else 'bg-primary' }}" style="width: {{ m.progress_pct }}%"></div>
+                                            </div>
+                                            <div class="small fw-bold {{ 'text-success' if m.progress_pct == 100 else 'text-primary' }}">{{ m.progress_pct }}%</div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                    <div class="text-center p-4 border rounded-3 bg-light text-muted small">
+                                        Đề tài này chưa thiết lập cột mốc nào.
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted py-5">
+                            <i class="fa-solid fa-clipboard-list fs-1 d-block mb-3 opacity-25"></i>
+                            <div class="fw-bold">Chưa có đề tài nào đang hướng dẫn</div>
+                            <div class="small">Sinh viên cần đăng ký và chọn bạn làm mentor</div>
+                        </div>
+                    {% endif %}
+                </div>
+        </div>
+{% endblock %}

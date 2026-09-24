@@ -1,0 +1,153 @@
+
+<!--templates/student.html-->
+{% extends "base.html" %}
+
+{% block title %}Cổng Sinh Viên - HOU S-RIMS{% endblock %}
+
+{% block content %}
+        <div class="top-bar">
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-light border-0 d-lg-none me-2" onclick="toggleSidebar()">
+                    <i class="fa-solid fa-bars fs-5"></i>
+                </button>
+                <i class="fa-solid fa-building-columns text-muted"></i> 
+                <span class="fw-bold text-uppercase small">HANOI OPEN UNIVERSITY</span>
+            </div>
+
+            <div class="d-flex align-items-center gap-3">
+                <div class="dropdown">
+                    <button class="btn btn-light border-0 btn-sm fw-bold text-muted position-relative" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fa-regular fa-bell" style="font-size: 1.1rem;"></i>
+                        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle">
+                            <span class="visually-hidden">New alerts</span>
+                        </span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg p-0 mt-3" style="width: 320px; border-radius: 12px; overflow: hidden;">
+                        <li class="p-3 bg-white border-bottom d-flex justify-content-between align-items-center">
+                            <h6 class="fw-bold mb-0 text-dark">Thông báo</h6>
+                            <a href="#" class="small text-primary fw-bold text-decoration-none" onclick="switchTab('s-calendar', document.querySelector('.sub-nav-item:last-child'))">Xem tất cả</a>
+                        </li>
+                        
+                        <div style="max-height: 300px; overflow-y: auto;">
+                            {% if notifications %}
+                                {% for notif in notifications %}
+                                <li><a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start {% if not notif.is_read %}bg-light{% endif %}" href="#">
+                                    <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;"><i class="fa-regular fa-bell"></i></div>
+                                    <div>
+                                        <div class="fw-bold small text-dark mb-1">Thông báo hệ thống</div>
+                                        <div class="small text-muted mb-1" style="line-height: 1.4;">{{ notif.content }}</div>
+                                        <div class="text-muted" style="font-size: 10px;">{{ notif.created_at.strftime('%d/%m/%Y %H:%M') if notif.created_at else '' }}</div>
+                                    </div>
+                                </a></li>
+                                {% endfor %}
+                            {% else %}
+                                <li class="p-3 text-center text-muted small">Không có thông báo nào</li>
+                            {% endif %}
+                        </div>
+
+                        <li class="p-2 bg-light text-center border-top">
+                            <a href="#" class="small text-muted fw-bold text-decoration-none" style="font-size: 11px;">Đánh dấu tất cả là đã đọc</a>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="dropdown border-start ps-3">
+                    <div class="d-flex align-items-center gap-2 cursor-pointer dropdown-toggle no-arrow" data-bs-toggle="dropdown">
+                        <div class="text-end">
+                            <div class="fw-bold text-dark" style="font-size: 13px;">
+                                {{ current_user.full_name if current_user else 'Sinh Viên' }}
+                            </div>
+                            <div class="fw-bold text-uppercase" style="font-size: 10px; color: #6366f1 !important;">
+                                {{ current_user.role if current_user else 'Student' }}
+                            </div>
+                        </div>
+                        <div class="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 35px; height: 35px; font-size: 12px; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;">
+                            {{ current_user.full_name[0] | upper if current_user and current_user.full_name else 'S' }}
+                        </div>
+                    </div>
+                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow mt-2">
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalProfile"><i class="fa-regular fa-id-badge me-2"></i> Hồ sơ cá nhân</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="fa-solid fa-right-from-bracket me-2"></i> Đăng xuất</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    <div class="content-area">
+        
+        
+<div class="content-body">
+{% block student_content %}{% endblock %}
+</div>
+<div class="modal fade" id="modalAddMember" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Thêm Thành viên Nhóm</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="mb-3"><label class="form-label small fw-bold text-muted">Nhập Mã sinh viên</label><input type="text" class="form-control"></div></div><div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-primary w-100 fw-bold" onclick="showToast('Đã thêm thành viên!')" data-bs-dismiss="modal">Thêm</button></div></div></div></div>
+    <div class="modal fade" id="modalMoreSuggestions" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Gợi ý Đề tài hệ thống</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><ul class="list-group list-group-flush"><li class="list-group-item">Ứng dụng Blockchain...</li><li class="list-group-item">Hệ thống IoT...</li></ul></div></div></div></div>
+    <div class="modal fade" id="modalAllMentors" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Danh sách Giảng viên Hướng dẫn</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="row g-3"><div class="col-md-6"><div class="p-3 border rounded-3 d-flex align-items-center gap-3"><div class="bg-light rounded-circle p-2"><i class="fa-solid fa-user-tie"></i></div><div><div class="fw-bold">TS. Nguyễn Văn A</div><div class="small text-muted">Khoa CNTT - AI, Big Data</div></div></div></div></div></div></div></div></div>
+
+    <div class="modal fade" id="modalConfirmSubmit" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold">Nộp báo cáo / Tài liệu</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Loại tài liệu</label>
+                        <select id="submissionType" class="form-select">
+                            <option value="report">Báo cáo định kỳ</option>
+                            <option value="final">Báo cáo tổng kết</option>
+                            <option value="other">Tài liệu khác</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Chọn file</label>
+                        <input type="file" id="submissionFile" class="form-control" required>
+                        <div class="form-text">Hỗ trợ: PDF, DOCX, ZIP (Tối đa 50MB)</div>
+                    </div>
+                    <input type="hidden" id="submissionTopicId" value="{{ my_topics[0].id if my_topics else '' }}">
+                    <input type="hidden" id="submissionUploaderId" value="{{ current_user.id if current_user else '' }}">
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy</button>
+                    <button id="btnUploadSubmission" class="btn btn-primary fw-bold px-4">Nộp ngay</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="modalScheduleMeeting" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold">Đặt lịch họp với Mentor</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Tiêu đề cuộc họp</label>
+                        <input type="text" id="meetingTitle" class="form-control" placeholder="Ví dụ: Báo cáo tiến độ tuần 1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Nội dung / Câu hỏi cần hỏi</label>
+                        <textarea id="meetingDesc" class="form-control" rows="3" placeholder="Ghi chú thêm..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Thời gian họp dự kiến</label>
+                        <input type="datetime-local" id="meetingTime" class="form-control" required>
+                    </div>
+                    <input type="hidden" id="meetingTopicId" value="{{ my_topics[0].id if my_topics else '' }}">
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy</button>
+                    <button id="btnSubmitMeeting" class="btn btn-primary fw-bold px-4">Gửi yêu cầu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="modalProfile" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Hồ sơ Sinh viên</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="mb-3"><label class="form-label small fw-bold text-muted">Họ tên</label><input type="text" class="form-control" value="{{ current_user.full_name if current_user else '' }}" readonly></div><div class="mb-3"><label class="form-label small fw-bold text-muted">Email</label><input type="text" class="form-control" value="{{ current_user.email if current_user else '' }}" readonly></div><div class="mb-3"><label class="form-label small fw-bold text-muted">Vai trò</label><input type="text" class="form-control" value="{{ current_user.role if current_user else '' }}" readonly></div></div><div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-primary w-100 fw-bold" onclick="showToast('Cập nhật hồ sơ thành công!')" data-bs-dismiss="modal">Lưu thay đổi</button></div></div></div></div>
+    <div class="modal fade" id="modalAddSkill" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header bg-primary text-white"><h5 class="modal-title fw-bold">Thêm Kỹ năng NCKH</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="mb-3"><label class="form-label small fw-bold text-muted">Tên kỹ năng</label><input type="text" id="skillName" class="form-control" placeholder="Ví dụ: Lập trình Python, Data Analysis..." required></div></div><div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy</button><button class="btn btn-primary fw-bold px-4" onclick="submitAddSkill()">Lưu</button></div></div></div></div>
+
+    <div class="modal fade" id="modalAddAchievement" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header bg-warning"><h5 class="modal-title fw-bold text-dark">Thêm Giải thưởng/Chứng nhận</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="mb-3"><label class="form-label small fw-bold text-muted">Tên giải thưởng/chứng nhận</label><input type="text" id="achName" class="form-control" placeholder="Ví dụ: Giải Nhất NCKH cấp Trường" required></div><div class="mb-3"><label class="form-label small fw-bold text-muted">Năm đạt được</label><input type="text" id="achYear" class="form-control" placeholder="Ví dụ: 2025"></div><div class="mb-0"><label class="form-label small fw-bold text-muted">Mô tả thêm (Tùy chọn)</label><textarea id="achDesc" class="form-control" rows="2" placeholder="Ghi chú thêm..."></textarea></div></div><div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy</button><button class="btn btn-warning fw-bold text-dark px-4" onclick="submitAddAchievement()">Lưu</button></div></div></div></div>
+
+    <div class="modal fade" id="modalAddExperience" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header bg-success text-white"><h5 class="modal-title fw-bold">Thêm Kinh nghiệm dự án</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="mb-3"><label class="form-label small fw-bold text-muted">Tên dự án/Đề tài</label><input type="text" id="expName" class="form-control" placeholder="Ví dụ: Hệ thống quản lý..." required></div><div class="row g-3 mb-3"><div class="col-md-6"><label class="form-label small fw-bold text-muted">Vai trò</label><input type="text" id="expRole" class="form-control" placeholder="Ví dụ: Leader, Coder..."></div><div class="col-md-6"><label class="form-label small fw-bold text-muted">Thời gian</label><input type="text" id="expDuration" class="form-control" placeholder="Ví dụ: 3 tháng"></div></div><div class="mb-0"><label class="form-label small fw-bold text-muted">Mô tả công việc</label><textarea id="expDesc" class="form-control" rows="3" placeholder="Mô tả ngắn gọn..."></textarea></div></div><div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy</button><button class="btn btn-success fw-bold px-4" onclick="submitAddExperience()">Lưu</button></div></div></div></div>
+{% endblock %}

@@ -14,11 +14,17 @@ def get_progress_dashboard():
       200:
         description: Progress data
     """
-    # Mocking aggregated progress for dashboard
+    total = Topic.query.count()
+    approved = Topic.query.filter_by(status='approved').count()
+    pending = Topic.query.filter_by(status='pending').count()
+    rejected = Topic.query.filter_by(status='rejected').count()
+
+    progress_pct = int((approved / total * 100) if total > 0 else 0)
     return jsonify({
-        'overall_progress': 75,
-        'topics_on_track': 10,
-        'topics_behind': 2
+        'overall_progress': progress_pct,
+        'topics_on_track': approved,
+        'topics_pending': pending,
+        'topics_rejected': rejected
     }), 200
 
 @dashboard_bp.route('/stats', methods=['GET'])
@@ -35,7 +41,7 @@ def get_stats():
     total_topics = Topic.query.count()
     total_groups = Group.query.count()
     total_students = User.query.filter_by(role='Student').count()
-    total_mentors = User.query.filter_by(role='Mentor').count()
+    total_mentors = User.query.filter_by(role='Lecturer').count()
     
     return jsonify({
         'total_topics': total_topics,

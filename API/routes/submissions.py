@@ -5,7 +5,7 @@ from models import db, Submission
 
 submissions_bp = Blueprint('submissions_api', __name__, url_prefix='/api/submissions')
 
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'doc', 'docx', 'xls', 'xlsx', 'zip'}
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'doc', 'docx', 'xls', 'xlsx', 'zip', 'rar', '7z', 'ppt', 'pptx', 'csv'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -61,11 +61,13 @@ def upload_file():
         file.save(file_path)
         
         try:
+            milestone_id = request.form.get('milestone_id')
             new_submission = Submission(
                 topic_id=int(request.form['topic_id']),
                 uploader_id=int(request.form['uploader_id']),
                 file_url=file_path,
-                type=request.form['type']
+                type=request.form['type'],
+                milestone_id=int(milestone_id) if milestone_id else None
             )
             db.session.add(new_submission)
             db.session.commit()
@@ -75,3 +77,10 @@ def upload_file():
             return jsonify({'error': str(e)}), 500
             
     return jsonify({'error': 'File type not allowed'}), 400
+
+from flask import send_file
+
+@submissions_bp.route('/download/<int:sub_id>', methods=['GET'])
+def download_file(sub_id):
+    sub = Submission.query.get_or_404(sub_id)
+    return send_file(sub.file_url, as_attachment=True)

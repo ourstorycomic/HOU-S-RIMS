@@ -1,0 +1,88 @@
+{% extends "layouts/student_layout.html" %}
+
+{% block student_content %}
+<div id="view-s-profile" class="fade-in ">
+                <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-2 text-center"><div class="bg-primary text-white rounded-4 d-flex align-items-center justify-content-center mx-auto shadow" style="width: 100px; height: 100px; font-size: 40px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">{{ (current_user.full_name[:2] | upper) if current_user and current_user.full_name else 'SV' }}</div></div>
+                        <div class="col-md-7">
+                            <h3 class="fw-bold mb-1">{{ current_user.full_name | upper if current_user else 'SINH VIÊN' }}</h3>
+                            <p class="text-muted fw-bold mb-3">{{ current_user.email if current_user else '' }} &bull; Mã SV: {{ current_user.student_id if current_user and current_user.student_id else 'N/A' }}</p>
+                            <div class="d-flex gap-4">
+                                <div class="text-center bg-light rounded-3 p-2 px-3"><div class="small text-muted fw-bold">ĐỀ TÀI THAM GIA</div><div class="h5 fw-bold mb-0">{{ my_topics | length }}</div></div>
+                                <div class="text-center bg-light rounded-3 p-2 px-3"><div class="small text-muted fw-bold">GIẢI THƯỞNG</div><div class="h5 fw-bold text-success mb-0">0</div></div>
+                                <div class="text-center bg-light rounded-3 p-2 px-3"><div class="small text-muted fw-bold">ĐIỂM NCKH</div><div class="h5 fw-bold text-primary mb-0">--</div></div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-end"><button class="btn btn-dark rounded-pill px-4 py-2 fw-bold" onclick="showToast('Đang tải xuống Portfolio...')"><i class="fa-solid fa-file-arrow-down me-2"></i> XUẤT PORTFOLIO (PDF)</button></div>
+                    </div>
+                </div>
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold text-warning mb-0"><i class="fa-solid fa-medal me-2"></i> Chứng nhận & Giải thưởng</h6>
+                                <button class="btn btn-sm btn-light rounded-circle" data-bs-toggle="modal" data-bs-target="#modalAddAchievement"><i class="fa-solid fa-plus text-muted"></i></button>
+                            </div>
+                            <div class="d-flex flex-column gap-2">
+                                {% if achievements %}
+                                    {% for ach in achievements %}
+                                    <div class="p-2 border rounded-3 position-relative group-hover">
+                                        <div class="fw-bold small">{{ ach.name }}</div>
+                                        <div class="text-muted" style="font-size: 11px;">{{ ach.year }} - {{ ach.description }}</div>
+                                        <button class="btn btn-sm text-danger position-absolute top-0 end-0 py-0" onclick="deletePortfolioItem('achievements', {{ ach.id }})"><i class="fa-solid fa-xmark"></i></button>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="text-center text-muted py-4">
+                                        <i class="fa-solid fa-award fs-1 mb-3 d-block opacity-25"></i>
+                                        <div class="small">Chưa có giải thưởng.</div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold text-success mb-0"><i class="fa-solid fa-briefcase me-2"></i> Kinh nghiệm dự án</h6>
+                                <button class="btn btn-sm btn-light rounded-circle" data-bs-toggle="modal" data-bs-target="#modalAddExperience"><i class="fa-solid fa-plus text-muted"></i></button>
+                            </div>
+                            <div class="d-flex flex-column gap-2">
+                                {% if experiences %}
+                                    {% for exp in experiences %}
+                                    <div class="p-2 border rounded-3 position-relative group-hover">
+                                        <div class="fw-bold small">{{ exp.project_name }}</div>
+                                        <div class="text-muted" style="font-size: 11px;">Vai trò: {{ exp.role }} | {{ exp.duration }}</div>
+                                        <div class="text-muted mt-1" style="font-size: 11px;">{{ exp.description }}</div>
+                                        <button class="btn btn-sm text-danger position-absolute top-0 end-0 py-0" onclick="deletePortfolioItem('experiences', {{ exp.id }})"><i class="fa-solid fa-xmark"></i></button>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="text-center text-muted py-4">
+                                        <i class="fa-solid fa-laptop-code fs-1 mb-3 d-block opacity-25"></i>
+                                        <div class="small">Chưa có kinh nghiệm dự án.</div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                            <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-wand-magic-sparkles me-2"></i> Kỹ năng NCKH</h6>
+                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                {% if skills %}
+                                    {% for sk in skills %}
+                                    <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill position-relative pe-4">
+                                        {{ sk.name }}
+                                        <i class="fa-solid fa-xmark position-absolute top-50 translate-middle-y cursor-pointer text-danger" style="right: 8px;" onclick="deletePortfolioItem('skills', {{ sk.id }})"></i>
+                                    </span>
+                                    {% endfor %}
+                                {% endif %}
+                                <span class="badge bg-light text-muted border border-dashed px-3 py-2 rounded-pill cursor-pointer" data-bs-toggle="modal" data-bs-target="#modalAddSkill">+ Thêm kỹ năng</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </div>
+{% endblock %}

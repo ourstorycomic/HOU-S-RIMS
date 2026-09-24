@@ -1,0 +1,197 @@
+{% extends "layouts/lecturer_layout.html" %}
+
+{% block lecturer_content %}
+<div id="view-l-calendar" class="fade-in ">
+                <div class="row g-4">
+                    <div class="col-xl-9 col-lg-8 col-12">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100" style="min-width: 0;">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h5 class="fw-bold mb-0 text-primary"><i class="fa-regular fa-calendar-check me-2"></i> LỊCH TRÌNH & SỰ KIỆN</h5>
+                                <button class="btn btn-primary-subtle text-primary fw-bold btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#modalCreateEvent">
+                                    + Tạo nhắc hẹn
+                                </button>
+                            </div>
+
+                            <div id="calendar" style="min-height: 500px;"></div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-lg-4 col-12 d-flex flex-column gap-4">
+                        
+                        <div class="card border-0 shadow-sm rounded-4 p-4">
+                            <h6 class="fw-bold mb-4 d-flex justify-content-between align-items-center">
+                                <span><i class="fa-regular fa-bell me-2 text-primary"></i> Thông báo quan trọng</span>
+                                {% if notifications and notifications|length > 0 %}
+                                <span class="badge bg-danger rounded-circle small" style="width: 24px; height: 24px; line-height: 18px;">{{ notifications|length }}</span>
+                                {% endif %}
+                            </h6>
+
+                            {% if notifications %}
+                                {% for notif in notifications %}
+                                <div class="p-3 rounded-3 mb-3 bg-primary-subtle bg-opacity-25 border border-primary-subtle">
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <span class="fw-bold text-primary" style="font-size: 11px;">THÔNG BÁO</span>
+                                        <span class="text-muted ms-auto" style="font-size: 10px;">{{ notif.created_at.strftime('%d/%m %H:%M') if notif.created_at else '' }}</span>
+                                    </div>
+                                    <div class="fw-bold text-dark small mb-1">
+                                        {{ notif.content }}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-muted small text-center py-3">Không có thông báo mới</div>
+                            {% endif %}
+
+                            <button class="btn btn-outline-secondary rounded-pill w-100 fw-bold btn-sm py-2 mt-2">Xem tất cả thông báo</button>
+                        </div>
+
+                        <div class="card border-0 shadow-sm rounded-4 p-4 text-white position-relative overflow-hidden mt-auto" style="background-color: #6366f1;">
+                            <div class="d-flex align-items-start gap-3 position-relative" style="z-index: 2;">
+                                <div class="bg-white bg-opacity-25 p-2 rounded-3">
+                                    <i class="fa-solid fa-medal fs-4 text-white"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Thành tích NCKH</h6>
+                                    <p class="small opacity-75 mb-3" style="font-size: 12px; line-height: 1.4;">Khoa CNTT đã đạt giải Nhất toàn Trường về số lượng bài báo Scopus trong năm học này.</p>
+                                    <button class="btn btn-light text-primary fw-bold rounded-pill w-100 btn-sm shadow-sm">Xem Bảng Vàng</button>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-trophy position-absolute text-white" style="font-size: 120px; right: -20px; bottom: -30px; opacity: 0.1; transform: rotate(-15deg);"></i>
+                        </div>
+
+                    </div>
+                </div>
+        </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+<script>
+async function submitCalendarMilestone() {
+    const topicId = document.getElementById('calendarMilestoneTopicId').value;
+    const name = document.getElementById('calendarMilestoneName').value.trim();
+    const deadline = document.getElementById('calendarMilestoneDeadline').value;
+    if (!topicId || !name || !deadline) return Swal.fire('Lỗi', 'Vui lòng điền đủ thông tin', 'warning');
+    
+    try {
+        const res = await fetch(`/api/topics/${topicId}/milestones`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name, deadline})
+        });
+        if (res.ok) {
+            Swal.fire('Thành công', 'Đã thêm cột mốc/nhắc hẹn!', 'success').then(() => location.reload());
+        } else {
+            Swal.fire('Lỗi', 'Thêm thất bại', 'error');
+        }
+    } catch (e) { console.error(e); }
+}
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    if (!calendarEl) return;
+    
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'vi',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek'
+        },
+        buttonText: {
+            today: 'Hôm nay',
+            month: 'Tháng',
+            week: 'Tuần'
+        },
+        themeSystem: 'bootstrap5',
+        events: '/api/calendar/events',
+        eventContent: function(arg) {
+            var status = arg.event.extendedProps.status;
+            var isMilestone = status === 'milestone';
+            var bgColor = status === 'pending' ? '#f59e0b' : (isMilestone ? '#dc3545' : '#6366f1'); // warning vs danger vs indigo
+            var iconHtml = isMilestone ? '<i class="fa-solid fa-flag text-white me-1"></i>' : '';
+            var titleHtml = '<span class="text-truncate flex-grow-1 text-white" title="' + arg.event.title + '">' + iconHtml + arg.event.title + '</span>';
+            var deleteBtn = '';
+            
+            if (status === 'pending') {
+                titleHtml = '<span class="text-truncate flex-grow-1 text-white" title="' + arg.event.title + ' (Chờ duyệt)">' + arg.event.title + ' (Chờ)</span>';
+                deleteBtn = '<i class="fa-solid fa-xmark ms-1 text-white" style="cursor:pointer;" onclick="revokeMeeting(' + arg.event.id + ', event)"></i>';
+            }
+            
+            return {
+                html: '<div class="p-1 d-flex align-items-center fw-bold rounded w-100" style="font-size: 11px; background-color: ' + bgColor + ';">' + titleHtml + deleteBtn + '</div>'
+            };
+        },
+        eventClick: function(arg) {
+            var status = arg.event.extendedProps.status;
+            var desc = arg.event.extendedProps.description || 'Không có mô tả';
+            var title = arg.event.title;
+            var start = arg.event.start ? arg.event.start.toLocaleString('vi-VN') : '';
+            
+            if (status === 'pending') {
+                Swal.fire({
+                    title: 'Yêu cầu đặt lịch',
+                    html: `<b>Tiêu đề:</b> ${title}<br><b>Thời gian:</b> ${start}<br><b>Mô tả:</b> ${desc}`,
+                    icon: 'info',
+                    showCancelButton: true,
+                    showDenyButton: true,
+                    confirmButtonText: 'Đồng ý',
+                    denyButtonText: 'Từ chối',
+                    cancelButtonText: 'Đóng'
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        await fetch('/api/calendar/events/' + arg.event.id + '/status', {
+                            method: 'PUT', headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({status: 'approved'})
+                        });
+                        Swal.fire('Thành công', 'Đã duyệt lịch họp', 'success').then(() => location.reload());
+                    } else if (result.isDenied) {
+                        await fetch('/api/calendar/events/' + arg.event.id, { method: 'DELETE' });
+                        Swal.fire('Đã từ chối', 'Đã hủy lịch họp', 'success').then(() => location.reload());
+                    }
+                });
+            } else {
+                Swal.fire({
+                    title: title,
+                    html: `<b>Thời gian:</b> ${start}<br><b>Mô tả:</b> ${desc}`,
+                    icon: 'info'
+                });
+            }
+        },
+        height: 600
+    });
+    
+    calendar.render();
+});
+
+window.revokeMeeting = async function(id, e) {
+    if (e) e.stopPropagation();
+    
+    const result = await Swal.fire({
+        title: 'Xóa sự kiện?',
+        text: 'Bạn có chắc chắn muốn xóa sự kiện này?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Đồng ý xóa',
+        cancelButtonText: 'Không'
+    });
+    
+    if (result.isConfirmed) {
+        try {
+            const resp = await fetch('/api/calendar/events/' + id, { method: 'DELETE' });
+            if (resp.ok) {
+                Swal.fire('Đã xóa!', 'Sự kiện đã được xóa.', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                const data = await resp.json();
+                Swal.fire('Lỗi', data.error || 'Không thể xóa sự kiện.', 'error');
+            }
+        } catch(ex) {
+            Swal.fire('Lỗi kết nối', ex.message, 'error');
+        }
+    }
+};
+</script>
+{% endblock %}

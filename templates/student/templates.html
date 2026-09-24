@@ -1,0 +1,13 @@
+{% extends "layouts/student_layout.html" %}
+
+{% block student_content %}
+<div id="view-s-templates" class="fade-in ">
+                <div class="bg-white p-4 rounded-4 shadow-sm mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4"><h5 class="fw-bold mb-0">Tài liệu & Biểu mẫu</h5><input type="text" class="form-control rounded-pill bg-light border-0 px-4 small" placeholder="Tìm tài liệu..." style="width: 250px;"></div>
+                    <div class="row g-4">
+                        <div class="col-md-3"><div class="card border-0 shadow-sm p-4 h-100 text-center hover-shadow"><div class="mb-3"><i class="fa-regular fa-file-word text-primary fs-1"></i></div><div class="fw-bold mb-1">Mẫu thuyết minh</div><button class="btn btn-light btn-sm fw-bold w-100 text-primary" onclick="showToast('Đang tải xuống...')">Tải xuống</button></div></div>
+                        <div class="col-md-3"><div class="card border-0 shadow-sm p-4 h-100 text-center hover-shadow"><div class="mb-3"><i class="fa-regular fa-file-pdf text-danger fs-1"></i></div><div class="fw-bold mb-1">Quy định trình bày</div><button class="btn btn-light btn-sm fw-bold w-100 text-primary" onclick="showToast('Đang tải xuống...')">Tải xuống</button></div></div>
+                    </div>
+                </div>
+        </div>
+{% endblock %}

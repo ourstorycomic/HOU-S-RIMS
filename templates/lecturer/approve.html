@@ -1,0 +1,39 @@
+{% extends "layouts/lecturer_layout.html" %}
+
+{% block lecturer_content %}
+<div id="view-l-approve" class="fade-in ">
+                <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h5 class="fw-bold mb-0">Yêu cầu hướng dẫn ({{ pending_topics|length }} đề tài)</h5>
+                        <small class="text-danger fw-bold">Đang chờ phê duyệt</small>
+                    </div>
+                    
+                    {% if pending_topics %}
+                        {% for topic in pending_topics %}
+                        <div class="card border shadow-sm p-3 mb-3 rounded-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="d-flex gap-2 mb-1">
+                                        <span class="badge bg-warning text-dark" style="font-size: 10px;">CHỜ PHÊ DUYỆT</span>
+                                    </div>
+                                    <div class="fw-bold mb-1">{{ topic.name }}</div>
+                                    <small class="text-muted"><i class="fa-solid fa-users me-1"></i> {{ topic.description }}</small>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-outline-secondary btn-sm fw-bold" onclick="showTopicDetail('{{ topic.name|replace("'","\\'") }}', '{{ topic.description|replace("'","\\'") }}')">Xem chi tiết</button>
+                                    <button class="btn btn-primary btn-sm fw-bold" style="background-color: #6366f1; border-color: #6366f1;"
+                                        onclick="openApproveModal({{ topic.id }}, '{{ topic.name|replace("'","\\'") }}')">Đồng ý hướng dẫn</button>
+                                    <button class="btn btn-light text-danger border-0" onclick="openRejectModal({{ topic.id }})"><i class="fa-regular fa-circle-xmark fs-4"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="fa-solid fa-inbox fs-1 mb-3 opacity-50"></i>
+                            <p>Không có yêu cầu hướng dẫn nào đang chờ phê duyệt.</p>
+                        </div>
+                    {% endif %}
+                </div>
+        </div>
+{% endblock %}

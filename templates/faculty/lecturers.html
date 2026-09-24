@@ -1,0 +1,29 @@
+{% extends "layouts/faculty_layout.html" %}
+
+{% block faculty_content %}
+<div id="view-f-lecturers" class="fade-in ">
+                <div class="bg-white p-4 rounded-4 shadow-sm mb-4 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0">DANH SÁCH GIẢNG VIÊN THAM GIA HD NCKH</h5>
+                    <button class="btn btn-primary fw-bold rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalAddLecturer"><i class="fa-solid fa-user-plus me-2"></i> THÊM GIẢNG VIÊN</button>
+                </div>
+                <div class="row g-4">
+                    {% if mentors %}
+                        {% for m in mentors %}
+                        <div class="col-md-4">
+                            <div class="card border-0 shadow-sm p-3 rounded-4 h-100 d-flex flex-row align-items-center gap-3 lecturer-card">
+                                <div class="avatar-letter bg-primary-subtle text-primary rounded-3" style="width: 60px; height: 60px;">{{ m.full_name[0] if m.full_name else 'G' }}</div>
+                                <div>
+                                    <div class="fw-bold">{{ m.full_name }}</div>
+                                    <div class="small text-muted fw-bold text-uppercase mb-1">{{ m.faculty or 'CNTT' }}</div>
+                                    <div class="small text-muted fst-italic mb-2">{{ m.email }}</div>
+                                    <span class="badge bg-dark text-white rounded-pill px-2">HD: {{ topics | selectattr('mentor_id', 'equalto', m.id) | list | length }} ĐỀ TÀI</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="col-12 text-center text-muted py-4">Chưa có giảng viên nào</div>
+                    {% endif %}
+                </div>
+        </div>
+{% endblock %}

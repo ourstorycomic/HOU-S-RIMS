@@ -1,0 +1,144 @@
+{% extends "layouts/student_layout.html" %}
+
+{% block student_content %}
+<div id="view-s-calendar" class="fade-in ">
+    <div class="row g-4">
+        <div class="col-xl-9 col-lg-8 col-12">
+            <div class="card border-0 shadow-sm rounded-4 p-4 h-100" style="min-width: 0;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold mb-0 text-primary"><i class="fa-regular fa-calendar-check me-2"></i> LỊCH TRÌNH NCKH CỦA TÔI</h5>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary fw-bold btn-sm rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalScheduleMeeting">
+                            + Đặt lịch họp
+                        </button>
+                    </div>
+                </div>
+
+                <div id="calendar" style="min-height: 500px;"></div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-lg-4 col-12 d-flex flex-column gap-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0 text-dark"><i class="fa-regular fa-bell me-2 text-danger"></i> Thông báo mới</h6>
+                    <a href="#" class="small fw-bold text-primary text-decoration-none">Xem tất cả</a>
+                </div>
+
+                <div class="d-flex flex-column gap-3">
+                    {% if notifications %}
+                        {% for notif in notifications %}
+                        <div class="bg-light p-3 rounded-3 border notif-card-item cursor-pointer">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="badge bg-primary-subtle text-primary fw-bold">THÔNG BÁO</span>
+                                <small class="text-muted" style="font-size: 10px;">{{ notif.created_at.strftime('%d/%m %H:%M') if notif.created_at else '' }}</small>
+                            </div>
+                            <div class="fw-bold text-dark small" style="line-height: 1.4;">{{ notif.content }}</div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-muted small text-center py-3">Không có thông báo mới</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4 p-4 text-white text-center position-relative overflow-hidden mt-auto" style="background-color: #1e1b4b;">
+                <h5 class="fw-bold mb-1">HỖ TRỢ NCKH</h5>
+                <i class="fa-solid fa-headset fs-1 mb-3 text-white-50"></i>
+                <p class="small opacity-75 mb-4 px-2" style="font-size: 11px;">"Mọi thắc mắc về kỹ thuật và quy chế, sinh viên có thể liên hệ trực tiếp Ban quản trị."</p>
+                <button class="btn btn-light text-primary fw-bold rounded-pill w-100 shadow-sm">CHAT VỚI SUPPORT</button>
+                <i class="fa-regular fa-life-ring position-absolute" style="font-size: 100px; right: -20px; bottom: -20px; opacity: 0.05;"></i>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    if (!calendarEl) return;
+    
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'vi',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek'
+        },
+        buttonText: {
+            today: 'Hôm nay',
+            month: 'Tháng',
+            week: 'Tuần'
+        },
+        themeSystem: 'bootstrap5',
+        events: '/api/calendar/events',
+        eventContent: function(arg) {
+            var status = arg.event.extendedProps.status;
+            var isMilestone = status === 'milestone';
+            var bgColor = status === 'pending' ? '#f59e0b' : (isMilestone ? '#dc3545' : '#6366f1'); // warning vs danger vs indigo
+            var iconHtml = isMilestone ? '<i class="fa-solid fa-flag text-white me-1"></i>' : '';
+            var titleHtml = '<span class="text-truncate flex-grow-1 text-white" title="' + arg.event.title + '">' + iconHtml + arg.event.title + '</span>';
+            var deleteBtn = '';
+            
+            if (status === 'pending') {
+                titleHtml = '<span class="text-truncate flex-grow-1 text-white" title="' + arg.event.title + ' (Chờ duyệt)">' + arg.event.title + ' (Chờ)</span>';
+                deleteBtn = '<i class="fa-solid fa-xmark ms-1 text-white" style="cursor:pointer;" onclick="revokeMeeting(' + arg.event.id + ', event)"></i>';
+            }
+            
+            return {
+                html: '<div class="p-1 d-flex align-items-center fw-bold rounded w-100" style="font-size: 11px; background-color: ' + bgColor + ';">' + titleHtml + deleteBtn + '</div>'
+            };
+        },
+        eventClick: function(arg) {
+            var status = arg.event.extendedProps.status;
+            var desc = arg.event.extendedProps.description || 'Không có mô tả';
+            var title = arg.event.title;
+            var start = arg.event.start ? arg.event.start.toLocaleString('vi-VN') : '';
+            
+            Swal.fire({
+                title: title,
+                html: `<b>Thời gian:</b> ${start}<br><b>Trạng thái:</b> ${status === 'pending' ? 'Đang chờ duyệt' : 'Đã duyệt'}<br><b>Mô tả:</b> ${desc}`,
+                icon: 'info'
+            });
+        },
+        height: 600
+    });
+    
+    calendar.render();
+});
+
+window.revokeMeeting = async function(id, e) {
+    if (e) e.stopPropagation();
+    
+    const result = await Swal.fire({
+        title: 'Thu hồi lịch hẹn?',
+        text: 'Bạn có chắc chắn muốn hủy lịch đã đặt này?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Đồng ý hủy',
+        cancelButtonText: 'Không'
+    });
+    
+    if (result.isConfirmed) {
+        try {
+            const resp = await fetch('/api/calendar/events/' + id, { method: 'DELETE' });
+            if (resp.ok) {
+                Swal.fire('Đã hủy!', 'Lịch hẹn đã được thu hồi.', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                const data = await resp.json();
+                Swal.fire('Lỗi', data.error || 'Không thể hủy lịch.', 'error');
+            }
+        } catch(ex) {
+            Swal.fire('Lỗi kết nối', ex.message, 'error');
+        }
+    }
+};
+</script>
+{% endblock %}

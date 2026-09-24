@@ -1,0 +1,194 @@
+<!--templates/lecturer.html-->
+{% extends "base.html" %}
+
+{% block title %}Cổng Giảng Viên - HOU S-RIMS{% endblock %}
+
+{% block content %}
+        <div class="top-bar">
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-light border-0 d-lg-none me-2" onclick="toggleSidebar()">
+                    <i class="fa-solid fa-bars fs-5"></i>
+                </button>
+                <i class="fa-solid fa-graduation-cap text-primary"></i> 
+                <span class="fw-bold text-uppercase small">HANOI OPEN UNIVERSITY</span>
+            </div>
+
+            <div class="d-flex align-items-center gap-3">
+                <button class="btn btn-light border-0 btn-sm fw-bold text-muted" onclick="switchTab('l-calendar', document.querySelector('.sub-nav-item:last-child'))">
+                    <i class="fa-regular fa-calendar me-2"></i> Lịch sự kiện
+                </button>
+                
+                <div class="dropdown border-start ps-3">
+                    <div class="d-flex align-items-center gap-2 cursor-pointer dropdown-toggle no-arrow" data-bs-toggle="dropdown">
+                        <div class="text-end">
+                            <div class="fw-bold text-dark" style="font-size: 13px;">
+                                {{ current_user.full_name if current_user else 'Giảng Viên' }}
+                            </div>
+                            <div class="fw-bold text-uppercase" style="font-size: 10px; color: #6366f1 !important;">
+                                GIẢNG VIÊN
+                            </div>
+                        </div>
+                        <div class="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 35px; height: 35px; font-size: 12px; background: #6366f1 !important;">
+                            {{ current_user.full_name[0] | upper if current_user and current_user.full_name else 'G' }}
+                        </div>
+                    </div>
+                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow mt-2">
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalEditProfile"><i class="fa-regular fa-id-card me-2"></i> Hồ sơ khoa học</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="fa-solid fa-right-from-bracket me-2"></i> Đăng xuất</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    <div class="content-area">
+        
+        
+<div class="content-body">
+{% block lecturer_content %}{% endblock %}
+</div>
+</div> <!-- Close content-area -->
+<div class="modal fade" id="modalEditProfile" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-dark text-white"><h5 class="modal-title fw-bold">Cập nhật Hồ sơ Giảng viên</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body p-4">
+                    <div class="row g-3 mb-3"><div class="col-md-6"><label class="form-label">Họ và Tên</label><input type="text" class="form-control" value="Nguyễn Văn A"></div><div class="col-md-6"><label class="form-label">Học hàm/Học vị</label><select class="form-select"><option selected>Tiến sĩ</option><option>PGS.TS</option></select></div></div>
+                    <div class="mb-3"><label class="form-label">Hướng nghiên cứu (Phân cách bằng dấu phẩy)</label><input type="text" class="form-control" value="Học máy, NLP, EdTech, Data Mining"></div>
+                    <div class="mb-3"><label class="form-label">Link Google Scholar</label><input type="url" class="form-control" value="https://scholar.google.com/..."></div>
+                    <div class="mb-0"><label class="form-label">Giới thiệu bản thân (Bio)</label><textarea class="form-control" rows="3">Giảng viên Khoa CNTT với 10 năm kinh nghiệm...</textarea></div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-dark w-100 fw-bold" onclick="showToast('Đã cập nhật hồ sơ thành công!')" data-bs-dismiss="modal">Lưu thay đổi</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalConfirmGuide" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-primary text-white"><h5 class="modal-title fw-bold">Xác nhận Hướng dẫn</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body p-4">
+                    <p class="mb-3">Bạn có chắc chắn muốn nhận hướng dẫn đề tài:<br><strong id="approveTopicName">...</strong>?</p>
+                    <div class="mb-0"><label class="form-label">Ghi chú (tuỳ chọn)</label><textarea id="approveNote" class="form-control" rows="2" placeholder="Ví dụ: Học máy, IoT, Blockchain..."></textarea></div>
+                    <input type="hidden" id="approveTopicId" value="">
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy</button><button id="btnApproveTopic" class="btn btn-primary fw-bold px-4" onclick="doApprove()">Đồng ý</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalRejectGuide" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-danger text-white"><h5 class="modal-title fw-bold">Từ chối Hướng dẫn</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="rejectTopicId" value="">
+                    <div class="mb-0"><label class="form-label">Lý do từ chối (Bắt buộc)</label><textarea id="rejectNote" class="form-control" rows="3" placeholder="VD: Đề tài không phù hợp chuyên môn, đã đủ số lượng nhóm..."></textarea></div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-danger w-100 fw-bold" onclick="doReject()">Gửi phản hồi</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalCreateMeeting" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold text-primary">Đặt lịch họp với nhóm</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body p-4 pt-0">
+                    <div class="mb-3"><label class="form-label">Chọn Nhóm/Đề tài</label><select class="form-select"><option>Nhóm K21-CNTT (Hệ thống gợi ý...)</option></select></div>
+                    <div class="row g-2 mb-3"><div class="col-6"><label class="form-label">Ngày họp</label><input type="date" class="form-control"></div><div class="col-6"><label class="form-label">Giờ</label><input type="time" class="form-control"></div></div>
+                    <div class="mb-0"><label class="form-label">Hình thức</label><select class="form-select"><option>Online (Google Meet)</option><option>Offline (Văn phòng Khoa)</option></select></div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-primary w-100 fw-bold" onclick="showToast('Đã gửi lịch mời họp!')" data-bs-dismiss="modal">Gửi lịch mời</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalCreateEvent" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold">Thêm Cột mốc nhắc hẹn (Milestone)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Chọn đề tài</label>
+                        <select id="calendarMilestoneTopicId" class="form-select">
+                            {% set has_topic = false %}
+                            {% for t in current_user.topics_mentored %}
+                                {% if t.status == 'approved' %}
+                                    <option value="{{ t.id }}">{{ t.title }}</option>
+                                    {% set has_topic = true %}
+                                {% endif %}
+                            {% endfor %}
+                            {% if not has_topic %}
+                                <option value="">Không có đề tài nào đang hướng dẫn</option>
+                            {% endif %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Tên Cột mốc (VD: Nộp báo cáo)</label>
+                        <input type="text" id="calendarMilestoneName" class="form-control" placeholder="Ví dụ: Nộp báo cáo..." required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Hạn chót (Deadline)</label>
+                        <input type="date" id="calendarMilestoneDeadline" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy</button>
+                    <button class="btn btn-primary fw-bold px-4" onclick="submitCalendarMilestone()">Tạo mốc</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="modalAddMilestone" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold">Thêm Cột mốc mới</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="milestoneTopicId">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Tên Cột mốc</label>
+                        <input type="text" id="milestoneName" class="form-control" placeholder="Ví dụ: Lập trình API..." required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Hạn chót (Deadline)</label>
+                        <input type="date" id="milestoneDeadline" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy</button>
+                    <button class="btn btn-primary fw-bold px-4" onclick="submitAddMilestone()">Lưu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalUpdateProgress" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold">Cập nhật Tiến độ</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="updateMilestoneId">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted" id="updateMilestoneNameLabel">Tên Cột mốc</label>
+                        <input type="range" class="form-range" id="updateMilestonePct" min="0" max="100" step="5" oninput="document.getElementById('pctDisplay').innerText = this.value + '%'">
+                        <div class="text-center fw-bold text-primary fs-4 mt-2" id="pctDisplay">0%</div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy</button>
+                    <button class="btn btn-primary fw-bold px-4" onclick="submitUpdateProgress()">Lưu Cập nhật</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

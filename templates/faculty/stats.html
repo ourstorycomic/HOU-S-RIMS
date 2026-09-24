@@ -1,0 +1,40 @@
+{% extends "layouts/faculty_layout.html" %}
+
+{% block faculty_content %}
+<div id="view-f-stats" class="fade-in ">
+                <div class="row g-4">
+                    <div class="col-md-8">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                            <div class="d-flex justify-content-between mb-4"><h6 class="fw-bold text-uppercase">THỐNG KÊ ĐỀ TÀI THEO TRẠNG THÁI</h6><i class="fa-solid fa-chart-pie text-muted"></i></div>
+                            {% set total_topics = topics|length %}
+                            {% set approved_topics = topics | selectattr('status', 'equalto', 'approved') | list | length %}
+                            {% set faculty_pending_topics = topics | selectattr('status', 'equalto', 'faculty_pending') | list | length %}
+                            {% set pending_topics = topics | selectattr('status', 'equalto', 'pending') | list | length %}
+                            
+                            <div class="mb-4"><div class="d-flex justify-content-between mb-1"><span class="fw-bold small">ĐÃ PHÊ DUYỆT CẤP KHOA</span><span class="fw-bold small">{{ approved_topics }} ĐỀ TÀI ({{ (approved_topics / total_topics * 100)|round|int if total_topics else 0 }}%)</span></div><div class="progress" style="height: 10px; border-radius: 5px;"><div class="progress-bar bg-success" style="width: {{ (approved_topics / total_topics * 100)|round|int if total_topics else 0 }}%"></div></div></div>
+                            <div class="mb-4"><div class="d-flex justify-content-between mb-1"><span class="fw-bold small">CHỜ KHOA PHÊ DUYỆT</span><span class="fw-bold small">{{ faculty_pending_topics }} ĐỀ TÀI ({{ (faculty_pending_topics / total_topics * 100)|round|int if total_topics else 0 }}%)</span></div><div class="progress" style="height: 10px; border-radius: 5px;"><div class="progress-bar bg-warning" style="width: {{ (faculty_pending_topics / total_topics * 100)|round|int if total_topics else 0 }}%"></div></div></div>
+                            <div class="mb-4"><div class="d-flex justify-content-between mb-1"><span class="fw-bold small">CHỜ GIẢNG VIÊN PHÊ DUYỆT</span><span class="fw-bold small">{{ pending_topics }} ĐỀ TÀI ({{ (pending_topics / total_topics * 100)|round|int if total_topics else 0 }}%)</span></div><div class="progress" style="height: 10px; border-radius: 5px;"><div class="progress-bar bg-primary" style="width: {{ (pending_topics / total_topics * 100)|round|int if total_topics else 0 }}%"></div></div></div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex flex-column gap-4 h-100">
+                            <div class="card border-0 shadow-sm rounded-4 p-4 text-center">
+                                <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-folder-open me-2"></i> TỔNG SỐ ĐỀ TÀI</h6>
+                                <h1 class="display-4 fw-bold text-dark">{{ total_topics }}</h1>
+                                <p class="text-muted small mb-0">Đề tài NCKH trong hệ thống</p>
+                            </div>
+                            <div class="card border-0 bg-warning shadow-sm rounded-4 p-4 text-white">
+                                <h5 class="fw-bold mb-1">CẦN PHÊ DUYỆT</h5>
+                                <h1 class="fw-bold display-5">{{ faculty_pending_topics }} NHÓM</h1>
+                                <p class="small mb-0">Chờ Quản trị khoa xử lý</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </div>
+
+    </div>
+{% endblock %}
+
+{% block modals %}
+{% endblock %}

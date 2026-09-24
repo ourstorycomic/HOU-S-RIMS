@@ -12,11 +12,11 @@ client = None
 if GROQ_API_KEY:
     # In log fingerprint để người dùng tự kiểm tra (4 ký tự cuối)
     masked_key = f"...{GROQ_API_KEY[-4:]}" if GROQ_API_KEY else "NONE"
-    print(f"[HỆ THỐNG] Đang sử dụng GROQ API Key kết thúc bằng: {masked_key}")
+    print(f"[SYSTEM] Using GROQ API Key ending with: {masked_key}")
     try:
         client = Groq(api_key=GROQ_API_KEY)
     except Exception as e:
-        print(f"[LỖI] Không thể khởi tạo Groq Client: {e}")
+        print(f"[ERROR] Cannot init Groq Client: {e}")
 
 def generate_insights(sys_prompt: str, user_prompt: str, model_id: str = "llama-3.3-70b-versatile") -> str:
     """Hàm xử lý phân tích dữ liệu sử dụng Groq Engine (Llama 3.3)."""

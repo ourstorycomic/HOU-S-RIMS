@@ -107,7 +107,7 @@
         </div>
 
         {% elif session['role'] == 'lecturer' %}
-        <a href="{{ url_for('web.lecturer_page') }}#l-calendar"
+        <a href="{{ url_for('lecturer_bp.calendar') }}"
             class="btn btn-light border-0 btn-sm fw-bold text-muted">
             <i class="fa-regular fa-calendar me-2"></i> Lịch sự kiện
         </a>
@@ -162,10 +162,10 @@
 
             <ul class="dropdown-menu dropdown-menu-end border-0 shadow mt-2">
                 {% if session['role'] == 'student' %}
-                <li><a class="dropdown-item" href="{{ url_for('web.student_page') }}#s-profile"><i
+                <li><a class="dropdown-item" href="#"><i
                             class="fa-regular fa-id-badge me-2"></i> Hồ sơ cá nhân</a></li>
                 {% elif session['role'] == 'lecturer' %}
-                <li><a class="dropdown-item" href="{{ url_for('web.lecturer_page') }}#l-profile"><i
+                <li><a class="dropdown-item" href="#"><i
                             class="fa-regular fa-id-card me-2"></i> Hồ sơ khoa học</a></li>
                 {% else %}
                 <li><a class="dropdown-item" href="#"><i class="fa-solid fa-gear me-2"></i> Cài đặt hệ thống</a></li>

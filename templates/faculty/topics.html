@@ -1,0 +1,53 @@
+{% extends "layouts/faculty_layout.html" %}
+
+{% block faculty_content %}
+<div id="view-f-topics" class="fade-in ">
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                    <div class="card-header bg-white border-bottom py-3 px-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-primary btn-sm rounded-pill px-4 fw-bold btn-filter active" onclick="filterTopics('all', this)">TẤT CẢ</button>
+                                <button class="btn btn-light btn-sm rounded-pill px-4 text-muted fw-bold btn-filter position-relative" onclick="filterTopics('pending', this)">
+                                    CHỜ PHÊ DUYỆT ({{ topics|selectattr('status', 'equalto', 'pending')|list|length }})
+                                </button>
+                                <button class="btn btn-light btn-sm rounded-pill px-4 text-muted fw-bold btn-filter" onclick="filterTopics('approved', this)">ĐÃ PHÊ DUYỆT</button>
+                            </div>
+                            <input type="text" class="form-control rounded-pill bg-light border-0 px-4 small" placeholder="Tìm tên đề tài..." style="width: 300px;">
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="bg-light text-muted small text-uppercase fw-bold"><tr><th class="ps-4 py-3">Mã đề tài</th><th>Tên đề tài & Nhóm</th><th>Giảng viên HD</th><th>Trạng thái</th><th class="text-end pe-4">Thao tác</th></tr></thead>
+                            <tbody>
+                                {% if topics %}
+                                    {% for t in topics %}
+                                    <tr class="status-{{ t.status | lower }}">
+                                        <td class="ps-4 fw-bold text-primary">DT-00{{ t.id }}</td>
+                                        <td>
+                                            <div class="fw-bold text-dark">{{ t.title }}</div>
+                                            <small class="text-muted">Nhóm ID: {{ t.group_id }}</small>
+                                        </td>
+                                        <td class="fw-bold text-dark small">
+                                            {% for m in mentors %}{% if m.id == t.mentor_id %}{{ m.full_name }}{% endif %}{% endfor %}
+                                            {% if not t.mentor_id %}Chưa phân công{% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge {% if t.status == 'approved' %}bg-success-subtle text-success border-success-subtle{% elif t.status == 'pending' %}bg-secondary-subtle text-secondary border-secondary-subtle{% elif t.status == 'faculty_pending' %}bg-warning-subtle text-warning border-warning-subtle{% else %}bg-primary-subtle text-primary border-primary-subtle{% endif %} border rounded-pill px-3 py-1 small">{{ t.status | upper }}</span>
+                                        </td>
+                                        <td class="text-end pe-4">
+                                            {% if t.status == 'faculty_pending' %}
+                                            <button class="btn btn-sm btn-success fw-bold me-2" onclick="facultyApprove({{ t.id }})">Duyệt</button>
+                                            {% endif %}
+                                            <button class="btn btn-sm text-primary" onclick="openEditTopicModal({{ t.id }}, '{{ t.title|replace('\'', '\\\'') }}', '{{ t.description|replace('\'', '\\\'') }}', '{{ t.mentor_id or '' }}', '{{ t.batch_id or '' }}', '{{ t.status }}')"><i class="fa-solid fa-pen-to-square"></i></button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr><td colspan="5" class="text-center text-muted py-4">Chưa có đề tài nào</td></tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+        </div>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "layouts/faculty_layout.html" %}
+
+{% block faculty_content %}
+<div id="view-f-council" class="fade-in ">
+                <div class="row g-4">
+                    <div class="col-md-7">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h6 class="fw-bold text-primary"><i class="fa-solid fa-gavel me-2"></i> HỘI ĐỒNG PHÊ DUYỆT TM</h6>
+                                <button class="btn btn-light btn-sm rounded-circle shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAddCouncil"><i class="fa-solid fa-plus"></i></button>
+                            </div>
+                            
+                            {% if councils %}
+                                {% for c in councils %}
+                                <div class="card border shadow-sm mb-3 rounded-3 overflow-hidden">
+                                    <div class="p-3 d-flex justify-content-between align-items-center bg-white" data-bs-toggle="collapse" href="#councilCollapse{{ c.id }}" role="button" style="cursor: pointer;">
+                                        <div>
+                                            <div class="fw-bold">{{ c.name }}</div>
+                                            <small class="text-muted">Ngày thành lập: {{ c.established_date.strftime('%d/%m/%Y') }}</small>
+                                        </div>
+                                        <i class="fa-solid fa-chevron-right text-muted rotate-icon"></i>
+                                    </div>
+                                    <div class="collapse" id="councilCollapse{{ c.id }}">
+                                        <div class="card-body bg-light border-top p-3">
+                                            <div class="small fw-bold text-muted mb-2">DANH SÁCH THÀNH VIÊN:</div>
+                                            <ul class="list-group small">
+                                                <li class="list-group-item bg-transparent border-0 py-1 ps-0 text-muted">Chưa cập nhật thành viên</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center text-muted p-4">Chưa có hội đồng nào được thành lập.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                            <h6 class="fw-bold text-success mb-4"><i class="fa-solid fa-certificate me-2"></i> HỘI ĐỒNG NGHIỆM THU</h6>
+                            <div class="d-flex flex-column align-items-center justify-content-center h-75 text-muted border border-dashed rounded-3 p-4">
+                                <i class="fa-solid fa-layer-group fa-2x mb-3 text-muted opacity-50"></i>
+                                <div class="fw-bold small">CHƯA CÓ HỘI ĐỒNG</div>
+                                <button class="btn btn-success btn-sm mt-3 rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#modalAddCouncil">Thiết lập ngay</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </div>
+{% endblock %}

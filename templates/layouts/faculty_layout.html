@@ -1,0 +1,181 @@
+<!--templates/faculty.html-->
+{% extends "base.html" %}
+
+{% block title %}Quản trị Khoa CNTT - HOU S-RIMS{% endblock %}
+
+{% block content %}
+        <div class="top-bar">
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-light border-0 d-lg-none me-2" onclick="toggleSidebar()">
+                    <i class="fa-solid fa-bars fs-5"></i>
+                </button>
+                <i class="fa-regular fa-building text-primary"></i> 
+                <span class="fw-bold text-uppercase small">HANOI OPEN UNIVERSITY • QUẢN TRỊ KHOA CNTT</span>
+            </div>
+
+            <div class="d-flex align-items-center gap-3">
+                <div class="dropdown">
+                    <button class="year-select dropdown-toggle" type="button" data-bs-toggle="dropdown" style="background: #f1f5f9; border: none; padding: 8px 16px; border-radius: 20px; color: #2563eb; font-weight: 600; font-size: 13px;">
+                        <i class="fa-regular fa-calendar me-2"></i> 2025-2026
+                    </button>
+                    <ul class="dropdown-menu border-0 shadow mt-2">
+                        <li><a class="dropdown-item fw-bold text-primary" href="#">2025-2026</a></li>
+                        <li><a class="dropdown-item" href="#">2024-2025</a></li>
+                    </ul>
+                </div>
+
+                <div class="dropdown border-start ps-3">
+                    <div class="d-flex align-items-center gap-2 cursor-pointer dropdown-toggle no-arrow" data-bs-toggle="dropdown">
+                        <div class="text-end">
+                            <div class="fw-bold text-dark" style="font-size: 13px;">
+                                {{ session.get('user_name', 'Admin Khoa') }}
+                            </div>
+                            <div class="fw-bold text-uppercase" style="font-size: 10px; color: #2563eb !important;">
+                                ADMIN KHOA
+                            </div>
+                        </div>
+                        <div class="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 35px; height: 35px; font-size: 12px; background: #2563eb !important;">
+                            {{ session.get('user_name', 'A')[0] | upper }}
+                        </div>
+                    </div>
+                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow mt-2">
+                        <li><a class="dropdown-item" href="#"><i class="fa-solid fa-gear me-2"></i> Cài đặt hệ thống</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="fa-solid fa-right-from-bracket me-2"></i> Đăng xuất</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    <div class="content-area">
+        
+        
+<div class="content-body">
+{% block faculty_content %}{% endblock %}
+</div>
+<div class="modal fade" id="modalCreateBatch" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-primary text-white"><h5 class="modal-title fw-bold">Thiết lập Đợt NCKH Mới</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body p-4">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-8"><label class="form-label">Tên đợt triển khai</label><input type="text" class="form-control" placeholder="VD: NCKH Sinh viên 2025 - Đợt 2"></div>
+                        <div class="col-md-4"><label class="form-label">Năm học áp dụng</label><select class="form-select"><option>2025-2026</option><option>2026-2027</option></select></div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-12"><label class="form-label">Loại hình</label><select class="form-select"><option selected>Nghiên cứu khoa học (Chuẩn)</option><option>Khởi nghiệp sáng tạo</option></select></div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6"><label class="form-label">Ngày bắt đầu</label><input type="date" class="form-control"></div>
+                        <div class="col-md-6"><label class="form-label">Hạn cuối nộp đề tài</label><input type="date" class="form-control"></div>
+                    </div>
+                    <div class="mb-3"><label class="form-label">Mô tả chi tiết / Ghi chú</label><textarea class="form-control" rows="3"></textarea></div>
+                    <div class="mb-0"><label class="form-label">Văn bản hướng dẫn (PDF/DOC)</label><input type="file" class="form-control"></div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy bỏ</button><button class="btn btn-primary fw-bold px-4" onclick="showToast('Đã tạo đợt mới thành công!')" data-bs-dismiss="modal">Lưu & Ban hành</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalAddLecturer" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Thêm Giảng viên Khoa</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body p-4 pt-0">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6"><label class="form-label">Họ và Tên</label><input type="text" class="form-control" placeholder="Nhập họ tên..."></div>
+                        <div class="col-md-3"><label class="form-label">Giới tính</label><select class="form-select"><option>Nam</option><option>Nữ</option></select></div>
+                        <div class="col-md-3"><label class="form-label">Học hàm/Học vị</label><select class="form-select"><option>Thạc sĩ</option><option>Tiến sĩ</option><option>PGS.TS</option></select></div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6"><label class="form-label">Email công vụ</label><input type="email" class="form-control" placeholder="@hou.edu.vn"></div>
+                        <div class="col-md-6"><label class="form-label">Số điện thoại</label><input type="text" class="form-control"></div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6"><label class="form-label">Bộ môn trực thuộc</label><select class="form-select"><option>Công nghệ phần mềm</option><option>Khoa học máy tính</option><option>Hệ thống thông tin</option></select></div>
+                        <div class="col-md-6"><label class="form-label">Quota hướng dẫn (Số nhóm tối đa)</label><input type="number" class="form-control" value="5"></div>
+                    </div>
+                    <div class="mb-0"><label class="form-label">Hướng nghiên cứu chuyên sâu (Dùng để gợi ý đề tài)</label><textarea class="form-control" rows="2" placeholder="Ví dụ: Học máy, IoT, Blockchain..."></textarea></div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-primary w-100 fw-bold" onclick="showToast('Đã thêm giảng viên vào hệ thống!')" data-bs-dismiss="modal">Lưu hồ sơ giảng viên</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalAddCouncil" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-success text-white"><h5 class="modal-title fw-bold">Thành lập Hội đồng Mới</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body p-4">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-8"><label class="form-label">Tên Hội đồng</label><input type="text" class="form-control" placeholder="HĐ Phê duyệt đề cương..."></div>
+                        <div class="col-md-4"><label class="form-label">Số Quyết định</label><input type="text" class="form-control" placeholder="Số: .../QĐ-CNTT"></div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4"><label class="form-label">Ngày họp</label><input type="date" class="form-control"></div>
+                        <div class="col-md-4"><label class="form-label">Giờ bắt đầu</label><input type="time" class="form-control"></div>
+                        <div class="col-md-4"><label class="form-label">Địa điểm</label><input type="text" class="form-control" placeholder="Phòng họp..."></div>
+                    </div>
+                    <hr class="my-4">
+                    <h6 class="fw-bold mb-3 small text-muted">THÀNH PHẦN HỘI ĐỒNG</h6>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6"><label class="form-label">Chủ tịch Hội đồng</label><input type="text" class="form-control" placeholder="Nhập tên..."></div>
+                        <div class="col-md-6"><label class="form-label">Thư ký</label><input type="text" class="form-control" placeholder="Nhập tên..."></div>
+                    </div>
+                    <div class="mb-3"><label class="form-label">Các Ủy viên (Mỗi người 1 dòng)</label><textarea class="form-control" rows="3"></textarea></div>
+                    <div class="mb-0"><label class="form-label">File Quyết định thành lập (PDF)</label><input type="file" class="form-control"></div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-success w-100 fw-bold" onclick="showToast('Đã lập hội đồng mới thành công!')" data-bs-dismiss="modal">Xác nhận thành lập</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalEditTopic" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-primary text-white"><h5 class="modal-title fw-bold">Cập nhật Đề tài</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="editTopicId">
+                    <div class="mb-3">
+                        <label class="form-label">Tên đề tài</label>
+                        <input type="text" id="editTopicTitle" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mô tả tóm tắt</label>
+                        <textarea id="editTopicDesc" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Giảng viên hướng dẫn</label>
+                            <select id="editTopicMentor" class="form-select">
+                                <option value="">-- Không có/Chưa phân công --</option>
+                                {% for m in mentors %}
+                                <option value="{{ m.id }}">{{ m.full_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Đợt NCKH</label>
+                            <select id="editTopicBatch" class="form-select">
+                                <option value="">-- Chọn đợt NCKH --</option>
+                                {% for b in batches %}
+                                <option value="{{ b.id }}">{{ b.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Trạng thái duyệt</label>
+                            <select id="editTopicStatus" class="form-select">
+                                <option value="pending">Chờ GV duyệt</option>
+                                <option value="faculty_pending">Chờ Khoa duyệt</option>
+                                <option value="approved">Đã phê duyệt</option>
+                                <option value="rejected">Từ chối</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy</button><button class="btn btn-primary fw-bold px-4" onclick="submitEditTopic()">Lưu thay đổi</button></div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

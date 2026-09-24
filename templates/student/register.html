@@ -1,0 +1,83 @@
+{% extends "layouts/student_layout.html" %}
+
+{% block student_content %}
+<div id="view-s-register" class="fade-in ">
+                {% if my_topics %}
+                <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                    <h5 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-chart-line me-2"></i> Tiến độ Đề tài của bạn</h5>
+                    {% for t in my_topics %}
+                        {% set status_map = {'pending': 1, 'faculty_pending': 2, 'approved': 3} %}
+                        {% set step = status_map.get(t.status, 1) %}
+                        {% set pct = (step / 3 * 100) | round | int %}
+                        <div class="bg-light border rounded-3 p-3 mb-3">
+                            <div class="d-flex justify-content-between mb-3">
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-1">{{ t.title }}</h6>
+                                    <small class="text-muted fw-bold">Trạng thái: <span class="badge {% if t.status == 'approved' %}bg-success{% elif t.status == 'faculty_pending' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">{{ t.status | upper }}</span></small>
+                                </div>
+                                <div class="text-end">
+                                    <div class="h4 fw-bold text-primary mb-0">{{ pct }}%</div>
+                                </div>
+                            </div>
+                            <div class="position-relative mb-2 px-2">
+                                <div class="progress" style="height: 4px; top: 12px; position: relative; z-index: 1;">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ pct }}%"></div>
+                                </div>
+                                <div class="d-flex justify-content-between position-relative" style="z-index: 2;">
+                                    <div class="text-center">
+                                        <div class="{% if step >= 1 %}bg-success{% else %}bg-white border{% endif %} text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" style="width:24px;height:24px; font-size:10px;">
+                                            {% if step >= 1 %}<i class="fa-solid fa-check"></i>{% else %}<span class="text-muted">1</span>{% endif %}
+                                        </div>
+                                        <div class="small fw-bold" style="font-size:11px;">Chờ duyệt</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="{% if step >= 2 %}bg-success{% else %}bg-white border{% endif %} text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" style="width:24px;height:24px; font-size:10px;">
+                                            {% if step >= 2 %}<i class="fa-solid fa-check"></i>{% else %}<span class="text-muted">2</span>{% endif %}
+                                        </div>
+                                        <div class="small fw-bold" style="font-size:11px;">GV Duyệt</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="{% if step >= 3 %}bg-success{% else %}bg-white border{% endif %} text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" style="width:24px;height:24px; font-size:10px;">
+                                            {% if step >= 3 %}<i class="fa-solid fa-check"></i>{% else %}<span class="text-muted">3</span>{% endif %}
+                                        </div>
+                                        <div class="small fw-bold" style="font-size:11px;">Khoa Duyệt</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if not my_topics %}
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                    <div class="bg-primary text-white p-4"><h4 class="fw-bold mb-1">ĐĂNG KÝ ĐỀ TÀI NCKH TRỰC TUYẾN</h4><p class="mb-0 opacity-75 small">NĂM HỌC 2025 - 2026 • ĐỢT 1</p></div>
+                    <div class="card-body p-4">
+                        <div class="row g-3 mb-4"><div class="col-md-6"><label class="form-label small fw-bold text-muted">TÊN ĐỀ TÀI (TIẾNG VIỆT)</label><textarea id="topicName" class="form-control bg-light" rows="2"></textarea></div><div class="col-md-6"><label class="form-label small fw-bold text-muted">MÔ TẢ TÓM TẮT</label><textarea id="topicDesc" class="form-control bg-light" rows="2"></textarea></div></div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4"><label class="form-label small fw-bold text-muted">ĐỢT ĐĂNG KÝ NCKH</label><select id="batchId" class="form-select bg-light" onchange="checkBatchExpiration(this)">{% for batch in batches %}{% set is_expired = batch.submission_deadline and batch.submission_deadline < current_time %}<option value="{{ batch.id }}" data-expired="{{ 'true' if is_expired else 'false' }}">{{ batch.name }} {% if is_expired %}(Đã khóa){% endif %}</option>{% else %}<option value="">Không có đợt nào</option>{% endfor %}</select></div>
+                            <div class="col-md-4"><label class="form-label small fw-bold text-muted">CHUYÊN NGÀNH</label><select id="major" class="form-select bg-light"><option value="CNTT">Công nghệ thông tin</option><option value="CNPM">Công nghệ phần mềm</option><option value="HTTT">Hệ thống thông tin</option></select></div>
+                            <div class="col-md-4"><label class="form-label small fw-bold text-muted">GIẢNG VIÊN HƯỚNG DẪN</label><select id="mentor_id" class="form-select bg-light"><option value="" selected>Chọn Mentor...</option>{% for mentor in mentors %}<option value="{{ mentor.id }}">{{ mentor.full_name }}</option>{% endfor %}</select></div>
+                        </div>
+                        <div class="mb-4"><label class="form-label small fw-bold text-muted">THÀNH VIÊN NHÓM</label>
+                            <div class="card p-3 bg-light border-0 mb-2">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold small" style="width: 35px; height: 35px;">{{ (current_user.full_name[:2] | upper) if current_user and current_user.full_name else 'SV' }}</div>
+                                        <div>
+                                            <div class="fw-bold text-dark">{{ current_user.full_name if current_user else 'Bạn' }}</div>
+                                            <div class="small text-muted">Trưởng nhóm</div>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-primary-subtle text-primary">CHÍNH CHỦ</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-outline-primary border-dashed w-100 rounded-3 py-2 small fw-bold" data-bs-toggle="modal" data-bs-target="#modalAddMember">+ Thêm thành viên bằng Mã SV</button>
+                        </div>
+                        <input type="hidden" id="groupId" value="{{ my_groups[0].id if my_groups is defined and my_groups else '' }}">
+                        <button id="btnSubmitRegister" class="btn btn-primary w-100 py-3 fw-bold rounded-3 shadow-sm" style="background: linear-gradient(90deg, #6366f1 0%, #4f46e5 100%); border: none;">GỬI HỒ SƠ ĐĂNG KÝ PHÊ DUYỆT</button>
+                    </div>
+                </div>
+                {% endif %}
+        </div>
+{% endblock %}

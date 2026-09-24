@@ -14,6 +14,7 @@ from API.routes.auth import auth_bp
 from API.routes.profile import profile_bp
 from API.routes.calendar import calendar_bp
 from API.routes.notifications import notifications_bp
+from API.routes.chat import chat_bp
 
 def init_api_routes(app):
     app.register_blueprint(batches_bp)
@@ -29,3 +30,4 @@ def init_api_routes(app):
     app.register_blueprint(profile_bp)
     app.register_blueprint(calendar_bp)
     app.register_blueprint(notifications_bp)
+    app.register_blueprint(chat_bp)

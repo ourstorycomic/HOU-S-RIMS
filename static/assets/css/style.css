@@ -231,6 +231,10 @@ a { text-decoration: none !important; }
     transition: transform 0.2s;
 }
 
+.stat-card {
+    padding: 1.5rem;
+}
+
 .stat-card:hover { 
     transform: translateY(-3px); 
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
@@ -713,4 +717,95 @@ a { text-decoration: none !important; }
     .top-bar .d-flex.align-items-center.gap-2 span {
         display: none; /* Ẩn chữ HANOI OPEN UNIVERSITY cho gọn */
     }
+}
+
+  60% { transform: scale(1.02) translateY(-2px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+#chat-messages-container {
+  overflow-x: hidden !important;
+}
+.sticker-img {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.sticker-img:hover {
+  transform: scale(1.1);
+}
+.picker-tabs {
+  display: flex;
+  border-bottom: 1px solid #dee2e6;
+  margin-bottom: 10px;
+}
+.picker-tab {
+  padding: 5px 15px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  font-weight: 600;
+  color: #6c757d;
+}
+.picker-tab.active {
+  color: #6366f1;
+  border-bottom-color: #6366f1;
+}
+.hover-scale {
+  transition: transform 0.2s;
+}
+.hover-scale:hover {
+  transform: scale(1.2);
+}
+
+.chat-sidebar {
+    width: 300px;
+    background: #fff;
+    border-left: 1px solid #dee2e6;
+    display: none;
+    flex-direction: column;
+}
+.chat-sidebar.active {
+    display: flex;
+}
+.media-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+}
+.media-item {
+    aspect-ratio: 1;
+    width: 100%;
+    object-fit: cover;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.file-list-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f8f9fa;
+}
+.file-list-item:last-child {
+    border-bottom: none;
+}
+.link-list-item {
+    display: block;
+    padding: 8px 0;
+    word-break: break-all;
+    border-bottom: 1px solid #f8f9fa;
+}
+.link-list-item:last-child {
+    border-bottom: none;
+}
+.sidebar-section-header {
+    cursor: pointer;
+    padding: 10px 15px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc;
+    border-bottom: 1px solid #dee2e6;
 }

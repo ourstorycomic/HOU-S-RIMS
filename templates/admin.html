@@ -59,7 +59,7 @@
                         </div>
                         <div>
                             <div class="text-secondary fw-bold small text-uppercase mb-1" style="font-size: 0.7rem; letter-spacing: 0.5px;">TỔNG ĐỀ TÀI TOÀN TRƯỜNG</div>
-                            <div class="h2 fw-bold text-dark mb-0">842</div>
+                            <div class="h2 fw-bold text-dark mb-0">{{ topics | length }}</div>
                         </div>
                     </div>
                 </div>
@@ -69,8 +69,8 @@
                             <i class="fa-regular fa-building"></i>
                         </div>
                         <div>
-                            <div class="text-secondary fw-bold small text-uppercase mb-1" style="font-size: 0.7rem; letter-spacing: 0.5px;">KHOA/VIỆN THAM GIA</div>
-                            <div class="h2 fw-bold text-dark mb-0">12</div>
+                            <div class="text-secondary fw-bold small text-uppercase mb-1" style="font-size: 0.7rem; letter-spacing: 0.5px;">TỔNG GIẢNG VIÊN</div>
+                            <div class="h2 fw-bold text-dark mb-0">{{ users | selectattr('role', 'equalto', 'Lecturer') | list | length }}</div>
                         </div>
                     </div>
                 </div>
@@ -80,19 +80,19 @@
                             <i class="fa-regular fa-clock"></i>
                         </div>
                         <div>
-                            <div class="text-secondary fw-bold small text-uppercase mb-1" style="font-size: 0.7rem; letter-spacing: 0.5px;">ĐANG PHÊ DUYỆT TRƯỜNG</div>
-                            <div class="h2 fw-bold text-dark mb-0">45</div>
+                            <div class="text-secondary fw-bold small text-uppercase mb-1" style="font-size: 0.7rem; letter-spacing: 0.5px;">ĐANG CHỜ PHÊ DUYỆT</div>
+                            <div class="h2 fw-bold text-dark mb-0">{{ topics | selectattr('status', 'equalto', 'pending') | list | length }}</div>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="stat-card-simple">
                         <div class="stat-icon-wrapper bg-success-subtle text-success">
-                            <i class="fa-solid fa-database"></i>
+                            <i class="fa-solid fa-layer-group"></i>
                         </div>
                         <div>
-                            <div class="text-secondary fw-bold small text-uppercase mb-1" style="font-size: 0.7rem; letter-spacing: 0.5px;">KINH PHÍ DỰ KIẾN</div>
-                            <div class="h2 fw-bold text-dark mb-0">3.2 Tỷ</div>
+                            <div class="text-secondary fw-bold small text-uppercase mb-1" style="font-size: 0.7rem; letter-spacing: 0.5px;">TỔNG ĐỢT TRIỂN KHAI</div>
+                            <div class="h2 fw-bold text-dark mb-0">{{ batches | length }}</div>
                         </div>
                     </div>
                 </div>
@@ -101,77 +101,66 @@
             <div class="row g-4">
                 <div class="col-md-8">
                     <div class="card border-0 shadow-sm p-4 h-100 rounded-4">
-                        <h6 class="fw-bold mb-4 text-secondary text-uppercase" style="font-size: 0.85rem;">SỐ LƯỢNG ĐỀ TÀI THEO KHOA</h6>
-                        
-                        <div class="mb-4">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-dark text-uppercase small">Khoa CNTT</span>
-                                <span class="fw-bold text-dark small">120 Đề tài</span>
+                        <h6 class="fw-bold mb-4 text-secondary text-uppercase" style="font-size: 0.85rem;">SỐ LƯỢNG ĐỀ TÀI THEO GIẢNG VIÊN HƯỚNG DẫN</h6>
+                        {% set mentor_stats = {} %}
+                        {% for t in topics %}
+                            {% if t.mentor_id %}
+                                {% set m = users | selectattr('id', 'equalto', t.mentor_id) | first %}
+                                {% if m %}
+                                    {% set fac = m.faculty or 'Không rõ' %}
+                                    {% if fac not in mentor_stats %}
+                                        {% set _ = mentor_stats.update({fac: 0}) %}
+                                    {% endif %}
+                                    {% set _ = mentor_stats.update({fac: mentor_stats[fac] + 1}) %}
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                        {% set total = topics | length %}
+                        {% if topics %}
+                            {% for fac, cnt in mentor_stats.items() %}
+                            {% set pct = ((cnt / total) * 100) | int if total > 0 else 0 %}
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="fw-bold text-dark text-uppercase small">{{ fac }}</span>
+                                    <span class="fw-bold text-dark small">{{ cnt }} ĐỀ TÀI</span>
+                                </div>
+                                <div class="progress progress-custom" style="height: 6px;">
+                                    <div class="progress-bar bg-primary" style="width: {{ pct }}%; border-radius: 10px;"></div>
+                                </div>
                             </div>
-                            <div class="progress progress-custom" style="height: 6px;">
-                                <div class="progress-bar bg-primary" style="width: 85%; border-radius: 10px;"></div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center text-muted py-5">
+                                <i class="fa-solid fa-chart-simple fs-1 mb-3 d-block opacity-25"></i>
+                                <div class="small fw-bold">Chưa có dữ liệu đề tài</div>
+                                <div class="small">Dữ liệu hiện thị sau khi Sinh viên đăng ký đề tài</div>
                             </div>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-dark text-uppercase small">Khoa Luật</span>
-                                <span class="fw-bold text-dark small">95 Đề tài</span>
-                            </div>
-                            <div class="progress progress-custom" style="height: 6px;">
-                                <div class="progress-bar bg-primary" style="width: 70%; border-radius: 10px;"></div>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-dark text-uppercase small">Khoa Du lịch</span>
-                                <span class="fw-bold text-dark small">70 Đề tài</span>
-                            </div>
-                            <div class="progress progress-custom" style="height: 6px;">
-                                <div class="progress-bar bg-primary" style="width: 55%; border-radius: 10px;"></div>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-2">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-dark text-uppercase small">Viện CNSH</span>
-                                <span class="fw-bold text-dark small">45 Đề tài</span>
-                            </div>
-                            <div class="progress progress-custom" style="height: 6px;">
-                                <div class="progress-bar bg-primary" style="width: 35%; border-radius: 10px;"></div>
-                            </div>
-                        </div>
+                        {% endif %}
                     </div>
                 </div>
-                
                 <div class="col-md-4">
                     <div class="card card-schedule-dark h-100">
                         <div class="card-header">
-                            <h6 class="fw-bold mb-0 text-uppercase text-white-50" style="font-size: 0.85rem; letter-spacing: 1px;">LỊCH TRÌNH SẮP TỚI</h6>
+                            <h6 class="fw-bold mb-0 text-uppercase text-white-50" style="font-size: 0.85rem; letter-spacing: 1px;">LỊCH TRÌNH ĐỢT NCKH</h6>
                         </div>
                         <div class="card-body p-0">
                             <div class="list-group list-group-flush">
-                                <div class="list-group-item d-flex align-items-center hover-shadow">
-                                    <div class="date-box-light">
-                                        <div class="day">20</div>
-                                        <div class="month">T10</div>
+                                {% if batches %}
+                                    {% for b in batches %}
+                                    <div class="list-group-item d-flex align-items-center hover-shadow">
+                                        <div class="date-box-light">
+                                            <div class="day">{{ b.submission_deadline.strftime('%d') if b.submission_deadline else '--' }}</div>
+                                            <div class="month">{{ b.submission_deadline.strftime('T%m') if b.submission_deadline else '---' }}</div>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="fw-bold text-white" style="font-size: 0.9rem;">{{ b.name }}</div>
+                                            <div class="small text-white-50">Hạn nộp: {{ b.submission_deadline.strftime('%d/%m/%Y') if b.submission_deadline else 'Chưa có' }} • {{ b.type or 'NCKH' }}</div>
+                                        </div>
                                     </div>
-                                    <div class="flex-grow-1">
-                                        <div class="fw-bold text-white" style="font-size: 0.95rem;">Họp Hội đồng cấp Trường</div>
-                                        <div class="small text-white-50">Phê duyệt TM đợt 1</div>
-                                    </div>
-                                </div>
-                                <div class="list-group-item d-flex align-items-center hover-shadow border-0">
-                                    <div class="date-box-light">
-                                        <div class="day">05</div>
-                                        <div class="month">T11</div>
-                                    </div>
-                                    <div class="flex-grow-1">
-                                        <div class="fw-bold text-white" style="font-size: 0.95rem;">Công bố kết quả hỗ trợ</div>
-                                        <div class="small text-white-50">Kinh phí cấp Trường</div>
-                                    </div>
-                                </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="text-center text-white-50 p-4 small">Chưa có lịch trình. Hãy tạo đợt NCKH mới.</div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -185,8 +174,34 @@
                 <button class="btn btn-primary fw-bold px-4 rounded-pill shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCreateBatch"><i class="fa-solid fa-plus me-2"></i> TẠO ĐỢT TRIỂN KHAI MỚI</button>
             </div>
             <div class="row g-4">
-                <div class="col-md-6"><div class="stat-card h-100"><div class="d-flex justify-content-between mb-3 align-items-start"><span class="badge bg-primary-subtle text-primary fw-bold">ĐANG TRIỂN KHAI</span><a href="#" class="text-muted"><i class="fa-solid fa-arrow-up-right-from-square"></i></a></div><h5 class="fw-bold mb-4">Chương trình NCKH SV Cấp Trường 2025-2026</h5><div class="row g-0 mb-4 bg-light rounded-3 p-3 border"><div class="col-6 border-end text-center"><small class="text-muted fw-bold" style="font-size: 10px;">ĐỐI TƯỢNG</small><div class="fw-bold text-dark mt-1">12 Khoa/Viện</div></div><div class="col-6 text-center"><small class="text-muted fw-bold" style="font-size: 10px;">HẠN CUỐI KHOA</small><div class="fw-bold text-dark mt-1">30/10/2025</div></div></div><div class="d-flex gap-2 mt-auto"><button class="btn btn-dark flex-grow-1 rounded-3 fw-bold" style="font-size: 13px;" data-bs-toggle="modal" data-bs-target="#modalManageFaculty">TRẠNG THÁI CÁC KHOA</button><button class="btn btn-outline-secondary flex-grow-1 rounded-3 fw-bold" style="font-size: 13px;">VĂN BẢN HƯỚNG DẪN</button></div></div></div>
-                <div class="col-md-6"><div class="stat-card h-100"><div class="d-flex justify-content-between mb-3 align-items-start"><span class="badge bg-info-subtle text-info fw-bold">ĐÃ BAN HÀNH</span><a href="#" class="text-muted"><i class="fa-solid fa-arrow-up-right-from-square"></i></a></div><h5 class="fw-bold mb-4">Giải thưởng Sáng tạo trẻ HOU 2025</h5><div class="row g-0 mb-4 bg-light rounded-3 p-3 border"><div class="col-6 border-end text-center"><small class="text-muted fw-bold" style="font-size: 10px;">ĐỐI TƯỢNG</small><div class="fw-bold text-dark mt-1">10 Khoa/Viện</div></div><div class="col-6 text-center"><small class="text-muted fw-bold" style="font-size: 10px;">HẠN CUỐI KHOA</small><div class="fw-bold text-dark mt-1">15/12/2025</div></div></div><div class="d-flex gap-2 mt-auto"><button class="btn btn-dark flex-grow-1 rounded-3 fw-bold" style="font-size: 13px;">TRẠNG THÁI CÁC KHOA</button><button class="btn btn-outline-secondary flex-grow-1 rounded-3 fw-bold" style="font-size: 13px;">VĂN BẢN HƯỚNG DẪN</button></div></div></div>
+                {% if batches %}
+                    {% for b in batches %}
+                    <div class="col-md-6">
+                        <div class="stat-card h-100">
+                            <div class="d-flex justify-content-between mb-3 align-items-start">
+                                <span class="badge bg-primary-subtle text-primary fw-bold text-uppercase">{{ b.status }}</span>
+                                <a href="#" class="text-muted"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                            </div>
+                            <h5 class="fw-bold mb-4">{{ b.name }}</h5>
+                            <div class="row g-0 mb-4 bg-light rounded-3 p-3 border">
+                                <div class="col-6 border-end text-center">
+                                    <small class="text-muted fw-bold" style="font-size: 10px;">LOẠI HÌNH</small>
+                                    <div class="fw-bold text-dark mt-1">{{ b.type or 'NCKH' }}</div>
+                                </div>
+                                <div class="col-6 text-center">
+                                    <small class="text-muted fw-bold" style="font-size: 10px;">HẠN CUỐI</small>
+                                    <div class="fw-bold text-dark mt-1">{{ b.submission_deadline.strftime('%d/%m/%Y') if b.submission_deadline else 'N/A' }}</div>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2 mt-auto">
+                                <button class="btn btn-dark flex-grow-1 rounded-3 fw-bold" style="font-size: 13px;" data-bs-toggle="modal" data-bs-target="#modalManageFaculty">TRẠNG THÁI CÁC KHOA</button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12 text-center text-muted p-4">Chưa có đợt triển khai nào. Hãy tạo đợt mới!</div>
+                {% endif %}
             </div>
         </div>
 
@@ -200,8 +215,40 @@
                     <table class="table table-hover mb-0 align-middle">
                         <thead class="bg-light"><tr class="text-muted small text-uppercase fw-bold"><th class="ps-4 py-3">Mã đề tài</th><th>Tên đề tài & Nhóm</th><th>Đơn vị</th><th>Cố vấn</th><th class="text-end pe-4">Trạng thái</th></tr></thead>
                         <tbody>
-                            <tr><td class="ps-4 fw-bold text-primary">DT2025-001</td><td><div class="fw-bold text-dark">Ứng dụng AI trong chẩn đoán y học</div><small class="text-muted">Nhóm SV K28-CNTT</small></td><td><span class="fw-bold text-secondary">Khoa CNTT</span></td><td><span class="text-dark">PGS.TS Nguyễn Văn A</span></td><td class="text-end pe-4"><span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-2 small">ĐANG TRIỂN KHAI</span></td></tr>
-                            <tr><td class="ps-4 fw-bold text-primary">DT2025-002</td><td><div class="fw-bold text-dark">Pháp luật về kinh tế số</div><small class="text-muted">Nhóm Luật 01</small></td><td><span class="fw-bold text-secondary">Khoa Luật</span></td><td><span class="text-dark">TS. Lê Thị B</span></td><td class="text-end pe-4"><span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-3 py-2 small">CHỜ NGHIỆM THU</span></td></tr>
+                            {% if topics %}
+                                {% for t in topics %}
+                                {% set mentor = users | selectattr('id', 'equalto', t.mentor_id) | first if t.mentor_id else None %}
+                                <tr>
+                                    <td class="ps-4 fw-bold text-primary">DT-{{ '%03d' | format(t.id) }}</td>
+                                    <td>
+                                        <div class="fw-bold text-dark">{{ t.title }}</div>
+                                        <small class="text-muted">
+                                            {% if t.group_id %}
+                                                Nhóm ID: {{ t.group_id }}
+                                            {% else %}
+                                                Chưa có nhóm
+                                            {% endif %}
+                                        </small>
+                                    </td>
+                                    <td><span class="fw-bold text-secondary">{{ mentor.faculty or 'CNTT' if mentor else 'N/A' }}</span></td>
+                                    <td><span class="text-dark">{{ mentor.full_name if mentor else 'Chưa phân công' }}</span></td>
+                                    <td class="text-end pe-4">
+                                        {% if t.status == 'approved' %}
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-2 small text-uppercase">{{ t.status }}</span>
+                                        {% elif t.status == 'rejected' %}
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-2 small text-uppercase">{{ t.status }}</span>
+                                        {% else %}
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-3 py-2 small text-uppercase">{{ t.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr><td colspan="5" class="text-center text-muted py-5">
+                                    <i class="fa-solid fa-inbox fs-1 mb-2 d-block opacity-25"></i>
+                                    Chưa có đề tài nào. Sinh viên cần đăng ký sau khi Admin triển khai đợt NCKH.
+                                </td></tr>
+                            {% endif %}
                         </tbody>
                     </table>
                 </div>
@@ -219,8 +266,29 @@
                 </div>
             </div>
             <div class="row g-4">
-                <div class="col-md-3"><div class="lecturer-card card border-0 shadow-sm p-3 h-100" data-bs-toggle="modal" data-bs-target="#modalLecturerDetail"><div class="d-flex align-items-center gap-3 mb-4"><div class="avatar-letter bg-primary-subtle text-primary">A</div><div><div class="fw-bold text-dark">PGS.TS Nguyễn Văn A</div><small class="text-primary fw-bold" style="font-size: 11px;">KHOA CNTT</small></div></div><div class="d-flex justify-content-between text-center border-top pt-3"><div><div class="small text-muted fw-bold">ĐỀ TÀI HD</div><div class="fw-bold">12</div></div><div><div class="small text-muted fw-bold">H-INDEX</div><div class="fw-bold text-primary">15</div></div></div></div></div>
-                <div class="col-md-3"><div class="lecturer-card card border-0 shadow-sm p-3 h-100" data-bs-toggle="modal" data-bs-target="#modalLecturerDetail"><div class="d-flex align-items-center gap-3 mb-4"><div class="avatar-letter bg-info-subtle text-info">B</div><div><div class="fw-bold text-dark">TS. Lê Thị B</div><small class="text-primary fw-bold" style="font-size: 11px;">KHOA LUẬT</small></div></div><div class="d-flex justify-content-between text-center border-top pt-3"><div><div class="small text-muted fw-bold">ĐỀ TÀI HD</div><div class="fw-bold">8</div></div><div><div class="small text-muted fw-bold">H-INDEX</div><div class="fw-bold text-primary">8</div></div></div></div></div>
+                {% if users %}
+                    {% for u in users %}
+                        {% if u.role == 'Lecturer' %}
+                        <div class="col-md-3">
+                            <div class="lecturer-card card border-0 shadow-sm p-3 h-100">
+                                <div class="d-flex align-items-center gap-3 mb-4">
+                                    <div class="avatar-letter bg-primary-subtle text-primary">{{ u.full_name[0] if u.full_name else 'G' }}</div>
+                                    <div>
+                                        <div class="fw-bold text-dark">{{ u.full_name }}</div>
+                                        <small class="text-primary fw-bold" style="font-size: 11px;">KHOA {{ u.faculty or 'CNTT' }}</small>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between text-center border-top pt-3">
+                                    <div><div class="small text-muted fw-bold">EMAIL</div><div class="fw-bold small text-truncate" style="max-width: 120px;">{{ u.email }}</div></div>
+                                    <div><div class="small text-muted fw-bold">VAI TRÒ</div><div class="fw-bold text-primary small">{{ u.role }}</div></div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12 text-center text-muted py-4">Chưa có giảng viên nào</div>
+                {% endif %}
             </div>
         </div>
 
@@ -230,18 +298,49 @@
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <div class="d-flex gap-2">
                             <button class="btn btn-primary btn-sm rounded-pill px-3 fw-bold btn-filter active" onclick="filterTable('all', this)">TẤT CẢ ĐỀ TÀI</button>
-                            <button class="btn btn-light btn-sm rounded-pill px-3 text-muted fw-bold btn-filter" onclick="filterTable('pending', this)">CẦN DUYỆT CẤP TRƯỜNG (2)</button>
+                            <button class="btn btn-light btn-sm rounded-pill px-3 text-muted fw-bold btn-filter" onclick="filterTable('pending', this)">CẦN DUYỆT CẤP TRƯỜNG ({{ topics | selectattr('status', 'equalto', 'pending') | list | length }})</button>
                         </div>
                         <input type="text" class="form-control rounded-pill bg-light border-0 px-4 small" placeholder="Tìm kiếm..." style="width: 250px;">
                     </div>
                 </div>
                 <div class="card-body p-0">
                     <table class="table table-hover mb-0 align-middle" id="approvalTable">
-                        <thead class="bg-light"><tr class="text-muted small text-uppercase fw-bold"><th class="ps-4 py-3">Khoa/Viện</th><th>Đề tài</th><th>Xếp loại Khoa</th><th>Kinh phí đề xuất</th><th class="text-end pe-4">Thao tác</th></tr></thead>
+                        <thead class="bg-light"><tr class="text-muted small text-uppercase fw-bold"><th class="ps-4 py-3">Khoa/Viện</th><th>Đề tài</th><th>Trạng thái Khoa</th><th>Cố vấn</th><th class="text-end pe-4">Thao tác</th></tr></thead>
                         <tbody>
-                            <tr class="row-pending"><td class="ps-4 fw-bold">Khoa CNTT</td><td><div class="fw-bold text-primary">Phát triển nền tảng học máy phi tập trung</div><small class="text-muted">Chủ nhiệm: Trần Thu Hà</small></td><td><span class="text-success fw-bold bg-success-subtle px-2 py-1 rounded small">A (XUẤT SẮC)</span></td><td class="fw-bold">25.000.000đ</td><td class="text-end pe-4"><button class="btn btn-primary btn-sm rounded-pill px-3 fw-bold" data-bs-toggle="modal" data-bs-target="#modalApproveTopic">DUYỆT TRƯỜNG</button></td></tr>
-                            <tr class="row-pending"><td class="ps-4 fw-bold">Khoa Kinh tế</td><td><div class="fw-bold text-primary">Phân tích xu hướng thương mại điện tử 2026</div><small class="text-muted">Chủ nhiệm: Trần Thu Hà</small></td><td><span class="text-success fw-bold bg-success-subtle px-2 py-1 rounded small">B (TỐT)</span></td><td class="fw-bold">15.000.000đ</td><td class="text-end pe-4"><button class="btn btn-primary btn-sm rounded-pill px-3 fw-bold" data-bs-toggle="modal" data-bs-target="#modalApproveTopic">DUYỆT TRƯỜNG</button></td></tr>
-                            <tr class="row-approved bg-light bg-opacity-25"><td class="ps-4 fw-bold text-muted">Khoa Du lịch</td><td><div class="fw-bold text-muted">Mô hình du lịch xanh (Đã duyệt)</div><small class="text-muted">Chủ nhiệm: Lê Văn C</small></td><td><span class="text-muted fw-bold bg-light px-2 py-1 rounded small border">ĐÃ DUYỆT</span></td><td class="fw-bold text-muted">10.000.000đ</td><td class="text-end pe-4"><button class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold" disabled>ĐÃ XONG</button></td></tr>
+                            {% if topics %}
+                                {% for t in topics %}
+                                {% set mentor = users | selectattr('id', 'equalto', t.mentor_id) | first if t.mentor_id else None %}
+                                <tr class="row-{{ t.status }}">
+                                    <td class="ps-4 fw-bold">{{ mentor.faculty or 'CNTT' if mentor else 'N/A' }}</td>
+                                    <td>
+                                        <div class="fw-bold text-primary">{{ t.title }}</div>
+                                        <small class="text-muted">Cố vấn: {{ mentor.full_name if mentor else 'Chưa có' }}</small>
+                                    </td>
+                                    <td>
+                                        {% if t.status == 'approved' %}
+                                        <span class="text-success fw-bold bg-success-subtle px-2 py-1 rounded small">ĐÃ DUYỆT</span>
+                                        {% elif t.status == 'rejected' %}
+                                        <span class="text-danger fw-bold bg-danger-subtle px-2 py-1 rounded small">TỪ CHỐI</span>
+                                        {% else %}
+                                        <span class="text-warning fw-bold bg-warning-subtle px-2 py-1 rounded small">CHƯA DUYỆT</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="fw-bold text-muted">{{ mentor.full_name if mentor else '---' }}</td>
+                                    <td class="text-end pe-4">
+                                        {% if t.status == 'pending' %}
+                                        <button class="btn btn-primary btn-sm rounded-pill px-3 fw-bold" onclick="adminApproveTopic({{ t.id }})">DUYỆT TRƯỜNG</button>
+                                        {% else %}
+                                        <button class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold" disabled>ĐÃ XONG</button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr><td colspan="5" class="text-center text-muted py-5">
+                                    <i class="fa-solid fa-inbox fs-1 mb-2 d-block opacity-25"></i>
+                                    Chưa có đề tài nào chờ phê duyệt.
+                                </td></tr>
+                            {% endif %}
                         </tbody>
                     </table>
                 </div>
@@ -258,14 +357,51 @@
                     <div class="card border-0 shadow-sm rounded-4 p-0 overflow-hidden">
                         <div class="card-header bg-white p-3 border-bottom"><h6 class="fw-bold mb-0">PHIÊN HỌP SẮP TỚI</h6></div>
                         <div class="list-group list-group-flush">
-                            <div class="list-group-item p-3 border-0 d-flex align-items-center"><div class="meeting-time"><div class="text-danger fw-bold h4 mb-0">20</div><div class="text-muted small fw-bold">THG 10</div></div><div class="flex-grow-1"><div class="fw-bold">Hội đồng Xét duyệt đề cương - Khối Kỹ thuật</div><div class="small text-muted"><i class="fa-regular fa-clock me-1"></i> 08:30 - 11:30 • Phòng họp A201</div></div><button class="btn btn-light btn-sm fw-bold border">Chi tiết</button></div>
+                            {% if batches %}
+                                {% for b in batches if b.submission_deadline %}
+                                <div class="list-group-item p-3 border-0 d-flex align-items-center">
+                                    <div class="meeting-time">
+                                        <div class="text-danger fw-bold h4 mb-0">{{ b.submission_deadline.strftime('%d') }}</div>
+                                        <div class="text-muted small fw-bold">TH{{ b.submission_deadline.strftime('%m') }}</div>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-bold">Phê duyệt đợt - {{ b.name }}</div>
+                                        <div class="small text-muted"><i class="fa-regular fa-clock me-1"></i> Hạn nộp: {{ b.submission_deadline.strftime('%d/%m/%Y') }}</div>
+                                    </div>
+                                    <button class="btn btn-light btn-sm fw-bold border">Chi tiết</button>
+                                </div>
+                                {% else %}
+                                <div class="text-center text-muted p-4 small">
+                                    <i class="fa-regular fa-calendar fs-1 mb-2 d-block opacity-25"></i>
+                                    Chưa có phên họp nào. Tạo đợt NCKH có hạn nộp để lên lịch tự động.
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center text-muted p-4 small">
+                                    <i class="fa-regular fa-calendar fs-1 mb-2 d-block opacity-25"></i>
+                                    Chưa có đợt NCKH nào.
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
                         <h6 class="fw-bold mb-3">THÀNH VIÊN THƯỜNG TRỰC</h6>
-                        <div class="d-flex align-items-center mb-3"><div class="bg-light rounded-circle p-2 me-2"><i class="fa-solid fa-user-tie text-primary"></i></div><div><div class="small fw-bold">PGS.TS Nguyễn Văn A</div><div class="text-muted" style="font-size: 10px;">Chủ tịch hội đồng</div></div></div>
+                        {% set lecturers = users | selectattr('role', 'equalto', 'Lecturer') | list %}
+                        {% if lecturers %}
+                            {% for lec in lecturers[:3] %}
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-light rounded-circle p-2 me-2"><i class="fa-solid fa-user-tie text-primary"></i></div>
+                                <div>
+                                    <div class="small fw-bold">{{ lec.full_name }}</div>
+                                    <div class="text-muted" style="font-size: 10px;">{{ lec.faculty or 'Giảng viên' }}</div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-muted small text-center py-3">Chưa có thành viên nào</div>
+                        {% endif %}
                         <button class="btn btn-outline-primary btn-sm w-100 rounded-pill fw-bold mt-auto">Xem toàn bộ danh sách</button>
                     </div>
                 </div>
@@ -343,21 +479,21 @@
                 <div class="modal-header bg-primary text-white rounded-top-4"><h5 class="modal-title fw-bold">Thiết lập Đợt NCKH Mới</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body p-4">
                     <div class="row g-3 mb-3">
-                        <div class="col-md-8"><label class="form-label">Tên đợt triển khai</label><input type="text" class="form-control" placeholder="VD: NCKH Sinh viên 2025 - Đợt 2"></div>
-                        <div class="col-md-4"><label class="form-label">Năm học áp dụng</label><select class="form-select"><option>2025-2026</option><option>2026-2027</option></select></div>
+                        <div class="col-md-8"><label class="form-label">Tên đợt triển khai</label><input type="text" id="batch-name" class="form-control" placeholder="VD: NCKH Sinh viên 2025 - Đợt 2"></div>
+                        <div class="col-md-4"><label class="form-label">Năm học áp dụng</label><select id="batch-year" class="form-select"><option value="2025-2026">2025-2026</option><option value="2026-2027">2026-2027</option></select></div>
                     </div>
                     <div class="row g-3 mb-3">
-                        <div class="col-md-6"><label class="form-label">Loại hình</label><select class="form-select"><option selected>Nghiên cứu khoa học (Chuẩn)</option><option>Khởi nghiệp sáng tạo</option></select></div>
-                        <div class="col-md-6"><label class="form-label">Hạn mức kinh phí tối đa (VNĐ)</label><input type="text" class="form-control" value="5,000,000"></div>
+                        <div class="col-md-6"><label class="form-label">Loại hình</label><select id="batch-type" class="form-select"><option selected value="NCKH Standard">Nghiên cứu khoa học (Chuẩn)</option><option value="Khởi nghiệp">Khởi nghiệp sáng tạo</option></select></div>
+                        <div class="col-md-6"><label class="form-label">Hạn mức kinh phí tối đa (VNĐ)</label><input type="text" id="batch-max-budget" class="form-control" value="5,000,000"></div>
                     </div>
                     <div class="row g-3 mb-3">
-                        <div class="col-md-6"><label class="form-label">Ngày bắt đầu</label><input type="date" class="form-control"></div>
-                        <div class="col-md-6"><label class="form-label">Hạn cuối nộp đề tài</label><input type="date" class="form-control"></div>
+                        <div class="col-md-6"><label class="form-label">Ngày bắt đầu</label><input type="date" id="batch-start-date" class="form-control"></div>
+                        <div class="col-md-6"><label class="form-label">Hạn cuối nộp đề tài</label><input type="date" id="batch-end-date" class="form-control"></div>
                     </div>
-                    <div class="mb-3"><label class="form-label">Mô tả chi tiết / Ghi chú</label><textarea class="form-control" rows="3"></textarea></div>
+                    <div class="mb-3"><label class="form-label">Mô tả chi tiết / Ghi chú</label><textarea id="batch-description" class="form-control" rows="3"></textarea></div>
                     <div class="mb-0"><label class="form-label">Văn bản hướng dẫn (PDF/DOC)</label><input type="file" class="form-control"></div>
                 </div>
-                <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy bỏ</button><button class="btn btn-primary fw-bold px-4" onclick="showToast('Đã tạo đợt mới thành công!')" data-bs-dismiss="modal">Lưu & Ban hành</button></div>
+                <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy bỏ</button><button class="btn btn-primary fw-bold px-4" onclick="saveBatch()">Lưu & Ban hành</button></div>
             </div>
         </div>
     </div>

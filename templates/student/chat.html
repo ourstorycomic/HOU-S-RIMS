@@ -1,0 +1,199 @@
+{% extends "layouts/student_layout.html" %}
+
+{% block student_content %}
+<div id="view-s-chat" class="fade-in ">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden" style="height: 650px;">
+                    <div class="row g-0 h-100">
+                        <div class="col-md-3 border-end bg-white d-flex flex-column">
+                            <div class="p-3 border-bottom bg-light">
+                                <h5 class="mb-2 fw-bold">Trò chuyện</h5>
+                                <div class="position-relative mb-3">
+                                    <input type="text" id="user-search-input" class="form-control form-control-sm rounded-pill pe-4" placeholder="Tìm kiếm..." autocomplete="off">
+                                    <i class="fa-solid fa-magnifying-glass position-absolute text-muted" style="top: 50%; right: 10px; transform: translateY(-50%);"></i>
+                                    <div id="user-search-dropdown" class="dropdown-menu w-100 shadow-sm" style="max-height: 200px; overflow-y: auto;">
+                                    </div>
+                                </div>
+                                <ul class="nav nav-pills nav-fill nav-sm" id="chat-tabs" role="tablist">
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link active py-1" id="groups-tab" data-bs-toggle="tab" data-bs-target="#groups-pane" type="button" role="tab">Nhóm</button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link py-1" id="private-tab" data-bs-toggle="tab" data-bs-target="#private-pane" type="button" role="tab">Cá nhân</button>
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                            <div class="tab-content flex-grow-1 overflow-hidden d-flex flex-column">
+                                <div class="tab-pane fade show active flex-grow-1 overflow-auto" id="groups-pane" role="tabpanel">
+                                    <div class="list-group list-group-flush">
+                                    {% if my_groups %}
+                                        {% for g in my_groups %}
+                                        <a href="#" class="list-group-item list-group-item-action border-0 p-3 chat-group-item" data-group-id="{{ g.id }}" onclick="updateChatHeader('{{ g.name }}', {{ g.id }})">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px; background-color: #6366f1 !important;"><i class="fa-solid fa-users"></i></div>
+                                                <div class="overflow-hidden">
+                                                    <div class="d-flex justify-content-between">
+                                                        <span class="fw-bold text-dark text-truncate">{{ g.name }}</span>
+                                                    </div>
+                                                    <small class="text-muted text-truncate d-block">Nhóm ID: {{ g.id }}</small>
+                                                </div>
+                                            </div>
+                                        </a>
+                                        {% endfor %}
+                                    {% else %}
+                                        <div class="text-muted small text-center p-4">Bạn chưa tham gia nhóm nào.</div>
+                                    {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="tab-pane fade flex-grow-1 overflow-auto" id="private-pane" role="tabpanel">
+                                    <div class="list-group list-group-flush" id="private-chat-list">
+                                        <div class="text-center text-muted p-4 small">Đang tải...</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="main-chat-area" class="col-md-9 d-flex flex-column bg-white h-100 transition-all">
+                            <div class="px-4 py-3 border-bottom d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div id="chat-header-avatar" class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold small" style="width: 40px; height: 40px; background-color: #6366f1 !important;"><i class="fa-solid fa-users"></i></div>
+                                    <div>
+                                        <div id="chat-header-name" class="fw-bold text-dark">Chọn một nhóm để bắt đầu</div>
+                                        <div class="small text-muted">Nhóm nghiên cứu</div>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-3 text-muted fs-5">
+                                    <!-- Search Box -->
+                                    <div class="input-group input-group-sm" id="chat-search-container" style="width: 0px; opacity: 0; overflow: hidden; transition: all 0.3s ease; border-radius: 20px;">
+                                        <input type="text" id="chat-search-input" class="form-control rounded-pill" placeholder="Tìm kiếm tin nhắn...">
+                                    </div>
+                                    <i class="fa-solid fa-magnifying-glass cursor-pointer" id="chat-search-btn" title="Tìm kiếm"></i>
+                                    <i class="fa-solid fa-circle-info cursor-pointer" id="chat-info-btn" title="Thông tin hội thoại"></i>
+                                </div>
+                            </div>
+
+                            <div id="chat-messages-container" class="flex-grow-1 p-4 chat-scroll" style="background-color: #fff; overflow-y: auto;">
+                                <div class="text-center text-muted small py-5"><i class="fa-regular fa-comment-dots fs-1 d-block mb-3 opacity-25"></i>Chọn một nhóm từ danh sách bên trái</div>
+                            </div>
+
+                            <div class="p-3 bg-white border-top">
+                                <div id="chat-upload-preview" class="mb-2 d-none">
+                                    <div class="d-flex align-items-center bg-light p-2 rounded">
+                                        <div id="chat-preview-icon" class="me-2 text-primary fs-4"></div>
+                                        <div id="chat-preview-name" class="flex-grow-1 text-truncate small fw-bold"></div>
+                                        <button class="btn btn-sm btn-close ms-2" onclick="cancelChatUpload()"></button>
+                                    </div>
+                                </div>
+                                <div class="input-group bg-light rounded-pill p-1 border">
+                                    <input type="file" id="chat-file-input" hidden>
+                                    <button class="btn btn-link text-muted" onclick="document.getElementById('chat-file-input').click()"><i class="fa-solid fa-paperclip"></i></button>
+                                    <input type="text" id="chat-input-field" class="form-control border-0 bg-transparent shadow-none" placeholder="Nhập tin nhắn thảo luận...">
+                                    
+                                    <!-- Emoji/Sticker picker button -->
+                                    <div class="position-relative">
+                                        <button class="btn btn-link text-muted fs-5" id="emoji-picker-btn" title="Gửi Emoji/Sticker"><i class="fa-regular fa-face-smile"></i></button>
+                                        
+                                        <div id="emoji-picker-container" class="position-absolute d-none bg-white border rounded-4 shadow-lg" style="bottom: 120%; right: -50px; width: 320px; z-index: 1000; overflow: hidden;">
+                                            <!-- Tabs -->
+                                            <div class="d-flex border-bottom text-center fw-bold text-muted bg-light" style="font-size: 13px;">
+                                                <div class="flex-fill py-2 cursor-pointer picker-tab active" data-target="tab-emoji">EMOJI</div>
+                                                <div class="flex-fill py-2 cursor-pointer picker-tab" data-target="tab-sticker">STICKER</div>
+                                                <div class="flex-fill py-2 cursor-pointer picker-tab" data-target="tab-gif">GIF</div>
+                                            </div>
+                                            
+                                            <!-- Tab contents -->
+                                            <div class="p-2" style="height: 250px; overflow-y: auto;">
+                                                <!-- Emoji Tab -->
+                                                <div id="tab-emoji" class="picker-tab-content">
+                                                    <div class="text-muted small fw-bold mb-2 px-1">Gần đây</div>
+                                                    <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;">
+                                                        <span class="cursor-pointer fs-4 text-center emoji-item hover-scale">😀</span>
+                                                        <span class="cursor-pointer fs-4 text-center emoji-item hover-scale">😂</span>
+                                                        <span class="cursor-pointer fs-4 text-center emoji-item hover-scale">🥰</span>
+                                                        <span class="cursor-pointer fs-4 text-center emoji-item hover-scale">😎</span>
+                                                        <span class="cursor-pointer fs-4 text-center emoji-item hover-scale">🤔</span>
+                                                        <span class="cursor-pointer fs-4 text-center emoji-item hover-scale">👍</span>
+                                                        <span class="cursor-pointer fs-4 text-center emoji-item hover-scale">🙏</span>
+                                                        <span class="cursor-pointer fs-4 text-center emoji-item hover-scale">🔥</span>
+                                                        <span class="cursor-pointer fs-4 text-center emoji-item hover-scale">❤️</span>
+                                                        <span class="cursor-pointer fs-4 text-center emoji-item hover-scale">🎉</span>
+                                                        <span class="cursor-pointer fs-4 text-center emoji-item hover-scale">✨</span>
+                                                        <span class="cursor-pointer fs-4 text-center emoji-item hover-scale">✔️</span>
+                                                        <span class="cursor-pointer fs-4 text-center emoji-item hover-scale">😭</span>
+                                                        <span class="cursor-pointer fs-4 text-center emoji-item hover-scale">😡</span>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Sticker Tab -->
+                                                <div id="tab-sticker" class="picker-tab-content d-none">
+                                                    <div class="text-muted small fw-bold mb-2 px-1">Zookiz - Chuyện Đời Thường</div>
+                                                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+                                                        <img src="https://cdn-icons-png.flaticon.com/512/4694/4694602.png" class="img-fluid sticker-item hover-scale cursor-pointer" data-url="https://cdn-icons-png.flaticon.com/512/4694/4694602.png">
+                                                        <img src="https://cdn-icons-png.flaticon.com/512/4694/4694606.png" class="img-fluid sticker-item hover-scale cursor-pointer" data-url="https://cdn-icons-png.flaticon.com/512/4694/4694606.png">
+                                                        <img src="https://cdn-icons-png.flaticon.com/512/4694/4694639.png" class="img-fluid sticker-item hover-scale cursor-pointer" data-url="https://cdn-icons-png.flaticon.com/512/4694/4694639.png">
+                                                        <img src="https://cdn-icons-png.flaticon.com/512/4694/4694665.png" class="img-fluid sticker-item hover-scale cursor-pointer" data-url="https://cdn-icons-png.flaticon.com/512/4694/4694665.png">
+                                                        <img src="https://cdn-icons-png.flaticon.com/512/4694/4694770.png" class="img-fluid sticker-item hover-scale cursor-pointer" data-url="https://cdn-icons-png.flaticon.com/512/4694/4694770.png">
+                                                        <img src="https://cdn-icons-png.flaticon.com/512/4694/4694793.png" class="img-fluid sticker-item hover-scale cursor-pointer" data-url="https://cdn-icons-png.flaticon.com/512/4694/4694793.png">
+                                                        <img src="https://cdn-icons-png.flaticon.com/512/4694/4694808.png" class="img-fluid sticker-item hover-scale cursor-pointer" data-url="https://cdn-icons-png.flaticon.com/512/4694/4694808.png">
+                                                        <img src="https://cdn-icons-png.flaticon.com/512/4694/4694833.png" class="img-fluid sticker-item hover-scale cursor-pointer" data-url="https://cdn-icons-png.flaticon.com/512/4694/4694833.png">
+                                                    </div>
+                                                </div>
+
+                                                <!-- GIF Tab -->
+                                                <div id="tab-gif" class="picker-tab-content d-none">
+                                                    <div class="text-center text-muted small py-4">Chưa có GIF nào.</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <button id="chat-send-btn" class="btn btn-primary rounded-circle m-1 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; background-color: #6366f1; border: none;" onclick="sendChatMessage(activeChatId)"><i class="fa-solid fa-paper-plane text-white" style="font-size: 14px;"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="chat-sidebar" class="chat-sidebar bg-white h-100">
+                            <div class="p-3 border-bottom text-center fw-bold fs-5">
+                                Thông tin hội thoại
+                            </div>
+                            <div class="flex-grow-1 overflow-auto p-2">
+                                <!-- Ảnh/Video -->
+                                <div class="sidebar-section">
+                                    <div class="sidebar-section-header" onclick="this.nextElementSibling.classList.toggle('d-none')">
+                                        <span>Ảnh/Video</span>
+                                        <i class="fa-solid fa-chevron-down small"></i>
+                                    </div>
+                                    <div class="p-2">
+                                        <div class="media-grid" id="sidebar-media-grid">
+                                            <div class="text-muted small text-center w-100 py-3">Không có ảnh/video</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- File -->
+                                <div class="sidebar-section mt-2">
+                                    <div class="sidebar-section-header" onclick="this.nextElementSibling.classList.toggle('d-none')">
+                                        <span>File</span>
+                                        <i class="fa-solid fa-chevron-down small"></i>
+                                    </div>
+                                    <div class="p-2" id="sidebar-file-list">
+                                        <div class="text-muted small text-center w-100 py-3">Không có file</div>
+                                    </div>
+                                </div>
+
+                                <!-- Link -->
+                                <div class="sidebar-section mt-2">
+                                    <div class="sidebar-section-header" onclick="this.nextElementSibling.classList.toggle('d-none')">
+                                        <span>Link</span>
+                                        <i class="fa-solid fa-chevron-down small"></i>
+                                    </div>
+                                    <div class="p-2" id="sidebar-link-list">
+                                        <div class="text-muted small text-center w-100 py-3">Không có link</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </div>
+{% endblock %}

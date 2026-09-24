@@ -1,0 +1,19 @@
+{% extends "layouts/faculty_layout.html" %}
+
+{% block faculty_content %}
+<div id="view-f-rubric" class="fade-in ">
+                <div class="rubric-banner-purple text-white p-4 rounded-4 shadow-sm mb-4 d-flex align-items-center justify-content-between">
+                    <div><h4 class="fw-bold mb-1">HỆ THỐNG NGHIỆM THU RUBRIC</h4><p class="mb-0 small opacity-75">Thiết lập bộ tiêu chuẩn đánh giá đa chiều.</p></div>
+                    <i class="fa-solid fa-gear fa-3x opacity-25"></i>
+                </div>
+                <div class="card border-0 shadow-sm rounded-4 p-4">
+                    <h6 class="fw-bold text-muted text-uppercase mb-4">CÁC TIÊU CHÍ ĐÁNH GIÁ (RUBRIC)</h6>
+                    <div id="rubricContainer">
+                        <div class="d-flex align-items-center justify-content-between bg-light p-3 rounded-3 mb-3 border-start border-4 border-primary">
+                            <div class="d-flex align-items-center gap-3"><div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px;">1</div><div><div class="fw-bold text-dark">Tính mới và sáng tạo</div><small class="text-primary fw-bold" style="font-size: 10px;">TRỌNG SỐ: 30%</small></div></div><div class="fw-bold text-muted h5 mb-0">/ 3.0</div>
+                        </div>
+                    </div>
+                    <div class="text-center mt-3 p-3 border border-dashed rounded-3 text-muted fw-bold" style="cursor: pointer;" onclick="addRubricCriteria()">+ THÊM TIÊU CHÍ MỚI</div>
+                </div>
+        </div>
+{% endblock %}

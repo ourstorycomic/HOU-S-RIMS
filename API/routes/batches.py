@@ -35,17 +35,27 @@ def create_batch():
     """
     data = request.get_json()
     
-    if not data or not 'name' in data or not 'start_date' in data or not 'end_date' in data:
-        return jsonify({'error': 'Missing required fields'}), 400
+    if not data or not data.get('name'):
+        return jsonify({'error': 'Missing required field: name'}), 400
         
     try:
-        start_date = datetime.strptime(data['start_date'], '%Y-%m-%d')
-        end_date = datetime.strptime(data['end_date'], '%Y-%m-%d')
+        start_date = None
+        end_date = None
+        submission_deadline = None
+
+        if data.get('start_date'):
+            start_date = datetime.strptime(data['start_date'], '%Y-%m-%d')
+        if data.get('end_date'):
+            end_date = datetime.strptime(data['end_date'], '%Y-%m-%d')
+        if data.get('submission_deadline'):
+            submission_deadline = datetime.strptime(data['submission_deadline'], '%Y-%m-%d')
         
         new_batch = Batch(
             name=data['name'],
+            type=data.get('type', 'NCKH Standard'),
             start_date=start_date,
             end_date=end_date,
+            submission_deadline=submission_deadline,
             status=data.get('status', 'active')
         )
         db.session.add(new_batch)
@@ -56,8 +66,7 @@ def create_batch():
             'batch': {
                 'id': new_batch.id,
                 'name': new_batch.name,
-                'start_date': new_batch.start_date.strftime('%Y-%m-%d'),
-                'end_date': new_batch.end_date.strftime('%Y-%m-%d'),
+                'type': new_batch.type,
                 'status': new_batch.status
             }
         }), 201
