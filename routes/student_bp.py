@@ -36,7 +36,7 @@ def portfolio():
 def register():
     user_id = session.get('user_id')
     batches = Batch.query.filter_by(status='active').all()
-    mentors = User.query.filter_by(role='lecturer').all()
+    mentors = User.query.filter(func.lower(User.role) == 'lecturer').all()
     my_groups = Group.query.join(GroupMember).filter(GroupMember.student_id == user_id).all()
     my_topics = []
     if my_groups:

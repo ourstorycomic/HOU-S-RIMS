@@ -24,7 +24,7 @@ def index():
 def dashboard():
     topics = Topic.query.all()
     groups = Group.query.all()
-    mentors = User.query.filter_by(role='lecturer').all()
+    mentors = User.query.filter(func.lower(User.role) == 'lecturer').all()
     students = User.query.filter_by(role='student').all()
     # stats mapping from original web.py
     stats = {
@@ -48,8 +48,9 @@ def topics():
 
 @faculty_bp.route('/lecturers')
 def lecturers():
-    all_lecturers = User.query.filter_by(role='lecturer').all()
-    return render_template('faculty/lecturers.html', lecturers=all_lecturers)
+    all_lecturers = User.query.filter(func.lower(User.role) == 'lecturer').all()
+    all_topics = Topic.query.all()
+    return render_template('faculty/lecturers.html', mentors=all_lecturers, topics=all_topics)
 
 @faculty_bp.route('/students')
 def students():
