@@ -10,13 +10,22 @@
                     {% if mentors %}
                         {% for m in mentors %}
                         <div class="col-md-4">
-                            <div class="card border-0 shadow-sm p-3 rounded-4 h-100 d-flex flex-row align-items-center gap-3 lecturer-card">
+                            <div class="card border-0 shadow-sm p-3 rounded-4 h-100 d-flex flex-row align-items-center gap-3 lecturer-card position-relative">
                                 <div class="avatar-letter bg-primary-subtle text-primary rounded-3" style="width: 60px; height: 60px;">{{ m.full_name[0] if m.full_name else 'G' }}</div>
                                 <div>
                                     <div class="fw-bold">{{ m.full_name }}</div>
                                     <div class="small text-muted fw-bold text-uppercase mb-1">{{ m.faculty or 'CNTT' }}</div>
                                     <div class="small text-muted fst-italic mb-2">{{ m.email }}</div>
                                     <span class="badge bg-dark text-white rounded-pill px-2">HD: {{ topics | selectattr('mentor_id', 'equalto', m.id) | list | length }} ĐỀ TÀI</span>
+                                </div>
+                                <div class="position-absolute top-0 end-0 p-3">
+                                    <div class="dropdown">
+                                        <a class="text-muted" href="#" data-bs-toggle="dropdown"><i class="fa-solid fa-ellipsis-vertical"></i></a>
+                                        <ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm">
+                                            <li><a class="dropdown-item fw-bold text-primary" href="#" onclick="openEditLecturer({{ m.id }}, '{{ m.full_name }}', '{{ m.email }}', '{{ m.faculty }}')"><i class="fa-solid fa-pen-to-square me-2"></i> Sửa thông tin</a></li>
+                                            <li><a class="dropdown-item fw-bold text-danger" href="#" onclick="deleteLecturer({{ m.id }})"><i class="fa-solid fa-trash me-2"></i> Xóa</a></li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -26,4 +35,93 @@
                     {% endif %}
                 </div>
         </div>
+        
+    <!-- Modal Sửa Giảng viên -->
+    <div class="modal fade" id="modalEditLecturer" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="fw-bold mb-0 text-primary">SỬA THÔNG TIN GIẢNG VIÊN</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="editLecId">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Họ và tên</label>
+                        <input type="text" class="form-control" id="editLecName">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Email</label>
+                        <input type="email" class="form-control" id="editLecEmail">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Khoa/Bộ môn</label>
+                        <input type="text" class="form-control" id="editLecFaculty">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-primary fw-bold px-4 shadow-sm" onclick="submitEditLecturer()">Lưu thay đổi</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function openEditLecturer(id, name, email, faculty) {
+        document.getElementById('editLecId').value = id;
+        document.getElementById('editLecName').value = name;
+        document.getElementById('editLecEmail').value = email;
+        document.getElementById('editLecFaculty').value = faculty;
+        new bootstrap.Modal(document.getElementById('modalEditLecturer')).show();
+    }
+
+    async function submitEditLecturer() {
+        const id = document.getElementById('editLecId').value;
+        const name = document.getElementById('editLecName').value.trim();
+        const email = document.getElementById('editLecEmail').value.trim();
+        const faculty = document.getElementById('editLecFaculty').value.trim();
+        
+        if (!name || !email) return Swal.fire('Lỗi', 'Vui lòng điền đủ thông tin', 'warning');
+        
+        try {
+            const res = await fetch('/api/profile/' + id, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ full_name: name, email: email, faculty: faculty })
+            });
+            if (res.ok) {
+                Swal.fire('Thành công', 'Đã cập nhật thông tin giảng viên!', 'success').then(() => location.reload());
+            } else {
+                Swal.fire('Lỗi', 'Cập nhật thất bại', 'error');
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    async function deleteLecturer(id) {
+        const result = await Swal.fire({
+            title: 'Xóa giảng viên?',
+            text: 'Bạn có chắc chắn muốn xóa giảng viên này? Toàn bộ dữ liệu liên quan có thể bị ảnh hưởng.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Đồng ý xóa',
+            cancelButtonText: 'Hủy'
+        });
+        
+        if (result.isConfirmed) {
+            try {
+                const res = await fetch('/api/profile/' + id, { method: 'DELETE' });
+                if (res.ok) {
+                    Swal.fire('Đã xóa', 'Giảng viên đã được xóa khỏi hệ thống', 'success').then(() => location.reload());
+                } else {
+                    Swal.fire('Lỗi', 'Không thể xóa giảng viên này', 'error');
+                }
+            } catch (e) { console.error(e); }
+        }
+    }
+</script>
 {% endblock %}

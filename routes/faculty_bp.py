@@ -52,8 +52,8 @@ def topics():
 @faculty_bp.route('/lecturers')
 def lecturers():
     all_lecturers = User.query.filter(func.lower(User.role) == 'lecturer').all()
-    all_current_year = session.get('academic_year', '2025-2026')
-    topics = Topic.query.join(Batch).filter(Batch.academic_year == current_year).all()
+    current_year = session.get('academic_year', '2025-2026')
+    all_topics = Topic.query.join(Batch).filter(Batch.academic_year == current_year).all()
     return render_template('faculty/lecturers.html', mentors=all_lecturers, topics=all_topics)
 
 @faculty_bp.route('/students')

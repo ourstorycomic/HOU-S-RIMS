@@ -81,6 +81,7 @@ def update_profile(user_id):
     if 'email' in data: user.email = data['email']
     if 'phone' in data: user.phone = data['phone']
     if 'bio' in data: user.bio = data['bio']
+    if 'faculty' in data: user.faculty = data['faculty']
     
     db.session.commit()
     return jsonify({'message': 'Profile updated successfully'}), 200
@@ -190,3 +191,12 @@ def delete_experience(id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+@profile_bp.route('/<int:user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    db.session.delete(user)
+    db.session.commit()
+    return jsonify({'message': 'User deleted successfully'}), 200
