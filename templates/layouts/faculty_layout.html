@@ -18,9 +18,10 @@
                     <button class="year-select dropdown-toggle" type="button" data-bs-toggle="dropdown" style="background: #f1f5f9; border: none; padding: 8px 16px; border-radius: 20px; color: #2563eb; font-weight: 600; font-size: 13px;">
                         <i class="fa-regular fa-calendar me-2"></i> {{ session.get('academic_year', '2025-2026') }}
                     </button>
+                    {% set current_yr = session.get('academic_year', '2025-2026') %}
                     <ul class="dropdown-menu border-0 shadow mt-2">
-                        <li><a class="dropdown-item fw-bold text-primary year-option" href="#" data-year="2025-2026">2025-2026</a></li>
-                        <li><a class="dropdown-item year-option" href="#" data-year="2024-2025">2024-2025</a></li>
+                        <li><a class="dropdown-item {% if current_yr == '2025-2026' %}fw-bold text-primary{% endif %} year-option" href="#" data-year="2025-2026">2025-2026</a></li>
+                        <li><a class="dropdown-item {% if current_yr == '2024-2025' %}fw-bold text-primary{% endif %} year-option" href="#" data-year="2024-2025">2024-2025</a></li>
                     </ul>
                 </div>
 
