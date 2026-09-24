@@ -45,9 +45,9 @@ def batches():
 @faculty_bp.route('/topics')
 def topics():
     current_year = session.get('academic_year', '2025-2026')
-    pending_topics = Topic.query.join(Batch).filter(Topic.status=='faculty_pending', Batch.academic_year == current_year).all()
-    approved_topics = Topic.query.join(Batch).filter(Topic.status=='approved', Batch.academic_year == current_year).all()
-    return render_template('faculty/topics.html', pending_topics=pending_topics, approved_topics=approved_topics)
+    all_topics = Topic.query.join(Batch).filter(Batch.academic_year == current_year).all()
+    mentors = User.query.filter(func.lower(User.role) == 'lecturer').all()
+    return render_template('faculty/topics.html', topics=all_topics, mentors=mentors)
 
 @faculty_bp.route('/lecturers')
 def lecturers():

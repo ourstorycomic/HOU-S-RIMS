@@ -27,8 +27,8 @@
                                     <td class="text-muted small">{{ s.email }}</td>
                                     <td class="text-end pe-4">
                                         <button class="btn btn-sm btn-light text-info border" onclick="viewPublicProfile({{ s.id }})" title="Xem hồ sơ"><i class="fa-regular fa-address-card"></i></button>
-                                        <button class="btn btn-sm btn-light text-primary border"><i class="fa-solid fa-pen"></i></button>
-                                        <button class="btn btn-sm btn-light text-danger border"><i class="fa-solid fa-trash"></i></button>
+                                        <button class="btn btn-sm btn-light text-primary border" onclick="openEditStudent({{ s.id }}, '{{ s.student_id or '' }}', '{{ s.full_name }}', '{{ s.email }}', '{{ s.faculty or '' }}', '{{ s.phone or '' }}')" title="Sửa"><i class="fa-solid fa-pen"></i></button>
+                                        <button class="btn btn-sm btn-light text-danger border" onclick="deleteStudent({{ s.id }})" title="Xóa"><i class="fa-solid fa-trash"></i></button>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -39,4 +39,98 @@
                     </table>
                 </div>
         </div>
+
+    <!-- Modal Sửa Sinh viên -->
+    <div class="modal fade" id="modalEditStudent" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="fw-bold mb-0 text-primary">SỬA THÔNG TIN SINH VIÊN</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4 pt-3">
+                    <input type="hidden" id="editStudentId">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6"><label class="form-label fw-bold">MSSV</label><input type="text" class="form-control" id="editStudentCode"></div>
+                        <div class="col-md-6"><label class="form-label fw-bold">Họ và tên</label><input type="text" class="form-control" id="editStudentName"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Email</label>
+                        <input type="email" class="form-control" id="editStudentEmail">
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6"><label class="form-label fw-bold">Số điện thoại</label><input type="text" class="form-control" id="editStudentPhone"></div>
+                        <div class="col-md-6"><label class="form-label fw-bold">Chuyên ngành</label><input type="text" class="form-control" id="editStudentFaculty"></div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-primary fw-bold px-4 shadow-sm" onclick="submitEditStudent()">Lưu thay đổi</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function openEditStudent(id, code, name, email, faculty, phone) {
+        document.getElementById('editStudentId').value = id;
+        document.getElementById('editStudentCode').value = code;
+        document.getElementById('editStudentName').value = name;
+        document.getElementById('editStudentEmail').value = email;
+        document.getElementById('editStudentFaculty').value = faculty;
+        document.getElementById('editStudentPhone').value = phone;
+        new bootstrap.Modal(document.getElementById('modalEditStudent')).show();
+    }
+
+    async function submitEditStudent() {
+        const id = document.getElementById('editStudentId').value;
+        const name = document.getElementById('editStudentName').value.trim();
+        const email = document.getElementById('editStudentEmail').value.trim();
+        const faculty = document.getElementById('editStudentFaculty').value.trim();
+        const phone = document.getElementById('editStudentPhone').value.trim();
+        
+        // Note: The API doesn't support student_id update yet, but we'll send it if we add it later
+        
+        if (!name || !email) return Swal.fire('Lỗi', 'Vui lòng điền đủ Họ tên và Email', 'warning');
+        
+        try {
+            const res = await fetch('/api/profile/' + id, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ full_name: name, email: email, faculty: faculty, phone: phone })
+            });
+            if (res.ok) {
+                Swal.fire('Thành công', 'Đã cập nhật sinh viên!', 'success').then(() => location.reload());
+            } else {
+                Swal.fire('Lỗi', 'Cập nhật thất bại', 'error');
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    async function deleteStudent(id) {
+        const result = await Swal.fire({
+            title: 'Xóa sinh viên?',
+            text: 'Bạn có chắc chắn muốn xóa sinh viên này khỏi hệ thống? Toàn bộ dữ liệu liên quan sẽ bị ảnh hưởng.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Đồng ý xóa',
+            cancelButtonText: 'Hủy'
+        });
+        
+        if (result.isConfirmed) {
+            try {
+                const res = await fetch('/api/profile/' + id, { method: 'DELETE' });
+                if (res.ok) {
+                    Swal.fire('Đã xóa', 'Sinh viên đã được xóa khỏi hệ thống', 'success').then(() => location.reload());
+                } else {
+                    Swal.fire('Lỗi', 'Không thể xóa sinh viên này', 'error');
+                }
+            } catch (e) { console.error(e); }
+        }
+    }
+</script>
 {% endblock %}

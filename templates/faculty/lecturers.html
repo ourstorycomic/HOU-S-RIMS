@@ -22,7 +22,7 @@
                                     <div class="dropdown">
                                         <a class="text-muted" href="#" data-bs-toggle="dropdown"><i class="fa-solid fa-ellipsis-vertical"></i></a>
                                         <ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm">
-                                            <li><a class="dropdown-item fw-bold text-primary" href="#" onclick="openEditLecturer({{ m.id }}, '{{ m.full_name }}', '{{ m.email }}', '{{ m.faculty }}')"><i class="fa-solid fa-pen-to-square me-2"></i> Sửa thông tin</a></li>
+                                            <li><a class="dropdown-item fw-bold text-primary" href="#" onclick="openEditLecturer({{ m.id }}, '{{ m.full_name }}', '{{ m.email }}', '{{ m.faculty }}', '{{ m.phone or '' }}', `{{ m.bio or '' }}`)"><i class="fa-solid fa-pen-to-square me-2"></i> Sửa thông tin</a></li>
                                             <li><a class="dropdown-item fw-bold text-danger" href="#" onclick="deleteLecturer({{ m.id }})"><i class="fa-solid fa-trash me-2"></i> Xóa</a></li>
                                         </ul>
                                     </div>
@@ -38,26 +38,28 @@
         
     <!-- Modal Sửa Giảng viên -->
     <div class="modal fade" id="modalEditLecturer" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 rounded-4 shadow">
-                <div class="modal-header border-0 pb-0">
+                <div class="modal-header border-bottom-0 pb-0">
                     <h5 class="fw-bold mb-0 text-primary">SỬA THÔNG TIN GIẢNG VIÊN</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body p-4">
+                <div class="modal-body p-4 pt-3">
                     <input type="hidden" id="editLecId">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Họ và tên</label>
-                        <input type="text" class="form-control" id="editLecName">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6"><label class="form-label fw-bold">Họ và tên</label><input type="text" class="form-control" id="editLecName"></div>
+                        <div class="col-md-3"><label class="form-label fw-bold">Giới tính</label><select class="form-select" id="editLecGender"><option>Nam</option><option>Nữ</option></select></div>
+                        <div class="col-md-3"><label class="form-label fw-bold">Học hàm/Học vị</label><select class="form-select" id="editLecDegree"><option>Thạc sĩ</option><option>Tiến sĩ</option><option>PGS.TS</option></select></div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Email</label>
-                        <input type="email" class="form-control" id="editLecEmail">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6"><label class="form-label fw-bold">Email công vụ</label><input type="email" class="form-control" id="editLecEmail"></div>
+                        <div class="col-md-6"><label class="form-label fw-bold">Số điện thoại</label><input type="text" class="form-control" id="editLecPhone"></div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Khoa/Bộ môn</label>
-                        <input type="text" class="form-control" id="editLecFaculty">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6"><label class="form-label fw-bold">Bộ môn trực thuộc</label><select class="form-select" id="editLecFaculty"><option value="Công nghệ phần mềm">Công nghệ phần mềm</option><option value="Khoa học máy tính">Khoa học máy tính</option><option value="Hệ thống thông tin">Hệ thống thông tin</option></select></div>
+                        <div class="col-md-6"><label class="form-label fw-bold">Quota hướng dẫn (Số nhóm tối đa)</label><input type="number" class="form-control" id="editLecQuota" value="5"></div>
                     </div>
+                    <div class="mb-0"><label class="form-label fw-bold">Hướng nghiên cứu chuyên sâu (Dùng để gợi ý đề tài)</label><textarea class="form-control" rows="2" id="editLecBio" placeholder="Ví dụ: Học máy, IoT, Blockchain..."></textarea></div>
                 </div>
                 <div class="modal-footer border-0 px-4 pb-4">
                     <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal">Hủy</button>
@@ -70,11 +72,13 @@
 
 {% block extra_js %}
 <script>
-    function openEditLecturer(id, name, email, faculty) {
+    function openEditLecturer(id, name, email, faculty, phone, bio) {
         document.getElementById('editLecId').value = id;
         document.getElementById('editLecName').value = name;
         document.getElementById('editLecEmail').value = email;
         document.getElementById('editLecFaculty').value = faculty;
+        document.getElementById('editLecPhone').value = phone || '';
+        document.getElementById('editLecBio').value = bio || '';
         new bootstrap.Modal(document.getElementById('modalEditLecturer')).show();
     }
 
@@ -83,6 +87,8 @@
         const name = document.getElementById('editLecName').value.trim();
         const email = document.getElementById('editLecEmail').value.trim();
         const faculty = document.getElementById('editLecFaculty').value.trim();
+        const phone = document.getElementById('editLecPhone').value.trim();
+        const bio = document.getElementById('editLecBio').value.trim();
         
         if (!name || !email) return Swal.fire('Lỗi', 'Vui lòng điền đủ thông tin', 'warning');
         
@@ -90,7 +96,7 @@
             const res = await fetch('/api/profile/' + id, {
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ full_name: name, email: email, faculty: faculty })
+                body: JSON.stringify({ full_name: name, email: email, faculty: faculty, phone: phone, bio: bio })
             });
             if (res.ok) {
                 Swal.fire('Thành công', 'Đã cập nhật thông tin giảng viên!', 'success').then(() => location.reload());
