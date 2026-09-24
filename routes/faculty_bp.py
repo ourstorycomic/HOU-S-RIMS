@@ -22,8 +22,9 @@ def index():
 
 @faculty_bp.route('/dashboard')
 def dashboard():
-    topics = Topic.query.all()
-    groups = Group.query.all()
+    current_year = session.get('academic_year', '2025-2026')
+    topics = Topic.query.join(Batch).filter(Batch.academic_year == current_year).all()
+    groups = Group.query.join(Batch).filter(Batch.academic_year == current_year).all()
     mentors = User.query.filter(func.lower(User.role) == 'lecturer').all()
     students = User.query.filter_by(role='student').all()
     # stats mapping from original web.py
@@ -37,19 +38,22 @@ def dashboard():
 
 @faculty_bp.route('/batches')
 def batches():
-    all_batches = Batch.query.all()
+    current_year = session.get('academic_year', '2025-2026')
+    all_batches = Batch.query.filter_by(academic_year=current_year).all()
     return render_template('faculty/batches.html', batches=all_batches)
 
 @faculty_bp.route('/topics')
 def topics():
-    pending_topics = Topic.query.filter_by(status='faculty_pending').all()
-    approved_topics = Topic.query.filter_by(status='approved').all()
+    current_year = session.get('academic_year', '2025-2026')
+    pending_topics = Topic.query.join(Batch).filter(Topic.status=='faculty_pending', Batch.academic_year == current_year).all()
+    approved_topics = Topic.query.join(Batch).filter(Topic.status=='approved', Batch.academic_year == current_year).all()
     return render_template('faculty/topics.html', pending_topics=pending_topics, approved_topics=approved_topics)
 
 @faculty_bp.route('/lecturers')
 def lecturers():
     all_lecturers = User.query.filter(func.lower(User.role) == 'lecturer').all()
-    all_topics = Topic.query.all()
+    all_current_year = session.get('academic_year', '2025-2026')
+    topics = Topic.query.join(Batch).filter(Batch.academic_year == current_year).all()
     return render_template('faculty/lecturers.html', mentors=all_lecturers, topics=all_topics)
 
 @faculty_bp.route('/students')
@@ -59,7 +63,8 @@ def students():
 
 @faculty_bp.route('/council')
 def council():
-    councils = Council.query.all()
+    current_year = session.get('academic_year', '2025-2026')
+    councils = Council.query.join(Batch).filter(Batch.academic_year == current_year).all()
     return render_template('faculty/council.html', councils=councils)
 
 @faculty_bp.route('/rubric')
@@ -69,3 +74,12 @@ def rubric():
 @faculty_bp.route('/stats')
 def stats_page():
     return render_template('faculty/stats.html')
+
+@faculty_bp.route('/set-academic-year', methods=['POST'])
+def set_academic_year():
+    from flask import request, jsonify
+    year = request.json.get('year')
+    if year:
+        session['academic_year'] = year
+        return jsonify({'success': True})
+    return jsonify({'error': 'No year provided'}), 400

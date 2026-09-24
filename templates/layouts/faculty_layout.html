@@ -16,11 +16,11 @@
             <div class="d-flex align-items-center gap-3">
                 <div class="dropdown">
                     <button class="year-select dropdown-toggle" type="button" data-bs-toggle="dropdown" style="background: #f1f5f9; border: none; padding: 8px 16px; border-radius: 20px; color: #2563eb; font-weight: 600; font-size: 13px;">
-                        <i class="fa-regular fa-calendar me-2"></i> 2025-2026
+                        <i class="fa-regular fa-calendar me-2"></i> {{ session.get('academic_year', '2025-2026') }}
                     </button>
                     <ul class="dropdown-menu border-0 shadow mt-2">
-                        <li><a class="dropdown-item fw-bold text-primary" href="#">2025-2026</a></li>
-                        <li><a class="dropdown-item" href="#">2024-2025</a></li>
+                        <li><a class="dropdown-item fw-bold text-primary year-option" href="#" data-year="2025-2026">2025-2026</a></li>
+                        <li><a class="dropdown-item year-option" href="#" data-year="2024-2025">2024-2025</a></li>
                     </ul>
                 </div>
 
@@ -178,4 +178,27 @@
             </div>
         </div>
     </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.year-option').forEach(item => {
+                item.addEventListener('click', async function(e) {
+                    e.preventDefault();
+                    const year = this.getAttribute('data-year');
+                    try {
+                        const res = await fetch('/faculty/set-academic-year', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({year})
+                        });
+                        if (res.ok) {
+                            location.reload();
+                        }
+                    } catch (err) {
+                        console.error(err);
+                    }
+                });
+            });
+        });
+    </script>
 {% endblock %}

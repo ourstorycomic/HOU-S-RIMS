@@ -29,6 +29,7 @@ class Batch(db.Model):
     end_date = db.Column(db.DateTime, nullable=True)
     submission_deadline = db.Column(db.DateTime, nullable=True)
     status = db.Column(db.String(20), default='active') # active, completed
+    academic_year = db.Column(db.String(20), default='2025-2026')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     topics = db.relationship('Topic', backref='batch', lazy=True)

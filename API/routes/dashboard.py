@@ -1,3 +1,4 @@
+from sqlalchemy import func
 from flask import Blueprint, jsonify
 from models import Topic, Group, User
 
@@ -14,10 +15,13 @@ def get_progress_dashboard():
       200:
         description: Progress data
     """
-    total = Topic.query.count()
-    approved = Topic.query.filter_by(status='approved').count()
-    pending = Topic.query.filter_by(status='pending').count()
-    rejected = Topic.query.filter_by(status='rejected').count()
+    from flask import session
+    from models import Batch
+    current_year = session.get('academic_year', '2025-2026')
+    total = Topic.query.join(Batch).filter(Batch.academic_year == current_year).count()
+    approved = Topic.query.join(Batch).filter(Topic.status=='approved', Batch.academic_year == current_year).count()
+    pending = Topic.query.join(Batch).filter(Topic.status=='pending', Batch.academic_year == current_year).count()
+    rejected = Topic.query.join(Batch).filter(Topic.status=='rejected', Batch.academic_year == current_year).count()
 
     progress_pct = int((approved / total * 100) if total > 0 else 0)
     return jsonify({
@@ -38,10 +42,14 @@ def get_stats():
       200:
         description: System stats
     """
-    total_topics = Topic.query.count()
-    total_groups = Group.query.count()
-    total_students = User.query.filter_by(role='Student').count()
-    total_mentors = User.query.filter_by(role='Lecturer').count()
+    from flask import session
+    from models import Batch
+    current_year = session.get('academic_year', '2025-2026')
+    
+    total_topics = Topic.query.join(Batch).filter(Batch.academic_year == current_year).count()
+    total_groups = Group.query.join(Batch).filter(Batch.academic_year == current_year).count()
+    total_students = User.query.filter(func.lower(User.role) == 'student').count()
+    total_mentors = User.query.filter(func.lower(User.role) == 'lecturer').count()
     
     return jsonify({
         'total_topics': total_topics,
