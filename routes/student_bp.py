@@ -59,6 +59,7 @@ def progress():
     my_groups = Group.query.join(GroupMember).join(Batch).filter(GroupMember.student_id == user_id, Batch.status == 'active').all()
     my_topics = []
     topic_milestones = []
+    topic_submissions = []
     if my_groups:
         group_ids = [g.id for g in my_groups]
         my_topics = Topic.query.join(Batch).filter(Topic.group_id.in_(group_ids), Batch.status == 'active').all()
@@ -73,10 +74,14 @@ def progress():
                 total_progress = total_progress // len(topic_milestones)
             my_topics[0].total_progress = total_progress
             
+            # Load submissions with feedback for the student's topic
+            from models import Submission
+            topic_submissions = Submission.query.filter_by(topic_id=my_topics[0].id).order_by(Submission.submitted_at.desc()).all()
+            
     from models import Meeting
     my_meetings = Meeting.query.filter_by(organizer_id=user_id).order_by(Meeting.start_time.desc()).all()
     
-    return render_template('student/progress.html', my_groups=my_groups, my_topics=my_topics, topic_milestones=topic_milestones, my_meetings=my_meetings)
+    return render_template('student/progress.html', my_groups=my_groups, my_topics=my_topics, topic_milestones=topic_milestones, my_meetings=my_meetings, topic_submissions=topic_submissions)
 
 @student_bp.route('/calendar')
 def calendar():
