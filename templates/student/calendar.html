@@ -1,5 +1,18 @@
 {% extends "layouts/student_layout.html" %}
 
+{% block extra_css %}
+<style>
+    .fc-daygrid-day:hover {
+        background-color: rgba(99, 102, 241, 0.05) !important;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+    .fc-daygrid-day-frame:hover {
+        box-shadow: inset 0 0 0 2px rgba(99, 102, 241, 0.3);
+    }
+</style>
+{% endblock %}
+
 {% block student_content %}
 <div id="view-s-calendar" class="fade-in ">
     <div class="row g-4">
