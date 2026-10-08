@@ -324,7 +324,17 @@ document.getElementById('modalAddCouncil').addEventListener('show.bs.modal', () 
 });
 
 async function deleteCouncil(id) {
-    if (!confirm('Bạn có chắc chắn muốn xóa hội đồng này không? Hệ thống sẽ gửi thông báo hủy đến tất cả các thành viên.')) return;
+    const result = await Swal.fire({
+        title: 'Xác nhận xóa?',
+        text: 'Hội đồng sẽ bị xóa và thành viên sẽ được thông báo.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Xóa',
+        cancelButtonText: 'Hủy'
+    });
+    if (!result.isConfirmed) return;
     try {
         const res = await fetch(`/api/councils/${id}`, { method: 'DELETE' });
         const data = await res.json();

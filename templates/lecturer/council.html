@@ -1,35 +1,74 @@
 {% extends "layouts/lecturer_layout.html" %}
 
 {% block lecturer_content %}
-<div id="view-l-council" class="fade-in ">
-            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
-                <h5 class="fw-bold mb-3"><i class="fa-solid fa-gavel text-primary me-2"></i> Hội đồng Chấm thi của tôi</h5>
-                
-                {% if my_councils %}
-                    <div class="row g-4">
-                    {% for c in my_councils %}
-                        <div class="col-md-6">
-                            <div class="card border shadow-sm rounded-4 h-100 p-4">
-                                <div class="d-flex justify-content-between mb-3">
-                                    <h6 class="fw-bold text-primary mb-0">{{ c.name }}</h6>
-                                    <span class="badge bg-success">Đang hoạt động</span>
-                                </div>
-                                <div class="small text-muted mb-3"><i class="fa-regular fa-calendar me-2"></i> Ngày thành lập: {{ c.established_date.strftime('%d/%m/%Y') }}</div>
-                                <button class="btn btn-outline-primary w-100 fw-bold mt-auto" onclick="showToast('Chức năng chấm điểm đang được hoàn thiện!')"><i class="fa-solid fa-pen-to-square me-2"></i> Vào chấm điểm</button>
-                            </div>
-                        </div>
-                    {% endfor %}
-                    </div>
-                {% else %}
-                    <div class="text-center text-muted py-5">
-                        <i class="fa-solid fa-file-shield fs-1 mb-3 opacity-25"></i>
-                        <p>Bạn chưa được phân công vào Hội đồng chấm thi nào.</p>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
+<div id="view-l-council" class="fade-in">
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+        <h5 class="fw-bold mb-3"><i class="fa-solid fa-gavel text-primary me-2"></i> Hội đồng Chấm thi của tôi</h5>
 
+        {% if my_councils %}
+            <div class="row g-4">
+            {% for c in my_councils %}
+                {% set my_role = c.members | selectattr('mentor_id', 'equalto', session.get('user_id', 0)) | map(attribute='role') | first | default('member') %}
+                <div class="col-md-6">
+                    <div class="card border shadow-sm rounded-4 h-100 p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <h6 class="fw-bold text-primary mb-0">{{ c.name }}</h6>
+                            <span class="badge {% if my_role == 'president' %}bg-danger{% elif my_role == 'secretary' %}bg-warning text-dark{% else %}bg-primary{% endif %}">
+                                {% if my_role == 'president' %}Chủ tịch{% elif my_role == 'secretary' %}Thư ký{% else %}Ủy viên{% endif %}
+                            </span>
+                        </div>
+
+                        <div class="small text-muted mb-1">
+                            <i class="fa-regular fa-calendar me-1"></i>
+                            Ngày họp: <strong>{{ c.meeting_date.strftime('%d/%m/%Y') if c.meeting_date else '---' }}</strong>
+                            {% if c.meeting_time %}
+                                lúc <strong>{{ c.meeting_time.strftime('%H:%M') }}</strong>
+                            {% endif %}
+                        </div>
+                        {% if c.location %}
+                        <div class="small text-muted mb-1">
+                            <i class="fa-solid fa-location-dot me-1"></i> Địa điểm: <strong>{{ c.location }}</strong>
+                        </div>
+                        {% endif %}
+                        {% if c.decision_number %}
+                        <div class="small text-muted mb-2">
+                            <i class="fa-solid fa-file-lines me-1"></i> Số QĐ: <strong>{{ c.decision_number }}</strong>
+                        </div>
+                        {% endif %}
+
+                        {% if c.topics %}
+                        <div class="mt-2">
+                            <div class="small fw-bold text-muted mb-1">Nhóm báo cáo:</div>
+                            {% for t in c.topics %}
+                            <div class="d-flex align-items-center small mb-1">
+                                <i class="fa-solid fa-users text-primary me-2"></i>
+                                <span>{{ t.title }} — <em>{{ t.group.name if t.group else 'Chưa có nhóm' }}</em></span>
+                                {% if t.presentation_time %}
+                                <span class="badge bg-light text-dark border ms-2">
+                                    <i class="fa-regular fa-clock text-primary"></i> {{ t.presentation_time }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <button class="btn btn-outline-primary w-100 fw-bold mt-3" onclick="showToast('Chức năng chấm điểm đang được hoàn thiện!')">
+                            <i class="fa-solid fa-pen-to-square me-2"></i> Vào chấm điểm
+                        </button>
+                    </div>
+                </div>
+            {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center text-muted py-5">
+                <i class="fa-solid fa-file-shield fs-1 mb-3 opacity-25"></i>
+                <p>Bạn chưa được phân công vào Hội đồng chấm thi nào.</p>
+            </div>
+        {% endif %}
     </div>
+</div>
+
 {% endblock %}
 
 {% block modals %}

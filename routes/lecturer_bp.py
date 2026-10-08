@@ -87,7 +87,9 @@ def calendar():
 @lecturer_bp.route('/council')
 def council():
     user_id = session.get('user_id')
-    # This logic was missing in the original monolithic route, adding a dummy for now 
-    # based on the original template requirements.
-    my_councils = []
+    from models import CouncilMember, Council
+    # Find all councils where this lecturer is a member
+    memberships = CouncilMember.query.filter_by(mentor_id=user_id).all()
+    council_ids = [m.council_id for m in memberships]
+    my_councils = Council.query.filter(Council.id.in_(council_ids)).all() if council_ids else []
     return render_template('lecturer/council.html', my_councils=my_councils)
