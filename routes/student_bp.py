@@ -110,11 +110,11 @@ def templates_page():
 @student_bp.route('/submit')
 def submit():
     user_id = session.get('user_id')
-    my_groups = Group.query.join(GroupMember).filter(GroupMember.student_id == user_id).all()
+    my_groups = Group.query.join(GroupMember).join(Batch).filter(GroupMember.student_id == user_id, Batch.status == 'active').all()
     my_topics = []
     if my_groups:
         group_ids = [g.id for g in my_groups]
-        my_topics = Topic.query.filter(Topic.group_id.in_(group_ids)).all()
+        my_topics = Topic.query.join(Batch).filter(Topic.group_id.in_(group_ids), Batch.status == 'active').all()
     topic_id = my_topics[0].id if my_topics else 1
     milestones = Milestone.query.filter_by(topic_id=topic_id).all() if my_topics else []
     return render_template('student/submit.html', topic_id=topic_id, milestones=milestones)
