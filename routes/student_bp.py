@@ -106,7 +106,34 @@ def chat():
 
 @student_bp.route('/result')
 def result():
-    return render_template('student/result.html')
+    user_id = session.get('user_id')
+    from models import GroupMember, Group, Topic, Council, CouncilMember
+    
+    # Find student's group in the active batch
+    current_year = session.get('academic_year', '2025-2026')
+    active_batch = Batch.query.filter_by(academic_year=current_year, status='active').first()
+    
+    my_council = None
+    my_topic = None
+    my_role_in_council = None
+    
+    if active_batch and user_id:
+        # Find the group the student belongs to in this batch
+        membership = GroupMember.query.join(Group).filter(
+            GroupMember.student_id == user_id,
+            Group.batch_id == active_batch.id
+        ).first()
+        
+        if membership:
+            # Find topic for this group
+            topic = Topic.query.filter_by(group_id=membership.group_id).first()
+            if topic and topic.council_id:
+                my_topic = topic
+                my_council = Council.query.get(topic.council_id)
+    
+    return render_template('student/result.html', 
+                           my_council=my_council, 
+                           my_topic=my_topic)
 
 @student_bp.route('/templates')
 def templates_page():
