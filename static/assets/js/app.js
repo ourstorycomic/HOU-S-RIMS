@@ -1133,9 +1133,11 @@ async function readNotification(id, content, fromAll = false) {
         confirmButtonText: 'Đóng'
     }).then(() => {
         if (fromAll) {
+            // Reopen the notification list without full page reload
             showAllNotifications();
         } else {
-            location.reload();
+            // Just update badge count without full reload
+            _refreshNotifBadge();
         }
     });
 }
@@ -1193,15 +1195,33 @@ async function showAllNotifications() {
             customClass: {
                 popup: 'p-4 rounded-4'
             }
-        }).then((result) => {
-            if (result.isDismissed) {
-                location.reload();
-            }
+        }).then(() => {
+            // Just refresh the badge count without full page reload
+            _refreshNotifBadge();
         });
 
     } catch (e) {
         Swal.fire('Lỗi', 'Không thể lấy danh sách thông báo.', 'error');
     }
+}
+
+function _refreshNotifBadge() {
+    // Refresh just the notification badge counter without full page reload
+    fetch('/api/notifications')
+        .then(r => r.json())
+        .then(data => {
+            const unread = data.filter(n => !n.is_read).length;
+            // Update all badge elements on page
+            document.querySelectorAll('.notif-badge, [data-notif-count]').forEach(el => {
+                if (unread > 0) {
+                    el.textContent = unread;
+                    el.style.display = '';
+                } else {
+                    el.style.display = 'none';
+                }
+            });
+        })
+        .catch(() => {});
 }
 
 function _openNotifDetail(id) {
