@@ -54,19 +54,21 @@ def create_council():
         from models import CouncilMember, Topic, User, Notification, GroupMember
         from email_utils import send_notification_email
         
-        # Add members
+        # Add members - all fields are now arrays
         lecturers_to_notify = set()
         
-        if data.get('president'):
-            db.session.add(CouncilMember(council_id=new_council.id, mentor_id=data['president'], role='president'))
-            lecturers_to_notify.add(int(data['president']))
+        for p_id in (data.get('president') or []):
+            if p_id:
+                db.session.add(CouncilMember(council_id=new_council.id, mentor_id=p_id, role='president'))
+                lecturers_to_notify.add(int(p_id))
             
-        if data.get('secretary'):
-            db.session.add(CouncilMember(council_id=new_council.id, mentor_id=data['secretary'], role='secretary'))
-            lecturers_to_notify.add(int(data['secretary']))
+        for s_id in (data.get('secretary') or []):
+            if s_id:
+                db.session.add(CouncilMember(council_id=new_council.id, mentor_id=s_id, role='secretary'))
+                lecturers_to_notify.add(int(s_id))
             
-        if data.get('members'):
-            for m_id in data['members']:
+        for m_id in (data.get('members') or []):
+            if m_id:
                 db.session.add(CouncilMember(council_id=new_council.id, mentor_id=m_id, role='member'))
                 lecturers_to_notify.add(int(m_id))
                 
