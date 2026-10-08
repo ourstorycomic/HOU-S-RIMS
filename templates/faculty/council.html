@@ -275,6 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Reset state when modal opens
 document.getElementById('modalAddCouncil').addEventListener('show.bs.modal', () => {
     _councilSubmitting = false;
+    if (typeof _editingCouncilId !== 'undefined' && _editingCouncilId) return;
     const btn = document.querySelector('#modalAddCouncil .btn-success');
     if (btn) { btn.disabled = false; btn.textContent = 'Xác nhận thành lập'; }
     councilState.president = [];
