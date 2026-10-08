@@ -34,7 +34,7 @@
                                         <span class="text-muted ms-auto" style="font-size: 10px;">{{ notif.created_at.strftime('%d/%m %H:%M') if notif.created_at else '' }}</span>
                                     </div>
                                     <div class="fw-bold text-dark small mb-1">
-                                        {{ notif.content }}
+                                        {{ notif.content | safe }}
                                     </div>
                                 </div>
                                 {% endfor %}
@@ -105,6 +105,20 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         themeSystem: 'bootstrap5',
         events: '/api/calendar/events',
+        dateClick: function(info) {
+            if (window.clickTimer) {
+                clearTimeout(window.clickTimer);
+                window.clickTimer = null;
+                // Double click action
+                document.getElementById('calendarMilestoneDeadline').value = info.dateStr;
+                var myModal = new bootstrap.Modal(document.getElementById('modalCreateEvent'));
+                myModal.show();
+            } else {
+                window.clickTimer = setTimeout(() => {
+                    window.clickTimer = null;
+                }, 300);
+            }
+        },
         eventContent: function(arg) {
             var status = arg.event.extendedProps.status;
             var isMilestone = status === 'milestone';
