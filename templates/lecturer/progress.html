@@ -85,22 +85,25 @@
                                                         <small class="text-muted">Sinh viên nộp (ID: {{ sub.uploader_id }})
                                                         {% if sub.milestone %} | Cột mốc: <span class="fw-bold text-primary">{{ sub.milestone.name }}</span>{% endif %}
                                                         </small>
-                                                        {% if sub.feedback %}
-                                                        <div class="mt-2 p-2 rounded-3 bg-warning-subtle border border-warning-subtle d-flex gap-2">
-                                                            <i class="fa-solid fa-note-sticky text-warning mt-1 flex-shrink-0"></i>
-                                                            <div>
-                                                                <div class="small fw-bold text-warning-emphasis">Ghi chú của GV:</div>
-                                                                <div class="small text-dark">{{ sub.feedback }}</div>
-                                                                {% if sub.feedback_at %}
-                                                                <div class="text-muted" style="font-size:10px;">{{ sub.feedback_at.strftime('%d/%m/%Y %H:%M') }}</div>
-                                                                {% endif %}
+                                                        {% if sub.feedback_list %}
+                                                        <div class="mt-3">
+                                                            <div class="small fw-bold text-warning-emphasis mb-2"><i class="fa-solid fa-note-sticky text-warning me-1"></i>Lịch sử ghi chú:</div>
+                                                            <div class="d-flex flex-column gap-2">
+                                                                {% for fb in sub.feedback_list %}
+                                                                <div class="p-2 rounded-3 bg-warning-subtle border border-warning-subtle position-relative">
+                                                                    <div class="small text-dark" style="white-space: pre-wrap;">{{ fb.text }}</div>
+                                                                    {% if fb.time %}
+                                                                    <div class="text-muted mt-1" style="font-size:10px;"><i class="fa-regular fa-clock me-1"></i>{{ fb.time }}</div>
+                                                                    {% endif %}
+                                                                </div>
+                                                                {% endfor %}
                                                             </div>
                                                         </div>
                                                         {% endif %}
                                                     </div>
                                                     <div class="d-flex gap-2 flex-shrink-0 ms-3">
                                                         <button class="btn btn-sm btn-outline-warning rounded-pill fw-bold" 
-                                                            onclick="openFeedbackModal({{ sub.id }}, '{{ sub.feedback|replace("'", "\\'") if sub.feedback else '' }}')">
+                                                            onclick="openFeedbackModal({{ sub.id }}, '{{ sub.feedback_list|tojson|forceescape if sub.feedback_list else '[]' }}')">
                                                             <i class="fa-solid fa-pen me-1"></i> Ghi chú
                                                         </button>
                                                         <a href="/api/submissions/download/{{ sub.id }}" class="btn btn-sm btn-outline-primary rounded-pill fw-bold">
@@ -193,19 +196,34 @@
 
 {% block extra_js %}
 <script>
-function openFeedbackModal(subId, existingFeedback) {
+function openFeedbackModal(subId, feedbackListJson) {
     document.getElementById('feedbackSubId').value = subId;
-    document.getElementById('feedbackText').value = '';  // Always empty for new note
-    document.getElementById('feedbackOldContent').value = existingFeedback || '';
+    document.getElementById('feedbackText').value = '';
     
-    // Show existing feedback as history
     const historyBox = document.getElementById('feedbackHistory');
     const historyContent = document.getElementById('feedbackHistoryContent');
-    if (existingFeedback && existingFeedback.trim()) {
-        historyContent.textContent = existingFeedback;
+    
+    let feedbackList = [];
+    try {
+        if (feedbackListJson) feedbackList = JSON.parse(feedbackListJson);
+    } catch(e) {}
+
+    if (feedbackList && feedbackList.length > 0) {
+        let html = '<div class="d-flex flex-column gap-2">';
+        feedbackList.forEach(fb => {
+            html += `
+                <div class="p-2 rounded-3 bg-white border shadow-sm">
+                    <div class="small text-dark" style="white-space: pre-wrap;">${fb.text}</div>
+                    ${fb.time ? `<div class="text-muted mt-1" style="font-size:10px;"><i class="fa-regular fa-clock me-1"></i>${fb.time}</div>` : ''}
+                </div>
+            `;
+        });
+        html += '</div>';
+        historyContent.innerHTML = html;
         historyBox.style.display = 'block';
     } else {
         historyBox.style.display = 'none';
+        historyContent.innerHTML = '';
     }
     new bootstrap.Modal(document.getElementById('modalFeedback')).show();
 }
@@ -213,23 +231,16 @@ function openFeedbackModal(subId, existingFeedback) {
 function saveFeedback() {
     const subId = document.getElementById('feedbackSubId').value;
     const newNote = document.getElementById('feedbackText').value.trim();
-    const oldContent = document.getElementById('feedbackOldContent').value.trim();
     
     if (!newNote) {
         showToast('Vui lòng nhập nội dung ghi chú mới!');
         return;
     }
 
-    // Append new note to existing feedback with timestamp separator
-    const now = new Date().toLocaleString('vi-VN', {timeZone: 'Asia/Ho_Chi_Minh'});
-    const appendedNote = oldContent 
-        ? oldContent + '\n\n--- ' + now + ' ---\n' + newNote
-        : '[' + now + '] ' + newNote;
-
     fetch(`/api/submissions/${subId}/feedback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ feedback: appendedNote })
+        body: JSON.stringify({ feedback: newNote })
     })
     .then(r => r.json())
     .then(data => {

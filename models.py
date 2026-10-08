@@ -129,6 +129,31 @@ class Submission(db.Model):
     feedback_at = db.Column(db.DateTime, nullable=True)
     milestone = db.relationship('Milestone', backref='submissions')
 
+    @property
+    def feedback_list(self):
+        import json
+        if not self.feedback: return []
+        try:
+            data = json.loads(self.feedback)
+            if isinstance(data, list):
+                return data
+        except:
+            pass
+        notes = []
+        blocks = self.feedback.split('\n\n--- ')
+        for block in blocks:
+            if ' ---\n' in block:
+                time_part, text_part = block.split(' ---\n', 1)
+                notes.append({'time': time_part, 'text': text_part.strip()})
+            elif block.startswith('[') and '] ' in block:
+                time_part = block[1:block.find('] ')]
+                text_part = block[block.find('] ')+2:]
+                notes.append({'time': time_part, 'text': text_part.strip()})
+            else:
+                time_part = self.feedback_at.strftime('%d/%m/%Y %H:%M') if self.feedback_at else ""
+                notes.append({'time': time_part, 'text': block.strip()})
+        return notes
+
 class DocumentTemplate(db.Model):
     __tablename__ = 'documents'
     id = db.Column(db.Integer, primary_key=True)

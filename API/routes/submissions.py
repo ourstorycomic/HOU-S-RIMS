@@ -71,13 +71,24 @@ def add_feedback(sub_id):
         return jsonify({"success": False, "message": "Không tìm thấy bài nộp."}), 404
 
     data = request.get_json()
-    feedback_text = (data.get('feedback') or '').strip()
-    if not feedback_text:
+    new_note = (data.get('feedback') or '').strip()
+    if not new_note:
         return jsonify({"success": False, "message": "Nội dung ghi chú không được để trống."}), 400
 
-    sub.feedback = feedback_text
-    sub.feedback_at = datetime.utcnow()
+    # Append new note
+    now = datetime.utcnow()
+    # Format time as Vietnam time approx
+    from datetime import timedelta
+    vn_now = now + timedelta(hours=7)
+    now_str = vn_now.strftime('%H:%M:%S %d/%m/%Y')
+    
+    appended_note = sub.feedback + f'\n\n--- {now_str} ---\n' + new_note if sub.feedback else f'[{now_str}] ' + new_note
+    
+    sub.feedback = appended_note
+    sub.feedback_at = now
     db.session.commit()
+    
+    feedback_text = new_note  # For notifications, only show new note
 
     uploader = User.query.get(sub.uploader_id)
     topic = Topic.query.get(sub.topic_id)
