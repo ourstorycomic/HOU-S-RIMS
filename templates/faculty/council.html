@@ -125,9 +125,9 @@
                     ] %}
 
                     {% for role_id, role_label, badge_class in role_configs %}
-                    <div class="mb-3" id="section-{{ role_id }}">
-                        <label class="form-label fw-semibold">{{ role_label }}</label>
-                        <div class="d-flex gap-2 mb-2">
+                    <div class="mb-2" id="section-{{ role_id }}">
+                        <label class="form-label fw-semibold mb-1" style="font-size:13px;">{{ role_label }}</label>
+                        <div class="d-flex gap-2 mb-1">
                             <select class="form-select form-select-sm" id="picker-{{ role_id }}">
                                 <option value="">-- Chọn giảng viên --</option>
                                 {% for m in mentors %}
@@ -138,7 +138,7 @@
                                 <i class="fa-solid fa-plus"></i> Thêm
                             </button>
                         </div>
-                        <div id="tags-{{ role_id }}" class="d-flex flex-wrap gap-2 min-height-tag">
+                        <div id="tags-{{ role_id }}" class="d-flex flex-wrap gap-1 min-height-tag">
                             <!-- Tags will appear here -->
                         </div>
                     </div>
@@ -163,7 +163,7 @@
 @keyframes tagIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
 .member-tag .remove-tag { cursor: pointer; opacity: 0.7; font-size: 10px; }
 .member-tag .remove-tag:hover { opacity: 1; }
-.min-height-tag { min-height: 36px; }
+.min-height-tag { min-height: 28px; padding: 4px 0; }
 </style>
 <script>
 // State to track selected members per role
