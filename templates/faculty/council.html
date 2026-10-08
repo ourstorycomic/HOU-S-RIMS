@@ -163,7 +163,26 @@
 .member-tag .remove-tag:hover { opacity: 1; }
 .min-height-tag { min-height: 28px; padding: 4px 0; }
 </style>
+
 <script>
+window.COUNCILS_DATA = {};
+{% if councils %}
+    {% for c in councils %}
+        window.COUNCILS_DATA[{{ c.id }}] = {
+            id: {{ c.id }},
+            name: {{ c.name|tojson }},
+            decision_number: {{ (c.decision_number or '')|tojson }},
+            meeting_date: {{ (c.meeting_date|string if c.meeting_date else '')|tojson }},
+            meeting_time: {{ (c.meeting_time|string)[:5]|tojson if c.meeting_time else '""' }},
+            location: {{ (c.location or '')|tojson }},
+            president: [{% for m in c.members if m.role == 'president' %}{id: {{ m.mentor_id }}, name: {{ m.mentor.full_name|tojson }}},{% endfor %}],
+            secretary: [{% for m in c.members if m.role == 'secretary' %}{id: {{ m.mentor_id }}, name: {{ m.mentor.full_name|tojson }}},{% endfor %}],
+            member: [{% for m in c.members if m.role == 'member' %}{id: {{ m.mentor_id }}, name: {{ m.mentor.full_name|tojson }}},{% endfor %}],
+            topics: [{% for t in c.topics %}{{ t.id }},{% endfor %}]
+        };
+    {% endfor %}
+{% endif %}
+
 // State to track selected members per role
 const councilState = { president: [], secretary: [], member: [] };
 
@@ -223,8 +242,10 @@ async function createCouncil() {
     }
 
     try {
-        const res = await fetch('/api/councils', {
-            method: 'POST',
+        const url = _editingCouncilId ? `/api/councils/${_editingCouncilId}` : '/api/councils';
+        const method = _editingCouncilId ? 'PUT' : 'POST';
+        const res = await fetch(url, {
+            method: method,
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 name, decision_number, meeting_date, meeting_time, location,
@@ -281,8 +302,62 @@ async function deleteCouncil(id) {
     }
 }
 
+
+let _editingCouncilId = null;
+
 function editCouncil(id) {
-    Swal.fire('Tính năng đang phát triển', 'Chức năng sửa hội đồng sẽ sớm ra mắt.', 'info');
+    const data = window.COUNCILS_DATA[id];
+    if (!data) return;
+    
+    _editingCouncilId = id;
+    document.getElementById('councilName').value = data.name;
+    document.getElementById('councilDecision').value = data.decision_number;
+    document.getElementById('councilDate').value = data.meeting_date;
+    document.getElementById('councilTime').value = data.meeting_time;
+    document.getElementById('councilLocation').value = data.location;
+    
+    // Select topics
+    const topicsSelect = document.getElementById('councilTopics');
+    if (topicsSelect) {
+        Array.from(topicsSelect.options).forEach(opt => {
+            opt.selected = data.topics.includes(parseInt(opt.value));
+        });
+    }
+    
+    // Set members
+    councilState.president = data.president || [];
+    councilState.secretary = data.secretary || [];
+    councilState.member = data.member || [];
+    renderTags('president');
+    renderTags('secretary');
+    renderTags('member');
+    
+    // Update modal title and button
+    document.querySelector('#modalAddCouncil .modal-title').textContent = 'Cập nhật Hội đồng';
+    const btn = document.querySelector('#modalAddCouncil .btn-success');
+    if (btn) btn.textContent = 'Lưu thay đổi';
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalAddCouncil'));
+    modal.show();
 }
+
+// Intercept reset on modal close
+document.getElementById('modalAddCouncil').addEventListener('hidden.bs.modal', () => {
+    _editingCouncilId = null;
+    document.querySelector('#modalAddCouncil .modal-title').textContent = 'Thành lập Hội đồng Mới';
+    document.getElementById('councilName').value = '';
+    document.getElementById('councilDecision').value = '';
+    document.getElementById('councilDate').value = '';
+    document.getElementById('councilTime').value = '';
+    document.getElementById('councilLocation').value = '';
+    
+    councilState.president = [];
+    councilState.secretary = [];
+    councilState.member = [];
+    renderTags('president');
+    renderTags('secretary');
+    renderTags('member');
+});
+
 
 </script>
