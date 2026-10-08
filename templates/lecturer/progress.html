@@ -162,21 +162,28 @@
 {% block modals %}
 <!-- Feedback Modal -->
 <div class="modal fade" id="modalFeedback" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg rounded-4">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold"><i class="fa-solid fa-note-sticky me-2 text-warning"></i>Ghi chú cho bài nộp</h5>
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-note-sticky me-2 text-warning"></i>Thêm ghi chú cho bài nộp</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body px-4 pb-4">
-                <p class="text-muted small mb-3">Nhập ghi chú / nhận xét để sinh viên biết cần chỉnh sửa và nộp lại.</p>
-                <textarea id="feedbackText" class="form-control" rows="5" placeholder="Ví dụ: Cần bổ sung phần tổng quan, format tài liệu chưa đúng..."></textarea>
+            <div class="modal-body px-4 pb-0">
+                <!-- Existing feedback history -->
+                <div id="feedbackHistory" class="mb-3" style="display:none;">
+                    <div class="small fw-bold text-muted mb-2"><i class="fa-solid fa-history me-1"></i>Ghi chú trước đó:</div>
+                    <div id="feedbackHistoryContent" class="p-3 rounded-3 bg-light border" style="font-size:13px; white-space:pre-wrap; max-height:150px; overflow-y:auto;"></div>
+                </div>
+                <!-- New note input -->
+                <p class="text-muted small mb-2">Nhập ghi chú mới để thêm vào lịch sử nhận xét:</p>
+                <textarea id="feedbackText" class="form-control" rows="4" placeholder="Ví dụ: Cần bổ sung phần tổng quan, format tài liệu chưa đúng..."></textarea>
                 <input type="hidden" id="feedbackSubId">
+                <input type="hidden" id="feedbackOldContent">
             </div>
-            <div class="modal-footer border-0 pt-0 px-4 pb-4">
+            <div class="modal-footer border-0 px-4 pb-4">
                 <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Hủy</button>
                 <button type="button" class="btn btn-warning fw-bold text-white" onclick="saveFeedback()">
-                    <i class="fa-solid fa-paper-plane me-2"></i>Lưu & Thông báo SV
+                    <i class="fa-solid fa-paper-plane me-2"></i>Thêm & Thông báo SV
                 </button>
             </div>
         </div>
@@ -188,28 +195,47 @@
 <script>
 function openFeedbackModal(subId, existingFeedback) {
     document.getElementById('feedbackSubId').value = subId;
-    document.getElementById('feedbackText').value = existingFeedback || '';
+    document.getElementById('feedbackText').value = '';  // Always empty for new note
+    document.getElementById('feedbackOldContent').value = existingFeedback || '';
+    
+    // Show existing feedback as history
+    const historyBox = document.getElementById('feedbackHistory');
+    const historyContent = document.getElementById('feedbackHistoryContent');
+    if (existingFeedback && existingFeedback.trim()) {
+        historyContent.textContent = existingFeedback;
+        historyBox.style.display = 'block';
+    } else {
+        historyBox.style.display = 'none';
+    }
     new bootstrap.Modal(document.getElementById('modalFeedback')).show();
 }
 
 function saveFeedback() {
     const subId = document.getElementById('feedbackSubId').value;
-    const feedback = document.getElementById('feedbackText').value.trim();
-    if (!feedback) {
-        showToast('Vui lòng nhập nội dung ghi chú!');
+    const newNote = document.getElementById('feedbackText').value.trim();
+    const oldContent = document.getElementById('feedbackOldContent').value.trim();
+    
+    if (!newNote) {
+        showToast('Vui lòng nhập nội dung ghi chú mới!');
         return;
     }
+
+    // Append new note to existing feedback with timestamp separator
+    const now = new Date().toLocaleString('vi-VN', {timeZone: 'Asia/Ho_Chi_Minh'});
+    const appendedNote = oldContent 
+        ? oldContent + '\n\n--- ' + now + ' ---\n' + newNote
+        : '[' + now + '] ' + newNote;
 
     fetch(`/api/submissions/${subId}/feedback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ feedback })
+        body: JSON.stringify({ feedback: appendedNote })
     })
     .then(r => r.json())
     .then(data => {
         if (data.success) {
             bootstrap.Modal.getInstance(document.getElementById('modalFeedback')).hide();
-            showToast('Đã lưu ghi chú và thông báo cho sinh viên!');
+            showToast('Đã thêm ghi chú và thông báo cho sinh viên!');
             setTimeout(() => location.reload(), 1500);
         } else {
             showToast(data.message || 'Có lỗi xảy ra!');
