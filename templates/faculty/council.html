@@ -112,27 +112,37 @@
 
                     <hr class="my-4">
                     <h6 class="fw-bold mb-3 small text-muted">THÀNH PHẦN HỘI ĐỒNG</h6>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Chủ tịch Hội đồng</label>
-                        <select id="councilPresident" class="form-select" multiple style="height: 80px;">
-                            {% for m in mentors %}<option value="{{ m.id }}">{{ m.full_name }}</option>{% endfor %}
-                        </select>
-                        <small class="text-muted">Giữ Ctrl để chọn nhiều người.</small>
+                    
+                    <!-- Hidden inputs to store selected member IDs -->
+                    <input type="hidden" id="councilPresident">
+                    <input type="hidden" id="councilSecretary">
+                    <input type="hidden" id="councilMembers">
+
+                    {% set role_configs = [
+                        ('president', 'Chủ tịch Hội đồng', 'bg-danger'),
+                        ('secretary', 'Thư ký', 'bg-warning text-dark'),
+                        ('member', 'Ủy viên', 'bg-primary')
+                    ] %}
+
+                    {% for role_id, role_label, badge_class in role_configs %}
+                    <div class="mb-3" id="section-{{ role_id }}">
+                        <label class="form-label fw-semibold">{{ role_label }}</label>
+                        <div class="d-flex gap-2 mb-2">
+                            <select class="form-select form-select-sm" id="picker-{{ role_id }}">
+                                <option value="">-- Chọn giảng viên --</option>
+                                {% for m in mentors %}
+                                <option value="{{ m.id }}" data-name="{{ m.full_name }}">{{ m.full_name }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="button" class="btn btn-outline-success btn-sm px-3 fw-bold flex-shrink-0" onclick="addCouncilMember('{{ role_id }}', '{{ badge_class }}')">
+                                <i class="fa-solid fa-plus"></i> Thêm
+                            </button>
+                        </div>
+                        <div id="tags-{{ role_id }}" class="d-flex flex-wrap gap-2 min-height-tag">
+                            <!-- Tags will appear here -->
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Thư ký</label>
-                        <select id="councilSecretary" class="form-select" multiple style="height: 80px;">
-                            {% for m in mentors %}<option value="{{ m.id }}">{{ m.full_name }}</option>{% endfor %}
-                        </select>
-                        <small class="text-muted">Giữ Ctrl để chọn nhiều người.</small>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Các Ủy viên</label>
-                        <select id="councilMembers" class="form-select" multiple style="height: 100px;">
-                            {% for m in mentors %}<option value="{{ m.id }}">{{ m.full_name }}</option>{% endfor %}
-                        </select>
-                        <small class="text-muted">Giữ Ctrl để chọn nhiều Ủy viên.</small>
-                    </div>
+                    {% endfor %}
                     <div class="mb-0"><label class="form-label">File Quyết định thành lập (PDF)</label><input type="file" id="councilFile" class="form-control"></div>
                 </div>
                 <div class="modal-footer border-0 px-4 pb-4">
@@ -144,17 +154,65 @@
 {% endblock %}
 
 {% block extra_js %}
+<style>
+.member-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    animation: tagIn 0.2s ease;
+}
+@keyframes tagIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+.member-tag .remove-tag { cursor: pointer; opacity: 0.7; font-size: 10px; }
+.member-tag .remove-tag:hover { opacity: 1; }
+.min-height-tag { min-height: 36px; }
+</style>
 <script>
+// State to track selected members per role
+const councilState = { president: [], secretary: [], member: [] };
+
+function addCouncilMember(role, badgeClass) {
+    const picker = document.getElementById('picker-' + role);
+    const val = picker.value;
+    const name = picker.options[picker.selectedIndex]?.dataset?.name;
+    if (!val || !name) return;
+    
+    // Prevent duplicates within same role
+    if (councilState[role].some(m => m.id === val)) {
+        showToast('Giảng viên này đã được thêm!');
+        return;
+    }
+    
+    councilState[role].push({ id: val, name: name });
+    renderTags(role, badgeClass);
+    picker.value = ''; // reset picker
+}
+
+function removeMemberTag(role, id, badgeClass) {
+    councilState[role] = councilState[role].filter(m => m.id !== id);
+    renderTags(role, badgeClass);
+}
+
+function renderTags(role, badgeClass) {
+    const container = document.getElementById('tags-' + role);
+    container.innerHTML = councilState[role].map(m => `
+        <span class="member-tag text-white ${badgeClass}">
+            <i class="fa-solid fa-user-tie" style="font-size:10px;"></i>
+            ${m.name}
+            <span class="remove-tag" onclick="removeMemberTag('${role}', '${m.id}', '${badgeClass}')">✕</span>
+        </span>
+    `).join('');
+}
+
 async function createCouncil() {
     const name = document.getElementById('councilName').value;
     const decision_number = document.getElementById('councilDecision').value;
     const meeting_date = document.getElementById('councilDate').value;
     const meeting_time = document.getElementById('councilTime').value;
     const location = document.getElementById('councilLocation').value;
-    const president = Array.from(document.getElementById('councilPresident').selectedOptions).map(o => o.value);
-    const secretary = Array.from(document.getElementById('councilSecretary').selectedOptions).map(o => o.value);
-    const members = Array.from(document.getElementById('councilMembers').selectedOptions).map(o => o.value);
     const topics = Array.from(document.getElementById('councilTopics').selectedOptions).map(o => o.value);
+
+    const president = councilState.president.map(m => m.id);
+    const secretary = councilState.secretary.map(m => m.id);
+    const members = councilState.member.map(m => m.id);
 
     if (!name || !meeting_date) {
         Swal.fire('Lỗi', 'Vui lòng nhập Tên Hội đồng và Ngày họp', 'error');
@@ -166,15 +224,8 @@ async function createCouncil() {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
-                name: name,
-                decision_number: decision_number,
-                meeting_date: meeting_date,
-                meeting_time: meeting_time,
-                location: location,
-                president: president,
-                secretary: secretary,
-                members: members,
-                topics: topics,
+                name, decision_number, meeting_date, meeting_time, location,
+                president, secretary, members, topics,
                 batch_id: {{ active_batch.id if active_batch else 'null' }}
             })
         });
@@ -188,5 +239,16 @@ async function createCouncil() {
         Swal.fire('Lỗi', 'Lỗi kết nối máy chủ', 'error');
     }
 }
+
+// Reset state when modal opens
+document.getElementById('modalAddCouncil').addEventListener('show.bs.modal', () => {
+    councilState.president = [];
+    councilState.secretary = [];
+    councilState.member = [];
+    ['president', 'secretary', 'member'].forEach(role => {
+        const tags = document.getElementById('tags-' + role);
+        if (tags) tags.innerHTML = '';
+    });
+});
 </script>
 {% endblock %}
