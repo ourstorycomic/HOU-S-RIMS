@@ -85,7 +85,12 @@ def calendar():
 @student_bp.route('/chat')
 def chat():
     user_id = session.get('user_id')
-    my_groups = Group.query.join(GroupMember).join(Batch).filter(GroupMember.student_id == user_id, GroupMember.status == 'accepted', Batch.status == 'active').all()
+    my_groups = Group.query.join(GroupMember).join(Topic, Topic.group_id == Group.id).join(Batch, Batch.id == Group.batch_id).filter(
+        GroupMember.student_id == user_id, 
+        GroupMember.status == 'accepted', 
+        Batch.status == 'active',
+        Topic.status == 'approved'
+    ).all()
     
     target_id = request.args.get('target_id')
     target_user = None

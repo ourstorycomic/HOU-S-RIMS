@@ -39,7 +39,7 @@ def approve():
 @lecturer_bp.route('/progress')
 def progress():
     user_id = session.get('user_id')
-    my_topics = Topic.query.join(Batch).filter(Topic.mentor_id == user_id, Batch.status == 'active').all()
+    my_topics = Topic.query.join(Batch).filter(Topic.mentor_id == user_id, Topic.status == 'approved', Batch.status == 'active').all()
     all_milestones = []
     
     if my_topics:
