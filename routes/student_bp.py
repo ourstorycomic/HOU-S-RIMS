@@ -17,7 +17,7 @@ def inject_common_data():
     notifications = Notification.query.filter_by(user_id=user_id).order_by(Notification.is_read.asc(), Notification.created_at.desc()).all() if user_id else []
     current_year = session.get('academic_year', '2025-2026')
     active_batch = Batch.query.filter_by(academic_year=current_year, status='active').first()
-    global_my_groups_count = Group.query.join(GroupMember).filter(GroupMember.student_id == user_id).count() if user_id else 0
+    global_my_groups_count = Group.query.join(GroupMember).join(Batch).filter(GroupMember.student_id == user_id, Batch.status == 'active').count() if user_id else 0
     all_students = User.query.filter(User.role.ilike('student')).all()
     return dict(current_user=current_user, notifications=notifications, current_time=datetime.utcnow(), active_batch=active_batch, global_my_groups_count=global_my_groups_count, all_students=all_students)
 
@@ -46,7 +46,7 @@ def register():
     user_id = session.get('user_id')
     batches = Batch.query.filter_by(status='active').all()
     mentors = User.query.filter(func.lower(User.role) == 'lecturer').all()
-    my_groups = Group.query.join(GroupMember).filter(GroupMember.student_id == user_id).all()
+    my_groups = Group.query.join(GroupMember).join(Batch).filter(GroupMember.student_id == user_id, Batch.status == 'active').all()
     my_topics = []
     if my_groups:
         group_ids = [g.id for g in my_groups]
@@ -56,7 +56,7 @@ def register():
 @student_bp.route('/progress')
 def progress():
     user_id = session.get('user_id')
-    my_groups = Group.query.join(GroupMember).filter(GroupMember.student_id == user_id).all()
+    my_groups = Group.query.join(GroupMember).join(Batch).filter(GroupMember.student_id == user_id, Batch.status == 'active').all()
     my_topics = []
     topic_milestones = []
     if my_groups:
@@ -85,7 +85,7 @@ def calendar():
 @student_bp.route('/chat')
 def chat():
     user_id = session.get('user_id')
-    my_groups = Group.query.join(GroupMember).filter(GroupMember.student_id == user_id, GroupMember.status == 'accepted').all()
+    my_groups = Group.query.join(GroupMember).join(Batch).filter(GroupMember.student_id == user_id, GroupMember.status == 'accepted', Batch.status == 'active').all()
     
     target_id = request.args.get('target_id')
     target_user = None
