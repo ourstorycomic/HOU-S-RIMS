@@ -1,10 +1,10 @@
 {% extends "layouts/faculty_layout.html" %}
 
 {% block faculty_content %}
-<div id="view-f-council" class="fade-in ">
-                <div class="row g-4">
-                    <div class="col-md-7">
-                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+<div id="view-f-council" class="fade-in">
+    <div class="d-flex gap-4 align-items-flex-start">
+        <div style="flex: 1; min-width: 0;">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
                             <div class="d-flex justify-content-between align-items-center mb-4">
                                 <h6 class="fw-bold text-primary"><i class="fa-solid fa-gavel me-2"></i> HỘI ĐỒNG PHÊ DUYỆT TM</h6>
                                 <button class="btn btn-light btn-sm rounded-circle shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAddCouncil"><i class="fa-solid fa-plus"></i></button>
@@ -65,20 +65,20 @@
                             {% else %}
                                 <div class="text-center text-muted p-4">Chưa có hội đồng nào được thành lập.</div>
                             {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-md-5" style="align-self: flex-start; position: sticky; top: 20px;">
-                        <div class="card border-0 shadow-sm rounded-4 p-4">
-                            <h6 class="fw-bold text-success mb-4"><i class="fa-solid fa-certificate me-2"></i> HỘI ĐỒNG NGHIỆM THU</h6>
-                            <div class="d-flex flex-column align-items-center justify-content-center text-muted border border-dashed rounded-3 p-4">
-                                <i class="fa-solid fa-layer-group fa-2x mb-3 text-muted opacity-50"></i>
-                                <div class="fw-bold small">CHƯA CÓ HỘI ĐỒNG</div>
-                                <button class="btn btn-success btn-sm mt-3 rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#modalAddCouncil">Thiết lập ngay</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            </div>
         </div>
+        <div style="width: 320px; flex-shrink: 0; position: sticky; top: 20px; align-self: flex-start;">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <h6 class="fw-bold text-success mb-4"><i class="fa-solid fa-certificate me-2"></i> HỘI ĐỒNG NGHIỆM THU</h6>
+                <div class="d-flex flex-column align-items-center justify-content-center text-muted border border-dashed rounded-3 p-4">
+                    <i class="fa-solid fa-layer-group fa-2x mb-3 text-muted opacity-50"></i>
+                    <div class="fw-bold small">CHƯА CÓ HỘI ĐỒNG</div>
+                    <button class="btn btn-success btn-sm mt-3 rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#modalAddCouncil">Thiết lập ngay</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
     <div class="modal fade" id="modalAddCouncil" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow-lg rounded-4">
