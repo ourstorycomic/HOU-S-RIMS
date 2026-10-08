@@ -42,8 +42,34 @@ def index(): return render_template('index.html')
 @app.route('/profile/<string:identifier>')
 def view_profile(identifier):
     from flask import session, redirect, url_for, render_template
-    from models import User, Skill, Achievement, Experience, Topic
-    if not session.get('user_id'): return redirect(url_for('auth.login'))
+    from models import User, Skill, Achievement, Experience, Topic, Notification, Batch, Group, GroupMember
+    from datetime import datetime
+    
+    user_id = session.get('user_id')
+    role = session.get('role')
+    if not user_id: return redirect(url_for('auth.login'))
+    
+    current_user = User.query.get(user_id)
+    current_time = datetime.utcnow()
+    current_year = session.get('academic_year', '2025-2026')
+    active_batch = Batch.query.filter_by(academic_year=current_year, status='active').first()
+    
+    context = {
+        'current_user': current_user,
+        'current_time': current_time,
+        'active_batch': active_batch,
+    }
+    
+    if role == 'student':
+        context['notifications'] = Notification.query.filter_by(user_id=user_id).order_by(Notification.is_read.asc(), Notification.created_at.desc()).all()
+        context['global_my_groups_count'] = Group.query.join(GroupMember).join(Batch).filter(GroupMember.student_id == user_id, Batch.status == 'active').count()
+        context['all_students'] = User.query.filter(User.role.ilike('student')).all()
+    elif role == 'lecturer':
+        context['global_pending_topics_count'] = Topic.query.filter_by(mentor_id=user_id, status='pending').count()
+        context['global_my_groups_count'] = Topic.query.filter(Topic.mentor_id == user_id, Topic.status == 'approved', Topic.group_id.isnot(None)).count()
+    elif role == 'faculty':
+        context['global_topic_count'] = Topic.query.join(Batch).filter(Batch.academic_year == current_year, Batch.status != 'hidden').count()
+        context['notifications'] = Notification.query.filter_by(user_id=user_id).order_by(Notification.is_read.asc(), Notification.created_at.desc()).all()
     
     # Try to find by student_id first, then by username, then by ID as string
     user = User.query.filter((User.student_id == identifier) | (User.username == identifier) | (User.id == identifier)).first_or_404()
@@ -53,7 +79,7 @@ def view_profile(identifier):
     achievements = Achievement.query.filter_by(student_id=user.id).all() if user.role == 'student' else []
     experiences = Experience.query.filter_by(student_id=user.id).all() if user.role == 'student' else []
     
-    return render_template('profile.html', profile_user=user, skills=skills, achievements=achievements, experiences=experiences)
+    return render_template('profile.html', profile_user=user, skills=skills, achievements=achievements, experiences=experiences, **context)
 
 @app.route('/<path:filename>')
 

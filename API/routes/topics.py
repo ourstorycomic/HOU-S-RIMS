@@ -292,6 +292,10 @@ def cancel_topic(topic_id):
         
         # Delete group members and group
         GroupMember.query.filter_by(group_id=group.id).delete()
+        
+        from models import Message
+        Message.query.filter_by(group_id=group.id).delete()
+        
         db.session.delete(group)
         
         db.session.commit()
