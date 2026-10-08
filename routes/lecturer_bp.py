@@ -16,8 +16,8 @@ def inject_common_data():
     current_year = session.get('academic_year', '2025-2026')
     active_batch = Batch.query.filter_by(academic_year=current_year, status='active').first()
     
-    global_pending_topics_count = Topic.query.filter_by(mentor_id=user_id, status='pending').count() if user_id else 0
-    global_my_groups_count = Topic.query.filter(Topic.mentor_id == user_id, Topic.status == 'approved', Topic.group_id.isnot(None)).count() if user_id else 0
+    global_pending_topics_count = Topic.query.join(Batch).filter(Topic.mentor_id == user_id, Topic.status == 'pending', Batch.status == 'active').count() if user_id else 0
+    global_my_groups_count = Topic.query.join(Batch).filter(Topic.mentor_id == user_id, Topic.status == 'approved', Topic.group_id.isnot(None), Batch.status == 'active').count() if user_id else 0
     
     return dict(current_user=current_user, current_time=datetime.utcnow(), active_batch=active_batch, global_pending_topics_count=global_pending_topics_count, global_my_groups_count=global_my_groups_count)
 
@@ -32,14 +32,14 @@ def dashboard():
 @lecturer_bp.route('/approve')
 def approve():
     user_id = session.get('user_id')
-    pending_topics = Topic.query.filter_by(mentor_id=user_id, status='pending').all()
-    approved_topics = Topic.query.filter(Topic.mentor_id == user_id, Topic.status != 'pending').all()
+    pending_topics = Topic.query.join(Batch).filter(Topic.mentor_id == user_id, Topic.status == 'pending', Batch.status == 'active').all()
+    approved_topics = Topic.query.join(Batch).filter(Topic.mentor_id == user_id, Topic.status != 'pending', Batch.status == 'active').all()
     return render_template('lecturer/approve.html', pending_topics=pending_topics, approved_topics=approved_topics)
 
 @lecturer_bp.route('/progress')
 def progress():
     user_id = session.get('user_id')
-    my_topics = Topic.query.filter_by(mentor_id=user_id).all()
+    my_topics = Topic.query.join(Batch).filter(Topic.mentor_id == user_id, Batch.status == 'active').all()
     all_milestones = []
     
     if my_topics:
@@ -64,7 +64,7 @@ def progress():
 def chat():
     user_id = session.get('user_id')
     # Lecturers get groups associated with the topics they mentor that are approved
-    my_topics = Topic.query.filter_by(mentor_id=user_id, status='approved').all()
+    my_topics = Topic.query.join(Batch).filter(Topic.mentor_id == user_id, Topic.status == 'approved', Batch.status == 'active').all()
     group_ids = [t.group_id for t in my_topics if t.group_id]
     my_groups = Group.query.filter(Group.id.in_(group_ids)).all() if group_ids else []
     
@@ -78,7 +78,7 @@ def chat():
 @lecturer_bp.route('/calendar')
 def calendar():
     user_id = session.get('user_id')
-    my_topics = Topic.query.filter_by(mentor_id=user_id, status='approved').all()
+    my_topics = Topic.query.join(Batch).filter(Topic.mentor_id == user_id, Topic.status == 'approved', Batch.status == 'active').all()
     return render_template('lecturer/calendar.html', my_topics=my_topics)
 
 @lecturer_bp.route('/council')
