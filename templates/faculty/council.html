@@ -208,7 +208,7 @@ function addCouncilMember(role, badgeClass) {
 }
 
 function removeMemberTag(role, id, badgeClass) {
-    councilState[role] = councilState[role].filter(m => m.id !== id);
+    councilState[role] = councilState[role].filter(m => String(m.id) !== String(id));
     renderTags(role, badgeClass);
 }
 
