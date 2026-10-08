@@ -57,6 +57,18 @@ def create_council():
         # Add members - all fields are now arrays
         lecturers_to_notify = set()
         
+        
+        # Check if lecturers are already in another council for this batch
+        all_lecturer_ids = (data.get('president') or []) + (data.get('secretary') or []) + (data.get('members') or [])
+        if all_lecturer_ids:
+            existing_members = CouncilMember.query.join(Council).filter(
+                Council.batch_id == data['batch_id'],
+                CouncilMember.mentor_id.in_(all_lecturer_ids)
+            ).all()
+            if existing_members:
+                conflict_users = list(set([User.query.get(m.mentor_id).full_name for m in existing_members]))
+                return jsonify({'error': f'Các giảng viên sau đã được phân công vào hội đồng khác trong đợt này: {", ".join(conflict_users)}'}), 400
+
         for p_id in (data.get('president') or []):
             if p_id:
                 db.session.add(CouncilMember(council_id=new_council.id, mentor_id=p_id, role='president'))
@@ -75,10 +87,13 @@ def create_council():
         # Assign topics
         students_to_notify = set()
         if data.get('topics'):
-            for t_id in data['topics']:
+            for t_item in data['topics']:
+                t_id = t_item.get('id') if isinstance(t_item, dict) else t_item
+                t_time = t_item.get('time') if isinstance(t_item, dict) else None
                 topic = Topic.query.get(t_id)
                 if topic:
                     topic.council_id = new_council.id
+                    topic.presentation_time = t_time
                     if topic.group_id:
                         group_members = GroupMember.query.filter_by(group_id=topic.group_id, status='accepted').all()
                         for gm in group_members:
@@ -134,7 +149,7 @@ def delete_council(council_id):
         council = Council.query.get_or_404(council_id)
         
         # Free topics
-        Topic.query.filter_by(council_id=council.id).update({'council_id': None})
+        Topic.query.filter_by(council_id=council.id).update({'council_id': None, 'presentation_time': None})
         
         # Notify lecturers before deletion
         from email_utils import send_notification_email
@@ -178,6 +193,17 @@ def update_council(council_id):
             
         # Update members if provided
         if any(k in data for k in ['president', 'secretary', 'members']):
+            all_lecturer_ids = (data.get('president') or []) + (data.get('secretary') or []) + (data.get('members') or [])
+            if all_lecturer_ids:
+                existing_members = CouncilMember.query.join(Council).filter(
+                    Council.batch_id == council.batch_id,
+                    Council.id != council.id,
+                    CouncilMember.mentor_id.in_(all_lecturer_ids)
+                ).all()
+                if existing_members:
+                    conflict_users = list(set([User.query.get(m.mentor_id).full_name for m in existing_members]))
+                    return jsonify({'error': f'Các giảng viên sau đã được phân công vào hội đồng khác trong đợt này: {", ".join(conflict_users)}'}), 400
+
             CouncilMember.query.filter_by(council_id=council.id).delete()
             for p_id in (data.get('president') or []):
                 db.session.add(CouncilMember(council_id=council.id, mentor_id=p_id, role='president'))
@@ -186,6 +212,17 @@ def update_council(council_id):
             for m_id in (data.get('members') or []):
                 db.session.add(CouncilMember(council_id=council.id, mentor_id=m_id, role='member'))
                 
+        # Update topics
+        if 'topics' in data:
+            Topic.query.filter_by(council_id=council.id).update({'council_id': None, 'presentation_time': None})
+            for t_item in data['topics']:
+                t_id = t_item.get('id') if isinstance(t_item, dict) else t_item
+                t_time = t_item.get('time') if isinstance(t_item, dict) else None
+                topic = Topic.query.get(t_id)
+                if topic:
+                    topic.council_id = council.id
+                    topic.presentation_time = t_time
+
         # Notify lecturers
         members = CouncilMember.query.filter_by(council_id=council.id).all()
         for m in members:

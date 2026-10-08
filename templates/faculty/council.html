@@ -53,7 +53,11 @@
                                                         {% if c.topics %}
                                                             {% for t in c.topics %}
                                                             <li class="list-group-item bg-transparent border-0 py-1 ps-0 text-dark">
-                                                                <i class="fa-solid fa-caret-right me-1 text-primary"></i> <strong>{{ t.title }}</strong><br>
+                                                                <i class="fa-solid fa-caret-right me-1 text-primary"></i> <strong>{{ t.title }}</strong>
+                                                                {% if t.presentation_time %}
+                                                                <span class="badge bg-light text-dark border ms-2"><i class="fa-regular fa-clock text-primary"></i> {{ t.presentation_time }}</span>
+                                                                {% endif %}
+                                                                <br>
                                                                 <span class="text-muted ms-3">Nhóm: {{ t.group.name if t.group else 'N/A' }}</span>
                                                             </li>
                                                             {% endfor %}
@@ -113,6 +117,7 @@
                             {% endfor %}
                         </select>
                         <small class="text-muted">Nhấn giữ Ctrl để chọn nhiều nhóm.</small>
+                        <div id="topicTimesContainer" class="mt-3"></div>
                     </div>
 
                     <hr class="my-4">
@@ -177,7 +182,7 @@ window.COUNCILS_DATA = {};
             president: [{% for m in c.members if m.role == 'president' %}{id: {{ m.mentor_id }}, name: {{ m.mentor.full_name|tojson }}},{% endfor %}],
             secretary: [{% for m in c.members if m.role == 'secretary' %}{id: {{ m.mentor_id }}, name: {{ m.mentor.full_name|tojson }}},{% endfor %}],
             member: [{% for m in c.members if m.role == 'member' %}{id: {{ m.mentor_id }}, name: {{ m.mentor.full_name|tojson }}},{% endfor %}],
-            topics: [{% for t in c.topics %}{{ t.id }},{% endfor %}]
+            topics: [{% for t in c.topics %}{id: {{ t.id }}, time: {{ (t.presentation_time or '')|tojson }}},{% endfor %}]
         };
     {% endfor %}
 {% endif %}
@@ -219,6 +224,34 @@ function renderTags(role, badgeClass) {
 }
 
 let _councilSubmitting = false;
+
+// Topic times logic
+function renderTopicTimes() {
+    const select = document.getElementById('councilTopics');
+    const container = document.getElementById('topicTimesContainer');
+    if (!select || !container) return;
+    
+    // Preserve existing values
+    const existingTimes = {};
+    container.querySelectorAll('input').forEach(input => {
+        existingTimes[input.dataset.topicId] = input.value;
+    });
+    
+    container.innerHTML = '';
+    Array.from(select.selectedOptions).forEach(opt => {
+        const id = opt.value;
+        const text = opt.text;
+        const div = document.createElement('div');
+        div.className = 'd-flex align-items-center mb-2 small';
+        div.innerHTML = `
+            <div class="text-truncate flex-grow-1 fw-bold me-2" title="${text}">${text}</div>
+            <input type="time" class="form-control form-control-sm w-auto topic-time-input" data-topic-id="${id}" value="${existingTimes[id] || ''}">
+        `;
+        container.appendChild(div);
+    });
+}
+document.getElementById('councilTopics').addEventListener('change', renderTopicTimes);
+
 async function createCouncil() {
     if (_councilSubmitting) return;
     _councilSubmitting = true;
@@ -229,7 +262,10 @@ async function createCouncil() {
     const meeting_date = document.getElementById('councilDate').value;
     const meeting_time = document.getElementById('councilTime').value;
     const location = document.getElementById('councilLocation').value;
-    const topics = Array.from(document.getElementById('councilTopics').selectedOptions).map(o => o.value);
+    const topics = Array.from(document.getElementById('councilTopics').selectedOptions).map(o => {
+        const input = document.querySelector(`.topic-time-input[data-topic-id="${o.value}"]`);
+        return { id: parseInt(o.value), time: input ? input.value : '' };
+    });
 
     const president = councilState.president.map(m => m.id);
     const secretary = councilState.secretary.map(m => m.id);
@@ -320,7 +356,13 @@ function editCouncil(id) {
     const topicsSelect = document.getElementById('councilTopics');
     if (topicsSelect) {
         Array.from(topicsSelect.options).forEach(opt => {
-            opt.selected = data.topics.includes(parseInt(opt.value));
+            opt.selected = data.topics.some(t => t.id === parseInt(opt.value));
+        });
+        renderTopicTimes();
+        // Set times after render
+        data.topics.forEach(t => {
+            const input = document.querySelector(`.topic-time-input[data-topic-id="${t.id}"]`);
+            if (input) input.value = t.time;
         });
     }
     
@@ -328,9 +370,9 @@ function editCouncil(id) {
     councilState.president = data.president || [];
     councilState.secretary = data.secretary || [];
     councilState.member = data.member || [];
-    renderTags('president');
-    renderTags('secretary');
-    renderTags('member');
+    renderTags('president', 'bg-danger');
+    renderTags('secretary', 'bg-warning text-dark');
+    renderTags('member', 'bg-primary');
     
     // Update modal title and button
     document.querySelector('#modalAddCouncil .modal-title').textContent = 'Cập nhật Hội đồng';
@@ -354,9 +396,9 @@ document.getElementById('modalAddCouncil').addEventListener('hidden.bs.modal', (
     councilState.president = [];
     councilState.secretary = [];
     councilState.member = [];
-    renderTags('president');
-    renderTags('secretary');
-    renderTags('member');
+    renderTags('president', 'bg-danger');
+    renderTags('secretary', 'bg-warning text-dark');
+    renderTags('member', 'bg-primary');
 });
 
 

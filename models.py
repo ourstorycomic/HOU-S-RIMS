@@ -63,6 +63,7 @@ class Topic(db.Model):
     mentor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     group_id = db.Column(db.Integer, db.ForeignKey('groups.id'), nullable=True)
     council_id = db.Column(db.Integer, db.ForeignKey('councils.id'), nullable=True)
+    presentation_time = db.Column(db.String(20), nullable=True)
     status = db.Column(db.String(20), default='pending') # pending, faculty_pending, approved, rejected
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
