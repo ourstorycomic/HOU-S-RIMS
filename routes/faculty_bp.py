@@ -67,8 +67,11 @@ def students():
 @faculty_bp.route('/council')
 def council():
     current_year = session.get('academic_year', '2025-2026')
+    active_batch = Batch.query.filter_by(academic_year=current_year, status='active').first()
     councils = Council.query.join(Batch).filter(Batch.academic_year == current_year).all()
-    return render_template('faculty/council.html', councils=councils)
+    mentors = User.query.filter(func.lower(User.role) == 'lecturer').all()
+    topics = Topic.query.join(Batch).filter(Batch.academic_year == current_year).all()
+    return render_template('faculty/council.html', councils=councils, mentors=mentors, active_batch=active_batch, topics=topics)
 
 @faculty_bp.route('/rubric')
 def rubric():

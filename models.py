@@ -62,6 +62,7 @@ class Topic(db.Model):
     batch_id = db.Column(db.Integer, db.ForeignKey('batches.id'), nullable=True)
     mentor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     group_id = db.Column(db.Integer, db.ForeignKey('groups.id'), nullable=True)
+    council_id = db.Column(db.Integer, db.ForeignKey('councils.id'), nullable=True)
     status = db.Column(db.String(20), default='pending') # pending, faculty_pending, approved, rejected
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -165,14 +166,25 @@ class Council(db.Model):
     __tablename__ = 'councils'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
+    decision_number = db.Column(db.String(100), nullable=True)
+    meeting_date = db.Column(db.Date, nullable=True)
+    meeting_time = db.Column(db.Time, nullable=True)
+    location = db.Column(db.String(255), nullable=True)
+    decision_file_url = db.Column(db.String(255), nullable=True)
     batch_id = db.Column(db.Integer, db.ForeignKey('batches.id'), nullable=False)
     established_date = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    topics = db.relationship('Topic', backref='council', lazy=True)
+    members = db.relationship('CouncilMember', backref='council', lazy=True)
 
 class CouncilMember(db.Model):
     __tablename__ = 'council_members'
     id = db.Column(db.Integer, primary_key=True)
     council_id = db.Column(db.Integer, db.ForeignKey('councils.id'), nullable=False)
     mentor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    role = db.Column(db.String(50), default='member') # president, secretary, member
+    
+    mentor = db.relationship('User', foreign_keys=[mentor_id])
 
 class Rubric(db.Model):
     __tablename__ = 'rubrics'
