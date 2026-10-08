@@ -27,14 +27,14 @@
                             </h6>
 
                             {% if notifications %}
-                                {% for notif in notifications %}
-                                <div class="p-3 rounded-3 mb-3 bg-primary-subtle bg-opacity-25 border border-primary-subtle">
+                                {% for notif in notifications[:5] %}
+                                <div class="p-3 rounded-3 mb-3 bg-primary-subtle bg-opacity-25 border border-primary-subtle cursor-pointer notif-card-item" onclick="readNotification({{ notif.id }}, decodeURIComponent('{{ notif.content | urlencode }}'), false)">
                                     <div class="d-flex align-items-center gap-2 mb-1">
                                         <span class="fw-bold text-primary" style="font-size: 11px;">THÔNG BÁO</span>
                                         <span class="text-muted ms-auto" style="font-size: 10px;">{{ notif.created_at.strftime('%d/%m %H:%M') if notif.created_at else '' }}</span>
                                     </div>
-                                    <div class="fw-bold text-dark small mb-1">
-                                        {{ notif.content | safe }}
+                                    <div class="fw-bold text-dark small mb-1" style="line-height: 1.4;">
+                                        {{ notif.content | striptags | truncate(80) | safe }}
                                     </div>
                                 </div>
                                 {% endfor %}
@@ -42,7 +42,7 @@
                                 <div class="text-muted small text-center py-3">Không có thông báo mới</div>
                             {% endif %}
 
-                            <button class="btn btn-outline-secondary rounded-pill w-100 fw-bold btn-sm py-2 mt-2">Xem tất cả thông báo</button>
+                            <button class="btn btn-outline-secondary rounded-pill w-100 fw-bold btn-sm py-2 mt-2" onclick="showAllNotifications()">Xem tất cả thông báo</button>
                         </div>
 
                         <div class="card border-0 shadow-sm rounded-4 p-4 text-white position-relative overflow-hidden mt-auto" style="background-color: #6366f1;">

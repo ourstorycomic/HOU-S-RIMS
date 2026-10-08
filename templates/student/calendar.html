@@ -22,18 +22,18 @@
             <div class="card border-0 shadow-sm rounded-4 p-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="fw-bold mb-0 text-dark"><i class="fa-regular fa-bell me-2 text-danger"></i> Thông báo mới</h6>
-                    <a href="#" class="small fw-bold text-primary text-decoration-none">Xem tất cả</a>
+                    <a href="#" class="small fw-bold text-primary text-decoration-none" onclick="showAllNotifications()">Xem tất cả</a>
                 </div>
 
                 <div class="d-flex flex-column gap-3">
                     {% if notifications %}
-                        {% for notif in notifications %}
-                        <div class="bg-light p-3 rounded-3 border notif-card-item cursor-pointer">
+                        {% for notif in notifications[:5] %}
+                        <div class="bg-light p-3 rounded-3 border notif-card-item cursor-pointer" onclick="readNotification({{ notif.id }}, decodeURIComponent('{{ notif.content | urlencode }}'), false)">
                             <div class="d-flex justify-content-between mb-1">
                                 <span class="badge bg-primary-subtle text-primary fw-bold">THÔNG BÁO</span>
                                 <small class="text-muted" style="font-size: 10px;">{{ notif.created_at.strftime('%d/%m %H:%M') if notif.created_at else '' }}</small>
                             </div>
-                            <div class="fw-bold text-dark small" style="line-height: 1.4;">{{ notif.content }}</div>
+                            <div class="fw-bold text-dark small" style="line-height: 1.4;">{{ notif.content | striptags | truncate(80) | safe }}</div>
                         </div>
                         {% endfor %}
                     {% else %}
@@ -76,6 +76,22 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         themeSystem: 'bootstrap5',
         events: '/api/calendar/events',
+        dateClick: function(info) {
+            if (window.clickTimer) {
+                clearTimeout(window.clickTimer);
+                window.clickTimer = null;
+                // Double click action
+                let dateVal = info.dateStr;
+                if (dateVal.length === 10) dateVal += 'T08:00';
+                document.getElementById('meetingTime').value = dateVal;
+                var myModal = new bootstrap.Modal(document.getElementById('modalScheduleMeeting'));
+                myModal.show();
+            } else {
+                window.clickTimer = setTimeout(() => {
+                    window.clickTimer = null;
+                }, 300);
+            }
+        },
         eventContent: function(arg) {
             var status = arg.event.extendedProps.status;
             var isMilestone = status === 'milestone';
