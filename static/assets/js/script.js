@@ -57,25 +57,7 @@ function filterTable(type, btn) {
     }
 }
 
-// Hàm dùng riêng cho Faculty
-function filterTopics(status, btn) {
-    updateFilterButtonState(btn);
 
-    const pending = document.querySelectorAll('.status-pending');
-    const approved = document.querySelectorAll('.status-approved');
-
-    if (status === 'pending') {
-        pending.forEach(el => el.classList.remove('d-none'));
-        approved.forEach(el => el.classList.add('d-none'));
-    } else if (status === 'approved') {
-        pending.forEach(el => el.classList.add('d-none'));
-        approved.forEach(el => el.classList.remove('d-none'));
-    } else {
-        // 'all'
-        pending.forEach(el => el.classList.remove('d-none'));
-        approved.forEach(el => el.classList.remove('d-none'));
-    }
-}
 
 // Helper: Cập nhật trạng thái active của nút lọc
 function updateFilterButtonState(clickedBtn) {
