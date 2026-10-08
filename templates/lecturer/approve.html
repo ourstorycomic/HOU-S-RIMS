@@ -23,11 +23,13 @@
                                     {% set students = [] %}
                                     {% if topic.group and topic.group.members %}
                                         {% for member in topic.group.members %}
-                                            {% set _ = students.append(member.student.full_name) %}
+                                            {% set identifier = member.student.student_id or member.student.username or member.student.id %}
+                                            {% set link = '<a href="/profile/' ~ identifier ~ '" target="_blank" class="text-decoration-none fw-bold">' ~ member.student.full_name ~ '</a>' %}
+                                            {% set _ = students.append(link) %}
                                         {% endfor %}
                                     {% endif %}
                                     {% set students_str = students|join(', ') %}
-                                    <button class="btn btn-outline-secondary btn-sm fw-bold" onclick="showTopicDetail('{{ topic.title|replace("'","\\'") }}', '{{ topic.description|replace("'","\\'") }}', '{{ students_str|replace("'","\\'") }}')">Xem chi tiết</button>
+                                    <button class="btn btn-outline-secondary btn-sm fw-bold" onclick="showTopicDetail(decodeURIComponent('{{ topic.title | urlencode }}'), decodeURIComponent('{{ topic.description | urlencode }}'), decodeURIComponent('{{ students_str | urlencode }}'))">Xem chi tiết</button>
                                     <button class="btn btn-primary btn-sm fw-bold" style="background-color: #6366f1; border-color: #6366f1;"
                                         onclick="openApproveModal({{ topic.id }}, '{{ topic.title|replace("'","\\'") }}')">Đồng ý hướng dẫn</button>
                                     <button class="btn btn-light text-danger border-0" onclick="openRejectModal({{ topic.id }})"><i class="fa-regular fa-circle-xmark fs-4"></i></button>

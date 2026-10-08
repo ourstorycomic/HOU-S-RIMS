@@ -141,7 +141,7 @@
                         {% for student in all_students %}
                             {% if current_user and student.id != current_user.id %}
                             <label class="list-group-item d-flex gap-2 align-items-center student-item" data-name="{{ student.full_name | lower }}" data-sid="{{ (student.student_id or '') | lower }}">
-                                <input class="form-check-input flex-shrink-0" type="checkbox" value="{{ student.id }}" data-fullname="{{ student.full_name }}" data-sid="{{ student.student_id or '' }}">
+                                <input class="form-check-input flex-shrink-0" type="checkbox" value="{{ student.id }}" data-fullname="{{ student.full_name }}" data-sid="{{ student.student_id or '' }}" data-identifier="{{ student.student_id or student.username or student.id }}">
                                 <span>
                                     <strong>{{ student.full_name }}</strong><br>
                                     <small class="text-muted">{{ student.student_id or 'Chưa cập nhật mã' }}</small>
@@ -178,37 +178,38 @@ function searchStudents() {
 // Giữ lại các thành viên đã được chọn
 window.selectedMembersForGroup = [];
 
-function addSelectedMembers() {
-    const checkboxes = document.querySelectorAll('#studentList .form-check-input:checked');
-    const container = document.getElementById('groupMembersContainer'); // We need to add this ID to register.html
-    
-    checkboxes.forEach(cb => {
-        const id = cb.value;
-        const name = cb.getAttribute('data-fullname');
-        const sid = cb.getAttribute('data-sid');
+    function addSelectedMembers() {
+        const checkboxes = document.querySelectorAll('#studentList .form-check-input:checked');
+        const container = document.getElementById('groupMembersContainer'); 
         
-        if (!window.selectedMembersForGroup.includes(id)) {
-            window.selectedMembersForGroup.push(id);
-            if(container) {
-                const div = document.createElement('div');
-                div.className = 'card p-3 bg-light border-0 mb-2 member-card';
-                div.setAttribute('data-id', id);
-                div.innerHTML = `
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold small" style="width: 35px; height: 35px;">${name.substring(0,2).toUpperCase()}</div>
-                            <div>
-                                <div class="fw-bold text-dark">${name}</div>
-                                <div class="small text-muted">Thành viên (${sid})</div>
+        checkboxes.forEach(cb => {
+            const id = cb.value;
+            const name = cb.getAttribute('data-fullname');
+            const sid = cb.getAttribute('data-sid');
+            const identifier = cb.getAttribute('data-identifier');
+            
+            if (!window.selectedMembersForGroup.includes(id)) {
+                window.selectedMembersForGroup.push(id);
+                if(container) {
+                    const div = document.createElement('div');
+                    div.className = 'card p-3 bg-light border-0 mb-2 member-card';
+                    div.setAttribute('data-id', id);
+                    div.innerHTML = `
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold small" style="width: 35px; height: 35px;">${name.substring(0,2).toUpperCase()}</div>
+                                <div>
+                                    <a href="/profile/${identifier}" target="_blank" class="fw-bold text-dark text-decoration-none hover-primary">${name}</a>
+                                    <div class="small text-muted">Thành viên (${sid})</div>
+                                </div>
                             </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeMember('${id}', this)"><i class="fa-solid fa-times"></i></button>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeMember('${id}', this)"><i class="fa-solid fa-times"></i></button>
-                    </div>
-                `;
-                container.insertBefore(div, container.lastElementChild);
+                    `;
+                    container.insertBefore(div, container.lastElementChild);
+                }
             }
-        }
-    });
+        });
     
     // Bỏ check
     checkboxes.forEach(cb => cb.checked = false);
