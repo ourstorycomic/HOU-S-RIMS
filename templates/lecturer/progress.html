@@ -22,7 +22,7 @@
                             <div class="d-flex justify-content-between mb-3">
                                 <div>
                                     <h6 class="fw-bold text-primary mb-1">{{ t.title }}</h6>
-                                    <small class="text-muted fw-bold">Nhóm ID: {{ t.group_id or 'N/A' }} | Trạng thái: <span class="badge {% if t.status == 'approved' %}bg-success{% else %}bg-warning text-dark{% endif %}">{{ t.status | upper }}</span></small>
+                                    <small class="text-muted fw-bold">Nhóm ID: {{ t.group_id or 'N/A' }} | Trạng thái: <span class="badge {% if t.status == 'approved' %}bg-success{% elif t.status == 'faculty_pending' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">{{ t.status | upper }}</span></small>
                                 </div>
                                 <div class="text-end">
                                     <div class="h4 fw-bold text-primary mb-0">{{ t.total_progress | default(0) }}%</div>
@@ -30,6 +30,34 @@
                                 </div>
                             </div>
                             
+                            <div class="position-relative mb-4 mt-3 px-2">
+                                {% set pct_timeline = (step - 1) * 50 %}
+                                <div class="progress position-absolute" style="height: 4px; top: 10px; left: 24px; width: calc(100% - 48px); z-index: 1;">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ pct_timeline }}%"></div>
+                                </div>
+                                <div class="d-flex justify-content-between position-relative" style="z-index: 2;">
+                                    <div class="text-center">
+                                        <div class="{% if step >= 1 %}bg-success{% else %}bg-white border{% endif %} text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" style="width:24px;height:24px; font-size:10px;">
+                                            {% if step >= 1 %}<i class="fa-solid fa-check"></i>{% else %}<span class="text-muted">1</span>{% endif %}
+                                        </div>
+                                        <div class="small fw-bold" style="font-size:11px;">Chờ duyệt</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="{% if step >= 2 %}bg-success{% else %}bg-white border{% endif %} text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" style="width:24px;height:24px; font-size:10px;">
+                                            {% if step >= 2 %}<i class="fa-solid fa-check"></i>{% else %}<span class="text-muted">2</span>{% endif %}
+                                        </div>
+                                        <div class="small fw-bold" style="font-size:11px;">GV Duyệt</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="{% if step >= 3 %}bg-success{% else %}bg-white border{% endif %} text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" style="width:24px;height:24px; font-size:10px;">
+                                            {% if step >= 3 %}<i class="fa-solid fa-check"></i>{% else %}<span class="text-muted">3</span>{% endif %}
+                                        </div>
+                                        <div class="small fw-bold" style="font-size:11px;">Khoa Duyệt</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {% if t.status == 'approved' %}
                             <div class="mt-4">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <h6 class="fw-bold mb-0 small"><i class="fa-solid fa-list-check me-2"></i>Danh sách Cột mốc (Milestones)</h6>
@@ -82,6 +110,11 @@
                                     </div>
                                 {% endif %}
                             </div>
+                            {% else %}
+                            <div class="mt-2 text-center p-4 border rounded-3 bg-light text-muted small">
+                                Đề tài đang chờ Khoa/Viện phê duyệt chính thức. Bạn chưa thể thiết lập Cột mốc tiến độ cho đề tài này.
+                            </div>
+                            {% endif %}
                         </div>
                         {% endfor %}
                     {% else %}

@@ -181,19 +181,23 @@
                                 </div>
                             </div>
 
-                            <div class="table-responsive">
-                                <table class="table table-bordered align-top" style="height: 450px;">
-                                    <thead class="text-muted small text-uppercase text-center border-0">
-                                        <tr>
-                                            <th class="border-0 fw-bold">CN</th><th class="border-0 fw-bold">T2</th><th class="border-0 fw-bold">T3</th>
-                                            <th class="border-0 fw-bold">T4</th><th class="border-0 fw-bold">T5</th><th class="border-0 fw-bold">T6</th>
-                                            <th class="border-0 fw-bold">T7</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="calendar-grid" class="text-muted fw-bold small">
-                                        <!-- JS will render calendar here -->
-                                    </tbody>
-                                </table>
+                            <div class="d-flex flex-column gap-3" id="compact-calendar-list">
+                                {% if topic_milestones %}
+                                    {% for m in topic_milestones %}
+                                    <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded-3 border-start border-4 {{ 'border-success' if m.progress_pct == 100 else 'border-primary' }}">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="fw-bold fs-5 text-dark" style="min-width: 45px; text-align: center;">{{ m.deadline.strftime('%d') }}<br><small class="text-muted fs-6">{{ m.deadline.strftime('%m/%Y') }}</small></div>
+                                            <div>
+                                                <div class="fw-bold text-dark">{{ m.name }}</div>
+                                                <small class="text-muted">{{ m.description | truncate(50) if m.description else 'Không có mô tả' }}</small>
+                                            </div>
+                                        </div>
+                                        <span class="badge {{ 'bg-success' if m.progress_pct == 100 else 'bg-primary' }} rounded-pill">{{ 'Hoàn thành' if m.progress_pct == 100 else 'Đang thực hiện' }}</span>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="text-center text-muted small py-4">Chưa có lịch trình/deadline nào</div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>

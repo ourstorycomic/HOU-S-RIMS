@@ -19,7 +19,10 @@ def inject_common_data():
     global_pending_topics_count = Topic.query.join(Batch).filter(Topic.mentor_id == user_id, Topic.status == 'pending', Batch.status == 'active').count() if user_id else 0
     global_my_groups_count = Topic.query.join(Batch).filter(Topic.mentor_id == user_id, Topic.status == 'approved', Topic.group_id.isnot(None), Batch.status == 'active').count() if user_id else 0
     
-    return dict(current_user=current_user, current_time=datetime.utcnow(), active_batch=active_batch, global_pending_topics_count=global_pending_topics_count, global_my_groups_count=global_my_groups_count)
+    from models import Notification
+    notifications = Notification.query.filter_by(user_id=user_id).order_by(Notification.created_at.desc()).all() if user_id else []
+    
+    return dict(current_user=current_user, current_time=datetime.utcnow(), active_batch=active_batch, global_pending_topics_count=global_pending_topics_count, global_my_groups_count=global_my_groups_count, notifications=notifications)
 
 @lecturer_bp.route('/')
 def index():
@@ -39,7 +42,7 @@ def approve():
 @lecturer_bp.route('/progress')
 def progress():
     user_id = session.get('user_id')
-    my_topics = Topic.query.join(Batch).filter(Topic.mentor_id == user_id, Topic.status == 'approved', Batch.status == 'active').all()
+    my_topics = Topic.query.join(Batch).filter(Topic.mentor_id == user_id, Topic.status.in_(['faculty_pending', 'approved']), Batch.status == 'active').all()
     all_milestones = []
     
     if my_topics:
