@@ -61,6 +61,7 @@
                                             </div>
                                         </div>
                                     </div>
+                                </div>
                                 {% endfor %}
                             {% else %}
                                 <div class="text-center text-muted p-4">Chưa có hội đồng nào được thành lập.</div>
@@ -147,8 +148,6 @@
         </div>
     </div>
 {% endblock %}
-
-{% block extra_js %}
 <style>
 .member-tag {
     display: inline-flex; align-items: center; gap: 6px;
@@ -263,4 +262,3 @@ document.getElementById('modalAddCouncil').addEventListener('show.bs.modal', () 
     });
 });
 </script>
-{% endblock %}
