@@ -168,6 +168,22 @@ def register_topic():
                         meta_data=json.dumps({'invite_group_id': group_id, 'topic_name': data['name']})
                     )
                     db.session.add(invite_msg)
+                    
+                    from email_utils import send_email_async
+                    invited_user = User.query.get(int(member_id))
+                    if invited_user and invited_user.email:
+                        link = f"http://127.0.0.1:5000/student/chat"
+                        html_content = f"""
+                        <div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>
+                            <h2 style='color: #4f46e5;'>Lời mời tham gia nhóm NCKH</h2>
+                            <p>Xin chào <strong>{invited_user.full_name}</strong>,</p>
+                            <p>Bạn vừa nhận được lời mời tham gia nhóm NCKH cho đề tài: <strong>{data['name']}</strong> từ sinh viên {inviter.full_name}.</p>
+                            <p>Vui lòng đăng nhập hệ thống và vào mục Chat Cá nhân để Đồng ý hoặc Từ chối lời mời này.</p>
+                            <a href='{link}' style='display: inline-block; padding: 10px 20px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Xem lời mời</a>
+                            <br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>
+                        </div>
+                        """
+                        send_email_async(invited_user.email, f"[HOU S-RIMS] Lời mời tham gia nhóm NCKH", f"Bạn được mời tham gia đề tài {data['name']}", html_content)
         else:
             # Check if group already has a topic in this batch
             existing_topic = Topic.query.filter_by(group_id=group_id, batch_id=data['batch_id']).first()
@@ -201,6 +217,23 @@ def register_topic():
         db.session.add(registration)
         db.session.commit() # Transaction completed
         
+        if topic_status == 'pending':
+            from email_utils import send_email_async
+            mentor = User.query.get(data['mentor_id'])
+            if mentor and mentor.email:
+                link = f"http://127.0.0.1:5000/lecturer/approve"
+                html_content = f"""
+                <div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>
+                    <h2 style='color: #4f46e5;'>Yêu cầu Hướng dẫn Đề tài NCKH</h2>
+                    <p>Xin chào <strong>{mentor.full_name}</strong>,</p>
+                    <p>Nhóm sinh viên vừa gửi yêu cầu nhờ bạn hướng dẫn đề tài NCKH: <strong>{data['name']}</strong>.</p>
+                    <p>Vui lòng đăng nhập hệ thống để xem chi tiết và Quyết định Phê duyệt / Từ chối.</p>
+                    <a href='{link}' style='display: inline-block; padding: 10px 20px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Phê duyệt Đề tài</a>
+                    <br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>
+                </div>
+                """
+                send_email_async(mentor.email, f"[HOU S-RIMS] Yêu cầu hướng dẫn đề tài", f"Yêu cầu hướng dẫn đề tài {data['name']}", html_content)
+                
         return jsonify({'message': 'Topic registered successfully', 'topic_id': new_topic.id}), 201
     except Exception as e:
         db.session.rollback()
@@ -256,6 +289,23 @@ def handle_invitation():
                 pass # Don't advance if someone rejected, leave it for the leader to cancel
             elif pending_count == 0:
                 topic.status = 'pending' # Now waiting for lecturer
+                
+                from email_utils import send_email_async
+                from models import User
+                mentor = User.query.get(topic.mentor_id)
+                if mentor and mentor.email:
+                    link = f"http://127.0.0.1:5000/lecturer/approve"
+                    html_content = f"""
+                    <div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>
+                        <h2 style='color: #4f46e5;'>Yêu cầu Hướng dẫn Đề tài NCKH</h2>
+                        <p>Xin chào <strong>{mentor.full_name}</strong>,</p>
+                        <p>Nhóm sinh viên vừa gửi yêu cầu nhờ bạn hướng dẫn đề tài NCKH: <strong>{topic.title}</strong>.</p>
+                        <p>Vui lòng đăng nhập hệ thống để xem chi tiết và Quyết định Phê duyệt / Từ chối.</p>
+                        <a href='{link}' style='display: inline-block; padding: 10px 20px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Phê duyệt Đề tài</a>
+                        <br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>
+                    </div>
+                    """
+                    send_email_async(mentor.email, f"[HOU S-RIMS] Yêu cầu hướng dẫn đề tài", f"Yêu cầu hướng dẫn đề tài {topic.title}", html_content)
             
         db.session.commit()
         return jsonify({'message': 'Successfully processed invitation'}), 200
@@ -355,6 +405,44 @@ def faculty_approve_topic(topic_id):
             
         topic.status = 'approved'
         db.session.commit()
+        
+        from email_utils import send_email_async
+        from models import User, GroupMember
+        
+        # Notify Mentor
+        mentor = User.query.get(topic.mentor_id)
+        if mentor and mentor.email:
+            link_mentor = f"http://127.0.0.1:5000/lecturer/progress"
+            html_content_mentor = f"""
+            <div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>
+                <h2 style='color: #10b981;'>Khoa đã Phê duyệt Đề tài NCKH</h2>
+                <p>Xin chào <strong>{mentor.full_name}</strong>,</p>
+                <p>Đề tài NCKH <strong>{topic.title}</strong> do bạn hướng dẫn đã được Khoa chính thức phê duyệt.</p>
+                <p>Bạn đã có thể truy cập Hệ thống để thiết lập cột mốc tiến độ và thảo luận với sinh viên.</p>
+                <a href='{link_mentor}' style='display: inline-block; padding: 10px 20px; background-color: #10b981; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Xem Tiến độ</a>
+                <br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>
+            </div>
+            """
+            send_email_async(mentor.email, f"[HOU S-RIMS] Đề tài được phê duyệt", f"Đề tài {topic.title} đã được phê duyệt", html_content_mentor)
+            
+        # Notify Students
+        members = GroupMember.query.filter_by(group_id=topic.group_id, status='accepted').all()
+        for member in members:
+            student = User.query.get(member.student_id)
+            if student and student.email:
+                link_student = f"http://127.0.0.1:5000/student/progress"
+                html_content_student = f"""
+                <div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>
+                    <h2 style='color: #10b981;'>Đề tài NCKH của bạn đã được phê duyệt</h2>
+                    <p>Xin chào <strong>{student.full_name}</strong>,</p>
+                    <p>Đề tài NCKH <strong>{topic.title}</strong> của nhóm bạn đã được Khoa chính thức phê duyệt.</p>
+                    <p>Chúc nhóm bạn hoàn thành xuất sắc dự án nghiên cứu!</p>
+                    <a href='{link_student}' style='display: inline-block; padding: 10px 20px; background-color: #10b981; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Xem Tiến độ</a>
+                    <br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>
+                </div>
+                """
+                send_email_async(student.email, f"[HOU S-RIMS] Đề tài được phê duyệt", f"Đề tài {topic.title} đã được phê duyệt", html_content_student)
+                
         return jsonify({'message': 'Topic approved by faculty'}), 200
     except Exception as e:
         db.session.rollback()
@@ -402,6 +490,63 @@ def approve_topic(topic_id):
             
         topic.status = data['status']
         db.session.commit()
+        
+        from email_utils import send_email_async
+        from models import User, GroupMember
+        
+        if topic.status == 'faculty_pending':
+            # Lecturer approved it, send email to students
+            members = GroupMember.query.filter_by(group_id=topic.group_id, status='accepted').all()
+            for member in members:
+                student = User.query.get(member.student_id)
+                if student and student.email:
+                    link_student = f"http://127.0.0.1:5000/student/progress"
+                    html_content_student = f"""
+                    <div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>
+                        <h2 style='color: #3b82f6;'>Giảng viên đã đồng ý Hướng dẫn</h2>
+                        <p>Xin chào <strong>{student.full_name}</strong>,</p>
+                        <p>Giảng viên hướng dẫn vừa đồng ý tham gia đề tài NCKH: <strong>{topic.title}</strong> của nhóm bạn.</p>
+                        <p>Hiện tại, đề tài đang chờ Khoa/Viện phê duyệt chính thức. Vui lòng theo dõi trạng thái thường xuyên.</p>
+                        <a href='{link_student}' style='display: inline-block; padding: 10px 20px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Xem Tiến độ</a>
+                        <br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>
+                    </div>
+                    """
+                    send_email_async(student.email, f"[HOU S-RIMS] Giảng viên đồng ý hướng dẫn", f"Giảng viên đồng ý hướng dẫn đề tài {topic.title}", html_content_student)
+                    
+        elif topic.status == 'approved':
+            # Faculty approved it, send email to mentor and students
+            mentor = User.query.get(topic.mentor_id)
+            if mentor and mentor.email:
+                link_mentor = f"http://127.0.0.1:5000/lecturer/progress"
+                html_content_mentor = f"""
+                <div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>
+                    <h2 style='color: #10b981;'>Khoa đã Phê duyệt Đề tài NCKH</h2>
+                    <p>Xin chào <strong>{mentor.full_name}</strong>,</p>
+                    <p>Đề tài NCKH <strong>{topic.title}</strong> do bạn hướng dẫn đã được Khoa chính thức phê duyệt.</p>
+                    <p>Bạn đã có thể truy cập Hệ thống để thiết lập cột mốc tiến độ và thảo luận với sinh viên.</p>
+                    <a href='{link_mentor}' style='display: inline-block; padding: 10px 20px; background-color: #10b981; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Xem Tiến độ</a>
+                    <br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>
+                </div>
+                """
+                send_email_async(mentor.email, f"[HOU S-RIMS] Đề tài được phê duyệt", f"Đề tài {topic.title} đã được phê duyệt", html_content_mentor)
+                
+            members = GroupMember.query.filter_by(group_id=topic.group_id, status='accepted').all()
+            for member in members:
+                student = User.query.get(member.student_id)
+                if student and student.email:
+                    link_student = f"http://127.0.0.1:5000/student/progress"
+                    html_content_student = f"""
+                    <div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>
+                        <h2 style='color: #10b981;'>Đề tài NCKH của bạn đã được phê duyệt</h2>
+                        <p>Xin chào <strong>{student.full_name}</strong>,</p>
+                        <p>Đề tài NCKH <strong>{topic.title}</strong> của nhóm bạn đã được Khoa chính thức phê duyệt.</p>
+                        <p>Chúc nhóm bạn hoàn thành xuất sắc dự án nghiên cứu!</p>
+                        <a href='{link_student}' style='display: inline-block; padding: 10px 20px; background-color: #10b981; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Xem Tiến độ</a>
+                        <br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>
+                    </div>
+                    """
+                    send_email_async(student.email, f"[HOU S-RIMS] Đề tài được phê duyệt", f"Đề tài {topic.title} đã được phê duyệt", html_content_student)
+                    
         return jsonify({'message': 'Topic status updated successfully'}), 200
     except Exception as e:
         db.session.rollback()

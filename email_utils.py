@@ -65,3 +65,9 @@ def send_notification_email(to_email, subject, content, html_content=None, attac
         print(f'Error sending email: {e}')
         return False
 
+import threading
+def send_email_async(to_email, subject, content, html_content=None, attachment_paths=None):
+    thread = threading.Thread(target=send_notification_email, args=(to_email, subject, content, html_content, attachment_paths))
+    thread.daemon = True
+    thread.start()
+
