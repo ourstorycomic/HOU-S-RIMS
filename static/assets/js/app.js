@@ -1150,29 +1150,35 @@ async function showAllNotifications() {
             return;
         }
 
+        // Store notifications globally so onclick can access by id
+        window._allNotifications = {};
+        data.forEach(n => { window._allNotifications[n.id] = n.content; });
+
         let html = `
         <div class="d-flex justify-content-between align-items-center mb-2">
             <span class="text-muted small fw-bold"><i class="fa-solid fa-list me-1"></i>Danh sách thông báo</span>
             <button class="btn btn-sm btn-outline-danger py-0 px-2 rounded-pill" onclick="Swal.close(); setTimeout(() => deleteAllReadNotifications(), 300)"><i class="fa-solid fa-trash me-1"></i>Xóa đã đọc</button>
         </div>
         <div class="list-group text-start" style="max-height: 400px; overflow-y: auto;">`;
+
         data.forEach(n => {
-            let badge = !n.is_read ? '<span class="badge bg-danger rounded-circle p-1" style="width:8px; height:8px;"></span>' : '';
-            
-            // Strip HTML to get raw text for brief preview
+            let badge = !n.is_read ? '<span class="badge bg-danger rounded-circle p-1 ms-1" style="width:8px; height:8px; display:inline-block;"></span>' : '';
             let temp = document.createElement("div");
             temp.innerHTML = n.content.split('|||')[0];
             let cleanText = temp.textContent || temp.innerText || "";
-            if (cleanText.length > 80) cleanText = cleanText.substring(0, 80) + '...';
+            if (cleanText.length > 100) cleanText = cleanText.substring(0, 100) + '...';
+            // Escape for HTML attribute
+            let safeText = cleanText.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
             html += `
-                <a href="#" class="list-group-item list-group-item-action py-3 ${!n.is_read ? 'bg-light' : ''}" onclick="Swal.close(); setTimeout(() => readNotification(${n.id}, decodeURIComponent('${encodeURIComponent(n.content)}'), true), 100)">
+                <a href="#" class="list-group-item list-group-item-action py-3 ${!n.is_read ? 'bg-light' : ''}"
+                    data-notif-id="${n.id}"
+                    onclick="event.preventDefault(); _openNotifDetail(${n.id})">
                     <div class="d-flex w-100 justify-content-between align-items-center">
-                        <strong class="mb-1 text-primary"><i class="fa-solid fa-envelope me-2"></i>Hệ thống</strong>
-                        ${badge}
+                        <strong class="mb-1 text-primary small"><i class="fa-solid fa-envelope me-2"></i>Hệ thống ${badge}</strong>
+                        <small class="text-muted" style="font-size:10px;">${n.created_at}</small>
                     </div>
-                    <p class="mb-1 small text-muted text-truncate" style="max-width: 90%;">${cleanText}</p>
-                    <small class="text-muted" style="font-size: 10px;"><i class="fa-regular fa-clock me-1"></i>${n.created_at}</small>
+                    <p class="mb-0 small text-muted mt-1" style="white-space: normal; line-height: 1.4;">${safeText}</p>
                 </a>
             `;
         });
@@ -1183,7 +1189,7 @@ async function showAllNotifications() {
             html: html,
             showConfirmButton: false,
             showCloseButton: true,
-            width: 600,
+            width: 620,
             customClass: {
                 popup: 'p-4 rounded-4'
             }
@@ -1196,6 +1202,13 @@ async function showAllNotifications() {
     } catch (e) {
         Swal.fire('Lỗi', 'Không thể lấy danh sách thông báo.', 'error');
     }
+}
+
+function _openNotifDetail(id) {
+    const content = window._allNotifications[id];
+    if (content === undefined) return;
+    Swal.close();
+    setTimeout(() => readNotification(id, content, true), 200);
 }
 
 async function deleteAllReadNotifications() {
