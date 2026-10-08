@@ -17,12 +17,17 @@
                         {% for t in all_mentored_topics %}
                         {% set status_map = {'pending': 1, 'faculty_pending': 2, 'approved': 3} %}
                         {% set step = status_map.get(t.status, 1) %}
-                        {% set pct = (step / 3 * 100) | round | int %}
                         <div class="bg-white border rounded-4 p-4 mb-3 shadow-sm">
                             <div class="d-flex justify-content-between mb-3">
                                 <div>
                                     <h6 class="fw-bold text-primary mb-1">{{ t.title }}</h6>
-                                    <small class="text-muted fw-bold">Nhóm ID: {{ t.group_id or 'N/A' }} | Trạng thái: <span class="badge {% if t.status == 'approved' %}bg-success{% elif t.status == 'faculty_pending' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">{{ t.status | upper }}</span></small>
+                                    <small class="text-muted fw-bold">Nhóm ID: {{ t.group_id or 'N/A' }} | Trạng thái:
+                                    <span class="badge {% if t.status == 'approved' %}bg-success{% elif t.status == 'faculty_pending' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                        {% if t.status == 'pending' %}Chờ GV duyệt
+                                        {% elif t.status == 'faculty_pending' %}GV đã duyệt - Chờ Khoa
+                                        {% elif t.status == 'approved' %}Khoa đã duyệt
+                                        {% else %}{{ t.status | upper }}{% endif %}
+                                    </span></small>
                                 </div>
                                 <div class="text-end">
                                     <div class="h4 fw-bold text-primary mb-0">{{ t.total_progress | default(0) }}%</div>
@@ -30,29 +35,33 @@
                                 </div>
                             </div>
                             
+                            <!-- Approval timeline -->
                             <div class="position-relative mb-4 mt-3 px-2">
                                 {% set pct_timeline = (step - 1) * 50 %}
                                 <div class="progress position-absolute" style="height: 4px; top: 10px; left: 24px; width: calc(100% - 48px); z-index: 1;">
                                     <div class="progress-bar bg-success" role="progressbar" style="width: {{ pct_timeline }}%"></div>
                                 </div>
                                 <div class="d-flex justify-content-between position-relative" style="z-index: 2;">
+                                    <!-- Step 1: SV đăng ký -->
                                     <div class="text-center">
                                         <div class="{% if step >= 1 %}bg-success{% else %}bg-white border{% endif %} text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" style="width:24px;height:24px; font-size:10px;">
                                             {% if step >= 1 %}<i class="fa-solid fa-check"></i>{% else %}<span class="text-muted">1</span>{% endif %}
                                         </div>
-                                        <div class="small fw-bold" style="font-size:11px;">Chờ duyệt</div>
+                                        <div class="small fw-bold" style="font-size:11px;">SV đăng ký</div>
                                     </div>
+                                    <!-- Step 2: GV duyệt -->
                                     <div class="text-center">
-                                        <div class="{% if step >= 2 %}bg-success{% else %}bg-white border{% endif %} text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" style="width:24px;height:24px; font-size:10px;">
-                                            {% if step >= 2 %}<i class="fa-solid fa-check"></i>{% else %}<span class="text-muted">2</span>{% endif %}
+                                        <div class="{% if step >= 2 %}bg-success{% elif step == 1 %}bg-primary{% else %}bg-white border{% endif %} text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" style="width:24px;height:24px; font-size:10px;">
+                                            {% if step >= 2 %}<i class="fa-solid fa-check"></i>{% else %}<i class="fa-solid fa-hourglass-half" style="font-size:9px;"></i>{% endif %}
                                         </div>
-                                        <div class="small fw-bold" style="font-size:11px;">GV Duyệt</div>
+                                        <div class="small fw-bold {% if step == 1 %}text-primary{% endif %}" style="font-size:11px;">GV duyệt</div>
                                     </div>
+                                    <!-- Step 3: Khoa duyệt -->
                                     <div class="text-center">
-                                        <div class="{% if step >= 3 %}bg-success{% else %}bg-white border{% endif %} text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" style="width:24px;height:24px; font-size:10px;">
-                                            {% if step >= 3 %}<i class="fa-solid fa-check"></i>{% else %}<span class="text-muted">3</span>{% endif %}
+                                        <div class="{% if step >= 3 %}bg-success{% elif step == 2 %}bg-primary{% else %}bg-white border{% endif %} text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" style="width:24px;height:24px; font-size:10px;">
+                                            {% if step >= 3 %}<i class="fa-solid fa-check"></i>{% elif step == 2 %}<i class="fa-solid fa-hourglass-half" style="font-size:9px;"></i>{% else %}<span class="text-muted">3</span>{% endif %}
                                         </div>
-                                        <div class="small fw-bold" style="font-size:11px;">Khoa Duyệt</div>
+                                        <div class="small fw-bold {% if step == 2 %}text-primary{% endif %}" style="font-size:11px;">Khoa duyệt</div>
                                     </div>
                                 </div>
                             </div>
@@ -69,14 +78,36 @@
                                     {% if t.submissions %}
                                         <div class="list-group list-group-flush border rounded-3">
                                         {% for sub in t.submissions %}
-                                            <div class="list-group-item p-3 d-flex justify-content-between align-items-center">
-                                                <div>
-                                                    <div class="fw-bold text-dark">Báo cáo {{ sub.submitted_at.strftime('%d/%m/%Y %H:%M') }}</div>
-                                                    <small class="text-muted">Sinh viên nộp (ID: {{ sub.uploader_id }})
-                                                    {% if sub.milestone %} | Cột mốc: <span class="fw-bold text-primary">{{ sub.milestone.name }}</span>{% endif %}
-                                                    </small>
+                                            <div class="list-group-item p-3">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div>
+                                                        <div class="fw-bold text-dark">Báo cáo {{ sub.submitted_at.strftime('%d/%m/%Y %H:%M') }}</div>
+                                                        <small class="text-muted">Sinh viên nộp (ID: {{ sub.uploader_id }})
+                                                        {% if sub.milestone %} | Cột mốc: <span class="fw-bold text-primary">{{ sub.milestone.name }}</span>{% endif %}
+                                                        </small>
+                                                        {% if sub.feedback %}
+                                                        <div class="mt-2 p-2 rounded-3 bg-warning-subtle border border-warning-subtle d-flex gap-2">
+                                                            <i class="fa-solid fa-note-sticky text-warning mt-1 flex-shrink-0"></i>
+                                                            <div>
+                                                                <div class="small fw-bold text-warning-emphasis">Ghi chú của GV:</div>
+                                                                <div class="small text-dark">{{ sub.feedback }}</div>
+                                                                {% if sub.feedback_at %}
+                                                                <div class="text-muted" style="font-size:10px;">{{ sub.feedback_at.strftime('%d/%m/%Y %H:%M') }}</div>
+                                                                {% endif %}
+                                                            </div>
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="d-flex gap-2 flex-shrink-0 ms-3">
+                                                        <button class="btn btn-sm btn-outline-warning rounded-pill fw-bold" 
+                                                            onclick="openFeedbackModal({{ sub.id }}, '{{ sub.feedback|replace("'", "\\'") if sub.feedback else '' }}')">
+                                                            <i class="fa-solid fa-pen me-1"></i> Ghi chú
+                                                        </button>
+                                                        <a href="/api/submissions/download/{{ sub.id }}" class="btn btn-sm btn-outline-primary rounded-pill fw-bold">
+                                                            <i class="fa-solid fa-download me-1"></i> Tải về
+                                                        </a>
+                                                    </div>
                                                 </div>
-                                                <a href="/api/submissions/download/{{ sub.id }}" class="btn btn-sm btn-outline-primary rounded-pill fw-bold"><i class="fa-solid fa-download me-1"></i> Tải về</a>
                                             </div>
                                         {% endfor %}
                                         </div>
@@ -126,4 +157,65 @@
                     {% endif %}
                 </div>
         </div>
+{% endblock %}
+
+{% block modals %}
+<!-- Feedback Modal -->
+<div class="modal fade" id="modalFeedback" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-note-sticky me-2 text-warning"></i>Ghi chú cho bài nộp</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4 pb-4">
+                <p class="text-muted small mb-3">Nhập ghi chú / nhận xét để sinh viên biết cần chỉnh sửa và nộp lại.</p>
+                <textarea id="feedbackText" class="form-control" rows="5" placeholder="Ví dụ: Cần bổ sung phần tổng quan, format tài liệu chưa đúng..."></textarea>
+                <input type="hidden" id="feedbackSubId">
+            </div>
+            <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-warning fw-bold text-white" onclick="saveFeedback()">
+                    <i class="fa-solid fa-paper-plane me-2"></i>Lưu & Thông báo SV
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openFeedbackModal(subId, existingFeedback) {
+    document.getElementById('feedbackSubId').value = subId;
+    document.getElementById('feedbackText').value = existingFeedback || '';
+    new bootstrap.Modal(document.getElementById('modalFeedback')).show();
+}
+
+function saveFeedback() {
+    const subId = document.getElementById('feedbackSubId').value;
+    const feedback = document.getElementById('feedbackText').value.trim();
+    if (!feedback) {
+        showToast('Vui lòng nhập nội dung ghi chú!');
+        return;
+    }
+
+    fetch(`/api/submissions/${subId}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feedback })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('modalFeedback')).hide();
+            showToast('Đã lưu ghi chú và thông báo cho sinh viên!');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showToast(data.message || 'Có lỗi xảy ra!');
+        }
+    })
+    .catch(() => showToast('Lỗi kết nối server!'));
+}
+</script>
 {% endblock %}

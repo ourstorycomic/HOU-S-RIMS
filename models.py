@@ -125,6 +125,8 @@ class Submission(db.Model):
     file_url = db.Column(db.String(255), nullable=False)
     type = db.Column(db.String(50), nullable=False)
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    feedback = db.Column(db.Text, nullable=True)
+    feedback_at = db.Column(db.DateTime, nullable=True)
     milestone = db.relationship('Milestone', backref='submissions')
 
 class DocumentTemplate(db.Model):
