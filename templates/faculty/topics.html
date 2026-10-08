@@ -6,11 +6,15 @@
                     <div class="card-header bg-white border-bottom py-3 px-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <div class="d-flex gap-2">
-                                <button class="btn btn-primary btn-sm rounded-pill px-4 fw-bold btn-filter active" onclick="filterTopics('all', this)">TẤT CẢ</button>
-                                <button class="btn btn-light btn-sm rounded-pill px-4 text-muted fw-bold btn-filter position-relative" onclick="filterTopics('pending', this)">
-                                    CHỜ PHÊ DUYỆT ({{ topics|selectattr('status', 'equalto', 'pending')|list|length }})
+                                <button class="btn btn-primary btn-sm rounded-pill px-4 fw-bold btn-filter active" onclick="filterTopics('all', this)">
+                                    TẤT CẢ ({{ topics|length }})
                                 </button>
-                                <button class="btn btn-light btn-sm rounded-pill px-4 text-muted fw-bold btn-filter" onclick="filterTopics('approved', this)">ĐÃ PHÊ DUYỆT</button>
+                                <button class="btn btn-light btn-sm rounded-pill px-4 text-muted fw-bold btn-filter position-relative" onclick="filterTopics('faculty_pending', this)">
+                                    CHỜ PHÊ DUYỆT ({{ topics|selectattr('status', 'equalto', 'faculty_pending')|list|length }})
+                                </button>
+                                <button class="btn btn-light btn-sm rounded-pill px-4 text-muted fw-bold btn-filter" onclick="filterTopics('approved', this)">
+                                    ĐÃ PHÊ DUYỆT ({{ topics|selectattr('status', 'equalto', 'approved')|list|length }})
+                                </button>
                             </div>
                             <input type="text" class="form-control rounded-pill bg-light border-0 px-4 small" placeholder="Tìm tên đề tài..." style="width: 300px;">
                         </div>
@@ -50,4 +54,58 @@
                     </div>
                 </div>
         </div>
+    <script>
+        function filterTopics(status, btn) {
+            // Update button styles
+            document.querySelectorAll('.btn-filter').forEach(b => {
+                b.classList.remove('btn-primary', 'active');
+                b.classList.add('btn-light', 'text-muted');
+            });
+            if(btn) {
+                btn.classList.remove('btn-light', 'text-muted');
+                btn.classList.add('btn-primary', 'active');
+            }
+            
+            // Filter rows
+            const rows = document.querySelectorAll('tbody tr');
+            let hasVisible = false;
+            rows.forEach(row => {
+                if(row.querySelector('td[colspan]')) return; // skip empty msg
+                
+                if(status === 'all' || row.classList.contains('status-' + status)) {
+                    row.hidden = false;
+                    row.classList.remove('d-none');
+                    row.style.display = '';
+                    hasVisible = true;
+                } else {
+                    row.hidden = true;
+                    row.classList.add('d-none');
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        async function facultyApprove(topicId) {
+            try {
+                const resp = await fetch(`/api/topics/${topicId}/faculty-approve`, {
+                    method: 'POST'
+                });
+                const data = await resp.json();
+                if (resp.ok) {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Duyệt thành công',
+                        text: 'Đề tài đã được Khoa phê duyệt.',
+                        timer: 1800,
+                        showConfirmButton: false
+                    });
+                    location.reload();
+                } else {
+                    Swal.fire('Lỗi', 'Không thể phê duyệt: ' + (data.error || 'Lỗi hệ thống'), 'error');
+                }
+            } catch (e) {
+                Swal.fire('Lỗi kết nối', e.message, 'error');
+            }
+        }
+    </script>
 {% endblock %}

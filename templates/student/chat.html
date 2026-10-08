@@ -196,4 +196,17 @@
                     </div>
                 </div>
         </div>
+        
+        {% if target_user %}
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                // Add a small delay to ensure chat.js has initialized the UI
+                setTimeout(() => {
+                    if (typeof startPrivateChat === 'function') {
+                        startPrivateChat({{ target_user.id }}, '{{ target_user.full_name }}');
+                    }
+                }, 500);
+            });
+        </script>
+        {% endif %}
 {% endblock %}

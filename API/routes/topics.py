@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from models import Topic, User, db
+from models import Topic, User, Batch, db
 
 topics_bp = Blueprint('topics', __name__, url_prefix='/api/topics')
 
@@ -27,17 +27,17 @@ def get_topics():
       200:
         description: List of topics
     """
-    query = Topic.query
+    query = Topic.query.join(Batch).filter(Batch.status != 'hidden')
     
     # Filter by mentor
     mentor_id = request.args.get('mentor_id')
     if mentor_id:
-        query = query.filter_by(mentor_id=mentor_id)
+        query = query.filter(Topic.mentor_id == mentor_id)
         
     # Filter by status (e.g. pending)
     status = request.args.get('status')
     if status:
-        query = query.filter_by(status=status)
+        query = query.filter(Topic.status == status)
         
     # Filter by group_id
     group_id = request.args.get('group_id')
@@ -45,7 +45,7 @@ def get_topics():
         if group_id.lower() == 'null' or group_id == '0':
             query = query.filter(Topic.group_id.is_(None))
         else:
-            query = query.filter_by(group_id=group_id)
+            query = query.filter(Topic.group_id == group_id)
             
     topics = query.all()
     result = []
@@ -132,11 +132,12 @@ def register_topic():
             return jsonify({'error': 'Unauthorized'}), 401
             
         group_id = data.get('group_id', 0)
+        members_list = data.get('members', [])
         
         if group_id == 0:
             # Auto-create group
             new_group = Group(
-                name=f"Nhóm của {session.get('user_name', 'SV')}",
+                name=f"Nhóm ID: {user_id}",
                 batch_id=data['batch_id'],
                 leader_id=user_id
             )
@@ -144,22 +145,48 @@ def register_topic():
             db.session.flush() # To get new_group.id
             group_id = new_group.id
             
-            # Add leader as member
-            new_member = GroupMember(group_id=group_id, student_id=user_id)
+            # Add leader as accepted member
+            new_member = GroupMember(group_id=group_id, student_id=user_id, status='accepted')
             db.session.add(new_member)
+            
+            # Add other members as pending
+            for member_id in members_list:
+                if str(member_id) != str(user_id):
+                    invited_member = GroupMember(group_id=group_id, student_id=int(member_id), status='pending')
+                    db.session.add(invited_member)
+                    
+                    # Send invitation as a private chat message (type: invitation)
+                    from models import Message as Msg
+                    import json
+                    inviter = User.query.get(user_id)
+                    invite_msg = Msg(
+                        sender_id=user_id,
+                        receiver_id=int(member_id),
+                        group_id=None,
+                        content=f"📩 Mời bạn tham gia nhóm NCKH cho đề tài **{data['name']}**. Nhấn Đồng ý để xác nhận.",
+                        message_type='invitation',
+                        meta_data=json.dumps({'invite_group_id': group_id, 'topic_name': data['name']})
+                    )
+                    db.session.add(invite_msg)
         else:
             # Check if group already has a topic in this batch
             existing_topic = Topic.query.filter_by(group_id=group_id, batch_id=data['batch_id']).first()
             if existing_topic:
                 return jsonify({'error': 'Group already registered a topic for this batch'}), 400
             
+        # Determine topic status based on pending members
+        topic_status = 'pending'
+        pending_members = GroupMember.query.filter_by(group_id=group_id, status='pending').first()
+        if pending_members or (group_id == 0 and len(members_list) > 0):
+            topic_status = 'waiting_for_members'
+
         new_topic = Topic(
             title=data['name'], # Note: Model uses 'title'
             description=data.get('description', ''),
             batch_id=data['batch_id'],
             mentor_id=data['mentor_id'],
             group_id=group_id,
-            status='pending'
+            status=topic_status
         )
         db.session.add(new_topic)
         db.session.flush() # To get new_topic.id
@@ -175,6 +202,101 @@ def register_topic():
         db.session.commit() # Transaction completed
         
         return jsonify({'message': 'Topic registered successfully', 'topic_id': new_topic.id}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@topics_bp.route('/invitation', methods=['POST'])
+def handle_invitation():
+    from flask import session
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.get_json()
+    group_id = data.get('group_id')
+    action = data.get('action') # 'accepted' or 'rejected'
+    msg_id = data.get('msg_id')
+    
+    if not group_id or not action:
+        return jsonify({'error': 'Missing parameters'}), 400
+        
+    try:
+        from models import GroupMember, Topic, Message
+        import json
+        
+        # Update message metadata if msg_id provided
+        if msg_id:
+            msg = Message.query.get(msg_id)
+            if msg and msg.receiver_id == user_id:
+                try:
+                    meta = json.loads(msg.meta_data or '{}')
+                    meta['invite_status'] = action
+                    msg.meta_data = json.dumps(meta)
+                except:
+                    pass
+                    
+        member = GroupMember.query.filter_by(group_id=group_id, student_id=user_id, status='pending').first()
+        if not member:
+            return jsonify({'error': 'Invitation not found'}), 404
+            
+        if action == 'rejected':
+            member.status = 'rejected'
+        else:
+            member.status = 'accepted'
+            
+        # Check if all members accepted
+        db.session.flush()
+        pending_count = GroupMember.query.filter_by(group_id=group_id, status='pending').count()
+        rejected_count = GroupMember.query.filter_by(group_id=group_id, status='rejected').count()
+        topic = Topic.query.filter_by(group_id=group_id).first()
+        
+        if topic and topic.status == 'waiting_for_members':
+            if rejected_count > 0:
+                pass # Don't advance if someone rejected, leave it for the leader to cancel
+            elif pending_count == 0:
+                topic.status = 'pending' # Now waiting for lecturer
+            
+        db.session.commit()
+        return jsonify({'message': 'Successfully processed invitation'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@topics_bp.route('/<int:topic_id>', methods=['DELETE'])
+def cancel_topic(topic_id):
+    from flask import session
+    from models import Topic, TopicRegistration, Group, GroupMember
+    
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'Unauthorized'}), 401
+        
+    try:
+        topic = Topic.query.get(topic_id)
+        if not topic:
+            return jsonify({'error': 'Topic not found'}), 404
+            
+        group = Group.query.get(topic.group_id)
+        if not group or group.leader_id != user_id:
+            return jsonify({'error': 'Only the group leader can cancel this registration'}), 403
+            
+        if topic.status != 'waiting_for_members':
+            return jsonify({'error': 'Cannot cancel this topic because it has already progressed'}), 400
+            
+        # Delete registration
+        TopicRegistration.query.filter_by(topic_id=topic.id).delete()
+        
+        # Delete topic
+        db.session.delete(topic)
+        
+        # Delete group members and group
+        GroupMember.query.filter_by(group_id=group.id).delete()
+        db.session.delete(group)
+        
+        db.session.commit()
+        return jsonify({'message': 'Topic and group deleted successfully'}), 200
+        
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
@@ -219,7 +341,7 @@ def faculty_approve_topic(topic_id):
     Faculty approves a topic
     """
     from flask import session
-    if session.get('role') != 'faculty':
+    if session.get('role') not in ['faculty', 'admin']:
         return jsonify({'error': 'Unauthorized'}), 403
         
     try:

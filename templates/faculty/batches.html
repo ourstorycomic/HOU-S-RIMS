@@ -11,7 +11,13 @@
                         {% for b in batches %}
                         <div class="col-md-6">
                             <div class="card border-0 shadow-sm p-4 rounded-4 h-100">
-                                <span class="badge {% if b.status == 'active' %}bg-success-subtle text-success{% else %}bg-secondary-subtle text-secondary{% endif %} fw-bold w-auto align-self-start mb-3 px-3">{{ b.status | upper }}</span>
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <span class="badge {% if b.status == 'active' %}bg-success-subtle text-success{% else %}bg-secondary-subtle text-secondary{% endif %} fw-bold px-3">{{ b.status | upper }}</span>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-primary btn-edit-batch border-0" data-id="{{ b.id }}" data-name="{{ b.name }}" data-start="{{ b.start_date.strftime('%Y-%m-%d') if b.start_date else '' }}" data-deadline="{{ b.submission_deadline.strftime('%Y-%m-%d') if b.submission_deadline else '' }}" data-end="{{ b.end_date.strftime('%Y-%m-%d') if b.end_date else '' }}" data-year="{{ b.academic_year }}" data-type="{{ b.type }}" data-status="{{ b.status }}" data-desc="{{ b.description|replace('\"', '&quot;') if b.description else '' }}" data-doc="{{ b.guidance_doc if b.guidance_doc else '' }}" data-bs-toggle="modal" data-bs-target="#modalEditBatch" title="Sửa"><i class="fa-solid fa-pen"></i></button>
+                                        <button class="btn btn-sm btn-outline-danger btn-delete-batch border-0 ms-1" data-id="{{ b.id }}" title="Xóa"><i class="fa-solid fa-trash"></i></button>
+                                    </div>
+                                </div>
                                 <h5 class="fw-bold mb-2">{{ b.name }}</h5>
                                 <div class="text-muted small mb-4">
                                     <i class="fa-regular fa-calendar me-2"></i>

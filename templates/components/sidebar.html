@@ -29,7 +29,7 @@
     </a>
     <a href="{{ url_for('faculty.topics') }}" class="nav-link {{ 'active-main' if request.endpoint == 'faculty.topics' else '' }}">
         <i class="fa-solid fa-layer-group"></i> Đề tài & Nhóm
-        {% set topic_count = topics | length if topics is defined else 0 %}
+        {% set topic_count = global_topic_count if global_topic_count is defined else (topics | length if topics is defined else 0) %}
         {% if topic_count > 0 %}<span class="badge bg-primary rounded-pill ms-1" style="font-size: 9px;">{{ topic_count }}</span>{% endif %}
     </a>
     <a href="{{ url_for('faculty.lecturers') }}" class="nav-link {{ 'active-main' if request.endpoint == 'faculty.lecturers' else '' }}">
@@ -56,7 +56,7 @@
     </a>
     <a href="{{ url_for('lecturer.approve') }}" class="nav-link {{ 'active-purple' if request.endpoint == 'lecturer.approve' else '' }}">
         <i class="fa-solid fa-file-signature"></i> Phê duyệt đề tài
-        {% set pending_count = pending_topics | length if pending_topics is defined else 0 %}
+        {% set pending_count = global_pending_topics_count if global_pending_topics_count is defined else (pending_topics | length if pending_topics is defined else 0) %}
         {% if pending_count > 0 %}<span class="badge bg-danger rounded-pill ms-1" style="font-size: 9px;">{{ pending_count }}</span>{% endif %}
     </a>
     <a href="{{ url_for('lecturer.progress') }}" class="nav-link {{ 'active-purple' if request.endpoint == 'lecturer.progress' else '' }}">
@@ -64,7 +64,7 @@
     </a>
     <a href="{{ url_for('lecturer.chat') }}" class="nav-link {{ 'active-purple' if request.endpoint == 'lecturer.chat' else '' }}">
         <i class="fa-regular fa-comments"></i> Chatgroups
-        {% set group_count = my_groups | length if my_groups is defined else 0 %}
+        {% set group_count = global_my_groups_count if global_my_groups_count is defined else (my_groups | length if my_groups is defined else 0) %}
         {% if group_count > 0 %}<span class="badge bg-primary rounded-pill ms-1" style="font-size: 9px;">{{ group_count }}</span>{% endif %}
     </a>
     <a href="{{ url_for('lecturer.calendar') }}" class="nav-link {{ 'active-purple' if request.endpoint == 'lecturer.calendar' else '' }}">
@@ -97,7 +97,7 @@
     </a>
     <a href="{{ url_for('student.chat') }}" class="nav-link {{ 'active-student' if request.endpoint == 'student.chat' else '' }}">
         <i class="fa-regular fa-comments"></i> Chatgroups
-        {% set sg_count = my_groups | length if my_groups is defined else 0 %}
+        {% set sg_count = global_my_groups_count if global_my_groups_count is defined else (my_groups | length if my_groups is defined else 0) %}
         {% if sg_count > 0 %}<span class="badge bg-primary rounded-pill ms-1" style="font-size: 9px;">{{ sg_count }}</span>{% endif %}
     </a>
     <a href="{{ url_for('student.calendar') }}" class="nav-link {{ 'active-student' if request.endpoint == 'student.calendar' else '' }}">

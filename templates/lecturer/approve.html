@@ -16,13 +16,20 @@
                                     <div class="d-flex gap-2 mb-1">
                                         <span class="badge bg-warning text-dark" style="font-size: 10px;">CHỜ PHÊ DUYỆT</span>
                                     </div>
-                                    <div class="fw-bold mb-1">{{ topic.name }}</div>
+                                    <div class="fw-bold mb-1">{{ topic.title }}</div>
                                     <small class="text-muted"><i class="fa-solid fa-users me-1"></i> {{ topic.description }}</small>
                                 </div>
                                 <div class="d-flex gap-2">
-                                    <button class="btn btn-outline-secondary btn-sm fw-bold" onclick="showTopicDetail('{{ topic.name|replace("'","\\'") }}', '{{ topic.description|replace("'","\\'") }}')">Xem chi tiết</button>
+                                    {% set students = [] %}
+                                    {% if topic.group and topic.group.members %}
+                                        {% for member in topic.group.members %}
+                                            {% set _ = students.append(member.student.full_name) %}
+                                        {% endfor %}
+                                    {% endif %}
+                                    {% set students_str = students|join(', ') %}
+                                    <button class="btn btn-outline-secondary btn-sm fw-bold" onclick="showTopicDetail('{{ topic.title|replace("'","\\'") }}', '{{ topic.description|replace("'","\\'") }}', '{{ students_str|replace("'","\\'") }}')">Xem chi tiết</button>
                                     <button class="btn btn-primary btn-sm fw-bold" style="background-color: #6366f1; border-color: #6366f1;"
-                                        onclick="openApproveModal({{ topic.id }}, '{{ topic.name|replace("'","\\'") }}')">Đồng ý hướng dẫn</button>
+                                        onclick="openApproveModal({{ topic.id }}, '{{ topic.title|replace("'","\\'") }}')">Đồng ý hướng dẫn</button>
                                     <button class="btn btn-light text-danger border-0" onclick="openRejectModal({{ topic.id }})"><i class="fa-regular fa-circle-xmark fs-4"></i></button>
                                 </div>
                             </div>

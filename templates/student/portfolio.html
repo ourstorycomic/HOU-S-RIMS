@@ -1,5 +1,13 @@
 {% extends "layouts/student_layout.html" %}
 
+<style type="text/css">
+@media print {
+    body * { visibility: hidden; }
+    #view-s-profile, #view-s-profile * { visibility: visible; }
+    #view-s-profile { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 20px; }
+    .btn, button, .modal, .sidebar, .top-bar, .badge.bg-light { display: none !important; }
+}
+</style>
 {% block student_content %}
 <div id="view-s-profile" class="fade-in ">
                 <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
@@ -14,7 +22,10 @@
                                 <div class="text-center bg-light rounded-3 p-2 px-3"><div class="small text-muted fw-bold">ĐIỂM NCKH</div><div class="h5 fw-bold text-primary mb-0">--</div></div>
                             </div>
                         </div>
-                        <div class="col-md-3 text-end"><button class="btn btn-dark rounded-pill px-4 py-2 fw-bold" onclick="showToast('Đang tải xuống Portfolio...')"><i class="fa-solid fa-file-arrow-down me-2"></i> XUẤT PORTFOLIO (PDF)</button></div>
+                        <div class="col-md-3 text-end">
+                            <button class="btn btn-outline-primary rounded-pill px-3 py-2 fw-bold mb-2 w-100" data-bs-toggle="modal" data-bs-target="#modalEditProfile"><i class="fa-solid fa-pen-to-square me-2"></i> CẬP NHẬT THÔNG TIN</button>
+                            <button class="btn btn-dark rounded-pill px-3 py-2 fw-bold w-100" onclick="window.print()"><i class="fa-solid fa-file-arrow-down me-2"></i> XUẤT PORTFOLIO (PDF)</button>
+                        </div>
                     </div>
                 </div>
                 <div class="row g-4">

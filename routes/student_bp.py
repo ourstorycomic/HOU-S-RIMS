@@ -1,6 +1,7 @@
-from flask import Blueprint, render_template, session, redirect, url_for
+from flask import Blueprint, render_template, session, redirect, url_for, request
 from models import db, User, Batch, Group, Topic, GroupMember, Notification, Milestone, Progress, Skill, Achievement, Experience
 from datetime import datetime
+from sqlalchemy import func
 
 student_bp = Blueprint('student', __name__, url_prefix='/student')
 
@@ -13,8 +14,12 @@ def require_student():
 def inject_common_data():
     user_id = session.get('user_id')
     current_user = User.query.get(user_id) if user_id else None
-    notifications = Notification.query.filter_by(user_id=user_id).order_by(Notification.created_at.desc()).all() if user_id else []
-    return dict(current_user=current_user, notifications=notifications, current_time=datetime.utcnow())
+    notifications = Notification.query.filter_by(user_id=user_id).order_by(Notification.is_read.asc(), Notification.created_at.desc()).all() if user_id else []
+    current_year = session.get('academic_year', '2025-2026')
+    active_batch = Batch.query.filter_by(academic_year=current_year, status='active').first()
+    global_my_groups_count = Group.query.join(GroupMember).filter(GroupMember.student_id == user_id).count() if user_id else 0
+    all_students = User.query.filter(User.role.ilike('student')).all()
+    return dict(current_user=current_user, notifications=notifications, current_time=datetime.utcnow(), active_batch=active_batch, global_my_groups_count=global_my_groups_count, all_students=all_students)
 
 @student_bp.route('/')
 def index():
@@ -22,7 +27,11 @@ def index():
 
 @student_bp.route('/dashboard')
 def dashboard():
-    return render_template('student/dashboard.html')
+    user_id = session.get('user_id')
+    pending_invitations = []
+    if user_id:
+        pending_invitations = GroupMember.query.filter_by(student_id=user_id, status='pending').all()
+    return render_template('student/dashboard.html', pending_invitations=pending_invitations)
 
 @student_bp.route('/portfolio')
 def portfolio():
@@ -41,7 +50,7 @@ def register():
     my_topics = []
     if my_groups:
         group_ids = [g.id for g in my_groups]
-        my_topics = Topic.query.filter(Topic.group_id.in_(group_ids)).all()
+        my_topics = Topic.query.join(Batch).filter(Topic.group_id.in_(group_ids), Batch.status == 'active').all()
     return render_template('student/register.html', batches=batches, mentors=mentors, my_groups=my_groups, my_topics=my_topics)
 
 @student_bp.route('/progress')
@@ -52,7 +61,7 @@ def progress():
     topic_milestones = []
     if my_groups:
         group_ids = [g.id for g in my_groups]
-        my_topics = Topic.query.filter(Topic.group_id.in_(group_ids)).all()
+        my_topics = Topic.query.join(Batch).filter(Topic.group_id.in_(group_ids), Batch.status == 'active').all()
         if my_topics:
             topic_milestones = Milestone.query.filter_by(topic_id=my_topics[0].id).order_by(Milestone.deadline.asc()).all()
             total_progress = 0
@@ -76,8 +85,14 @@ def calendar():
 @student_bp.route('/chat')
 def chat():
     user_id = session.get('user_id')
-    my_groups = Group.query.join(GroupMember).filter(GroupMember.student_id == user_id).all()
-    return render_template('student/chat.html', my_groups=my_groups)
+    my_groups = Group.query.join(GroupMember).filter(GroupMember.student_id == user_id, GroupMember.status == 'accepted').all()
+    
+    target_id = request.args.get('target_id')
+    target_user = None
+    if target_id:
+        target_user = User.query.get(target_id)
+        
+    return render_template('student/chat.html', my_groups=my_groups, target_user=target_user)
 
 @student_bp.route('/result')
 def result():

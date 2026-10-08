@@ -3,10 +3,9 @@
 {% block faculty_content %}
 <div id="view-f-overview" class="fade-in">
             <div class="row g-4 mb-4">
-                    <div class="col-md-3"><div class="stat-card p-4"><div class="icon-box bg-primary-subtle text-primary mb-3"><i class="fa-regular fa-file"></i></div><div class="text-muted small fw-bold text-uppercase">TỔNG ĐỀ TÀI</div><div class="h2 fw-bold mb-0">{{ topics|length }}</div></div></div>
-                    <div class="col-md-3"><div class="stat-card p-4"><div class="icon-box bg-warning-subtle text-warning mb-3"><i class="fa-regular fa-clock"></i></div><div class="text-muted small fw-bold text-uppercase">CHỜ PHÊ DUYỆT</div><div class="h2 fw-bold mb-0">{{ topics|selectattr('status', 'equalto', 'pending')|list|length }}</div></div></div>
-                    <div class="col-md-3"><div class="stat-card p-4"><div class="icon-box bg-success-subtle text-success mb-3"><i class="fa-solid fa-chart-line"></i></div><div class="text-muted small fw-bold text-uppercase">ĐANG THỰC HIỆN</div><div class="h2 fw-bold mb-0">{{ topics|selectattr('status', 'equalto', 'approved')|list|length }}</div></div></div>
-                    <div class="col-md-3"><div class="stat-card p-4"><div class="icon-box bg-info-subtle text-info mb-3"><i class="fa-solid fa-database"></i></div><div class="text-muted small fw-bold text-uppercase">TỔNG KINH PHÍ</div><div class="h2 fw-bold mb-0">0 VNĐ</div></div></div>
+                    <div class="col-md-4"><div class="stat-card p-4"><div class="icon-box bg-primary-subtle text-primary mb-3"><i class="fa-regular fa-file"></i></div><div class="text-muted small fw-bold text-uppercase">TỔNG ĐỀ TÀI</div><div class="h2 fw-bold mb-0">{{ topics|length }}</div></div></div>
+                    <div class="col-md-4"><div class="stat-card p-4"><div class="icon-box bg-warning-subtle text-warning mb-3"><i class="fa-regular fa-clock"></i></div><div class="text-muted small fw-bold text-uppercase">CHỜ PHÊ DUYỆT</div><div class="h2 fw-bold mb-0">{{ topics|selectattr('status', 'equalto', 'faculty_pending')|list|length }}</div></div></div>
+                    <div class="col-md-4"><div class="stat-card p-4"><div class="icon-box bg-success-subtle text-success mb-3"><i class="fa-solid fa-chart-line"></i></div><div class="text-muted small fw-bold text-uppercase">ĐANG THỰC HIỆN</div><div class="h2 fw-bold mb-0">{{ topics|selectattr('status', 'equalto', 'approved')|list|length }}</div></div></div>
                 </div>
 
                 <div class="row g-4">

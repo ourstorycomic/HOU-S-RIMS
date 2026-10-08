@@ -30,6 +30,8 @@ class Batch(db.Model):
     submission_deadline = db.Column(db.DateTime, nullable=True)
     status = db.Column(db.String(20), default='active') # active, completed
     academic_year = db.Column(db.String(20), default='2025-2026')
+    guidance_doc = db.Column(db.String(255), nullable=True)
+    description = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     topics = db.relationship('Topic', backref='batch', lazy=True)
@@ -50,6 +52,7 @@ class GroupMember(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     group_id = db.Column(db.Integer, db.ForeignKey('groups.id'), nullable=False)
     student_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    status = db.Column(db.String(20), default='accepted') # 'accepted', 'pending'
 
 class Topic(db.Model):
     __tablename__ = 'topics'
@@ -94,9 +97,12 @@ class Message(db.Model):
     receiver_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     group_id = db.Column(db.Integer, db.ForeignKey('groups.id'), nullable=True)
     content = db.Column(db.Text, nullable=False)
-    message_type = db.Column(db.String(20), default='text') # text, image, file, emoji
+    message_type = db.Column(db.String(20), default='text') # text, image, file, emoji, invitation
     file_url = db.Column(db.String(255), nullable=True)
     file_name = db.Column(db.String(255), nullable=True)
+    meta_data = db.Column(db.String(500), nullable=True)  # JSON string for extra data (group_id for invitations)
+    is_read = db.Column(db.Boolean, default=False)
+    read_at = db.Column(db.DateTime, nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     sender = db.relationship('User', foreign_keys=[sender_id])

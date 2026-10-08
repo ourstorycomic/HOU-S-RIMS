@@ -18,35 +18,80 @@
                 <div class="dropdown">
                     <button class="btn btn-light border-0 btn-sm fw-bold text-muted position-relative" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="fa-regular fa-bell" style="font-size: 1.1rem;"></i>
-                        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle">
-                            <span class="visually-hidden">New alerts</span>
+                        {% set unread_count = notifications|selectattr('is_read', 'equalto', false)|list|length %}
+                        {% set pending_inv_count = current_user.group_memberships | selectattr('status', 'equalto', 'pending') | list | length if current_user else 0 %}
+                        {% if unread_count + pending_inv_count > 0 %}
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 9px; min-width: 18px;">
+                            {{ unread_count + pending_inv_count }}
                         </span>
+                        {% endif %}
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg p-0 mt-3" style="width: 320px; border-radius: 12px; overflow: hidden;">
                         <li class="p-3 bg-white border-bottom d-flex justify-content-between align-items-center">
                             <h6 class="fw-bold mb-0 text-dark">Thông báo</h6>
-                            <a href="#" class="small text-primary fw-bold text-decoration-none" onclick="switchTab('s-calendar', document.querySelector('.sub-nav-item:last-child'))">Xem tất cả</a>
+                            <a href="#" class="small text-primary fw-bold text-decoration-none" onclick="showAllNotifications()">Xem tất cả</a>
                         </li>
                         
-                        <div style="max-height: 300px; overflow-y: auto;">
+                        <div style="max-height: 360px; overflow-y: auto;">
+                            {% set pending_invitations = [] %}
+                            {% if current_user %}
+                                {% set pending_invitations = current_user.group_memberships | selectattr('status', 'equalto', 'pending') | list %}
+                            {% endif %}
+                            
+                            {% for inv in pending_invitations %}
+                            {% set topic = inv.group.topics[0] if inv.group and inv.group.topics else None %}
+                            <li>
+                                <div class="dropdown-item p-3 border-bottom bg-warning-subtle">
+                                    <div class="d-flex gap-3 align-items-start">
+                                        <div class="bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;"><i class="fa-solid fa-users"></i></div>
+                                        <div class="flex-grow-1">
+                                            <div class="fw-bold small text-dark mb-1">Lời mời tham gia nhóm NCKH</div>
+                                            <div class="small text-muted mb-2" style="line-height: 1.4;">
+                                                Bạn được mời vào nhóm <strong>{{ inv.group.name }}</strong>
+                                                {% if topic %} - Đề tài: <em>{{ topic.title }}</em>{% endif %}
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <button class="btn btn-sm btn-dark rounded-pill px-3 py-1" style="font-size: 11px;" onclick="handleGroupInvitation({{ inv.group_id }}, 'accepted')">
+                                                    <i class="fa-solid fa-check me-1"></i> Đồng ý
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1" style="font-size: 11px;" onclick="handleGroupInvitation({{ inv.group_id }}, 'rejected')">
+                                                    <i class="fa-solid fa-xmark me-1"></i> Từ chối
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </li>
+                            {% endfor %}
+                            
                             {% if notifications %}
                                 {% for notif in notifications %}
-                                <li><a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start {% if not notif.is_read %}bg-light{% endif %}" href="#">
-                                    <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;"><i class="fa-regular fa-bell"></i></div>
-                                    <div>
-                                        <div class="fw-bold small text-dark mb-1">Thông báo hệ thống</div>
-                                        <div class="small text-muted mb-1" style="line-height: 1.4;">{{ notif.content }}</div>
-                                        <div class="text-muted" style="font-size: 10px;">{{ notif.created_at.strftime('%d/%m/%Y %H:%M') if notif.created_at else '' }}</div>
-                                    </div>
-                                </a></li>
+                                <li>
+                                    <a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start {% if not notif.is_read %}bg-light{% endif %}" href="#" onclick="readNotification({{ notif.id }}, decodeURIComponent('{{ notif.content | urlencode }}'), false)">
+                                        <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;"><i class="fa-regular fa-bell"></i></div>
+                                        <div>
+                                            <div class="fw-bold small text-dark mb-1 d-flex align-items-center justify-content-between">
+                                                <span>Thông báo hệ thống</span>
+                                                {% if not notif.is_read %}
+                                                    <span class="badge bg-danger rounded-circle p-1" style="width:8px; height:8px;"></span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="small text-muted mb-1" style="line-height: 1.4; white-space: normal;">{{ notif.content.split('|||')[0] | striptags | truncate(80) }}</div>
+                                            <div class="text-muted" style="font-size: 10px;">{{ notif.created_at.strftime('%d/%m/%Y %H:%M') if notif.created_at else '' }}</div>
+                                        </div>
+                                    </a>
+                                </li>
                                 {% endfor %}
-                            {% else %}
+                            {% endif %}
+                            
+                            {% if not notifications and not pending_invitations %}
                                 <li class="p-3 text-center text-muted small">Không có thông báo nào</li>
                             {% endif %}
                         </div>
 
-                        <li class="p-2 bg-light text-center border-top">
-                            <a href="#" class="small text-muted fw-bold text-decoration-none" style="font-size: 11px;">Đánh dấu tất cả là đã đọc</a>
+                        <li class="p-2 bg-light text-center border-top d-flex justify-content-between px-3">
+                            <a href="#" class="small text-muted fw-bold text-decoration-none" style="font-size: 11px;" onclick="showAllNotifications()">Xem tất cả</a>
+                            <a href="#" class="small text-danger fw-bold text-decoration-none" style="font-size: 11px;" onclick="deleteAllReadNotifications()"><i class="fa-solid fa-trash me-1"></i> Xóa thư đã đọc</a>
                         </li>
                     </ul>
                 </div>
@@ -80,7 +125,101 @@
 <div class="content-body">
 {% block student_content %}{% endblock %}
 </div>
-<div class="modal fade" id="modalAddMember" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Thêm Thành viên Nhóm</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="mb-3"><label class="form-label small fw-bold text-muted">Nhập Mã sinh viên</label><input type="text" class="form-control"></div></div><div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-primary w-100 fw-bold" onclick="showToast('Đã thêm thành viên!')" data-bs-dismiss="modal">Thêm</button></div></div></div></div>
+<div class="modal fade" id="modalAddMember" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom-0">
+                <h5 class="modal-title fw-bold">Thêm Thành viên Nhóm</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3 position-relative">
+                    <label class="form-label small fw-bold text-muted">Tìm kiếm Sinh viên (Tên hoặc Mã SV)</label>
+                    <input type="text" class="form-control mb-2" id="searchStudentInput" placeholder="Nhập để tìm kiếm..." onkeyup="searchStudents()">
+                    
+                    <div class="list-group shadow-sm" id="studentList" style="max-height: 250px; overflow-y: auto;">
+                        {% for student in all_students %}
+                            {% if current_user and student.id != current_user.id %}
+                            <label class="list-group-item d-flex gap-2 align-items-center student-item" data-name="{{ student.full_name | lower }}" data-sid="{{ (student.student_id or '') | lower }}">
+                                <input class="form-check-input flex-shrink-0" type="checkbox" value="{{ student.id }}" data-fullname="{{ student.full_name }}" data-sid="{{ student.student_id or '' }}">
+                                <span>
+                                    <strong>{{ student.full_name }}</strong><br>
+                                    <small class="text-muted">{{ student.student_id or 'Chưa cập nhật mã' }}</small>
+                                </span>
+                                <a href="/profile/{{ student.student_id or student.username or student.id }}" target="_blank" class="btn btn-sm btn-light ms-auto rounded-circle" title="Xem Profile Sinh viên" onclick="event.stopPropagation();">
+                                    <i class="fa-regular fa-id-badge text-primary"></i>
+                                </a>
+                            </label>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button class="btn btn-primary w-100 fw-bold" onclick="addSelectedMembers()" data-bs-dismiss="modal">Thêm vào nhóm</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+function searchStudents() {
+    const term = document.getElementById('searchStudentInput').value.toLowerCase();
+    document.querySelectorAll('.student-item').forEach(item => {
+        if (item.getAttribute('data-name').includes(term) || item.getAttribute('data-sid').includes(term)) {
+            item.style.display = 'flex';
+            item.style.setProperty('display', 'flex', 'important');
+        } else {
+            item.style.display = 'none';
+            item.style.setProperty('display', 'none', 'important');
+        }
+    });
+}
+
+// Giữ lại các thành viên đã được chọn
+window.selectedMembersForGroup = [];
+
+function addSelectedMembers() {
+    const checkboxes = document.querySelectorAll('#studentList .form-check-input:checked');
+    const container = document.getElementById('groupMembersContainer'); // We need to add this ID to register.html
+    
+    checkboxes.forEach(cb => {
+        const id = cb.value;
+        const name = cb.getAttribute('data-fullname');
+        const sid = cb.getAttribute('data-sid');
+        
+        if (!window.selectedMembersForGroup.includes(id)) {
+            window.selectedMembersForGroup.push(id);
+            if(container) {
+                const div = document.createElement('div');
+                div.className = 'card p-3 bg-light border-0 mb-2 member-card';
+                div.setAttribute('data-id', id);
+                div.innerHTML = `
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold small" style="width: 35px; height: 35px;">${name.substring(0,2).toUpperCase()}</div>
+                            <div>
+                                <div class="fw-bold text-dark">${name}</div>
+                                <div class="small text-muted">Thành viên (${sid})</div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeMember('${id}', this)"><i class="fa-solid fa-times"></i></button>
+                    </div>
+                `;
+                container.insertBefore(div, container.lastElementChild);
+            }
+        }
+    });
+    
+    // Bỏ check
+    checkboxes.forEach(cb => cb.checked = false);
+    showToast('Đã thêm thành viên vào danh sách tạm!');
+}
+
+function removeMember(id, btn) {
+    window.selectedMembersForGroup = window.selectedMembersForGroup.filter(mid => mid !== id);
+    btn.closest('.member-card').remove();
+}
+</script>
     <div class="modal fade" id="modalMoreSuggestions" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Gợi ý Đề tài hệ thống</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><ul class="list-group list-group-flush"><li class="list-group-item">Ứng dụng Blockchain...</li><li class="list-group-item">Hệ thống IoT...</li></ul></div></div></div></div>
     <div class="modal fade" id="modalAllMentors" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Danh sách Giảng viên Hướng dẫn</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="row g-3"><div class="col-md-6"><div class="p-3 border rounded-3 d-flex align-items-center gap-3"><div class="bg-light rounded-circle p-2"><i class="fa-solid fa-user-tie"></i></div><div><div class="fw-bold">TS. Nguyễn Văn A</div><div class="small text-muted">Khoa CNTT - AI, Big Data</div></div></div></div></div></div></div></div></div>
 
@@ -144,7 +283,27 @@
             </div>
         </div>
     </div>
-    <div class="modal fade" id="modalProfile" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Hồ sơ Sinh viên</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="mb-3"><label class="form-label small fw-bold text-muted">Họ tên</label><input type="text" class="form-control" value="{{ current_user.full_name if current_user else '' }}" readonly></div><div class="mb-3"><label class="form-label small fw-bold text-muted">Email</label><input type="text" class="form-control" value="{{ current_user.email if current_user else '' }}" readonly></div><div class="mb-3"><label class="form-label small fw-bold text-muted">Vai trò</label><input type="text" class="form-control" value="{{ current_user.role if current_user else '' }}" readonly></div></div><div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-primary w-100 fw-bold" onclick="showToast('Cập nhật hồ sơ thành công!')" data-bs-dismiss="modal">Lưu thay đổi</button></div></div></div></div>
+    <div class="modal fade" id="modalEditProfile" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-bottom-0">
+                    <h5 class="modal-title fw-bold">Cập nhật Hồ sơ Sinh viên</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="editProfileId" value="{{ current_user.id if current_user else '' }}">
+                    <div class="mb-3"><label class="form-label small fw-bold text-muted">Họ tên</label><input type="text" id="editProfileName" class="form-control" value="{{ current_user.full_name if current_user else '' }}"></div>
+                    <div class="mb-3"><label class="form-label small fw-bold text-muted">Email</label><input type="email" id="editProfileEmail" class="form-control" value="{{ current_user.email if current_user else '' }}"></div>
+                    <div class="mb-3"><label class="form-label small fw-bold text-muted">Số điện thoại</label><input type="text" id="editProfilePhone" class="form-control" value="{{ current_user.phone if current_user else '' }}"></div>
+                    <div class="mb-3"><label class="form-label small fw-bold text-muted">Giới thiệu bản thân (Bio)</label><textarea id="editProfileBio" class="form-control" rows="3">{{ current_user.bio if current_user else '' }}</textarea></div>
+                    <div class="mb-3"><label class="form-label small fw-bold text-muted">Khoa/Ngành</label><input type="text" id="editProfileFaculty" class="form-control" value="{{ current_user.faculty if current_user else '' }}"></div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button class="btn btn-primary w-100 fw-bold" onclick="submitEditProfile()">Lưu thay đổi</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="modal fade" id="modalAddSkill" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header bg-primary text-white"><h5 class="modal-title fw-bold">Thêm Kỹ năng NCKH</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="mb-3"><label class="form-label small fw-bold text-muted">Tên kỹ năng</label><input type="text" id="skillName" class="form-control" placeholder="Ví dụ: Lập trình Python, Data Analysis..." required></div></div><div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy</button><button class="btn btn-primary fw-bold px-4" onclick="submitAddSkill()">Lưu</button></div></div></div></div>
 
     <div class="modal fade" id="modalAddAchievement" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header bg-warning"><h5 class="modal-title fw-bold text-dark">Thêm Giải thưởng/Chứng nhận</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="mb-3"><label class="form-label small fw-bold text-muted">Tên giải thưởng/chứng nhận</label><input type="text" id="achName" class="form-control" placeholder="Ví dụ: Giải Nhất NCKH cấp Trường" required></div><div class="mb-3"><label class="form-label small fw-bold text-muted">Năm đạt được</label><input type="text" id="achYear" class="form-control" placeholder="Ví dụ: 2025"></div><div class="mb-0"><label class="form-label small fw-bold text-muted">Mô tả thêm (Tùy chọn)</label><textarea id="achDesc" class="form-control" rows="2" placeholder="Ghi chú thêm..."></textarea></div></div><div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy</button><button class="btn btn-warning fw-bold text-dark px-4" onclick="submitAddAchievement()">Lưu</button></div></div></div></div>

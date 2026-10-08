@@ -18,7 +18,7 @@ def get_notifications():
     if not user_id:
         return jsonify({'error': 'Unauthorized'}), 401
 
-    notifs = Notification.query.filter_by(user_id=user_id).order_by(Notification.created_at.desc()).all()
+    notifs = Notification.query.filter_by(user_id=user_id).order_by(Notification.is_read.asc(), Notification.created_at.desc()).all()
     result = [
         {
             'id': n.id,
@@ -44,3 +44,14 @@ def mark_read(notif_id):
     notif.is_read = True
     db.session.commit()
     return jsonify({'message': 'Marked as read'}), 200
+
+@notifications_bp.route('/read', methods=['DELETE'])
+def delete_read_notifications():
+    """Delete all read notifications for the current user"""
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    Notification.query.filter_by(user_id=user_id, is_read=True).delete()
+    db.session.commit()
+    return jsonify({'message': 'Deleted read notifications'}), 200

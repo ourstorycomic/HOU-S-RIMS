@@ -211,6 +211,7 @@ def get_private_conversations():
 
 @chat_bp.route('/private/<int:user_id>/messages', methods=['GET'])
 def get_private_messages(user_id):
+    from datetime import datetime
     my_id = session.get('user_id')
     if not my_id:
         return jsonify({'error': 'Unauthorized'}), 401
@@ -221,6 +222,14 @@ def get_private_messages(user_id):
             and_(Message.sender_id == user_id, Message.receiver_id == my_id)
         ))
     ).order_by(Message.timestamp.asc()).all()
+    
+    # Mark incoming messages as read
+    unread = [m for m in messages if m.receiver_id == my_id and not m.is_read]
+    for m in unread:
+        m.is_read = True
+        m.read_at = datetime.utcnow()
+    if unread:
+        db.session.commit()
     
     result = []
     for msg in messages:
@@ -234,6 +243,8 @@ def get_private_messages(user_id):
             'message_type': msg.message_type,
             'file_url': msg.file_url,
             'file_name': msg.file_name,
+            'meta_data': msg.meta_data,
+            'is_read': msg.is_read,
             'timestamp': msg.timestamp.strftime('%H:%M %d/%m/%Y')
         })
     return jsonify(result), 200

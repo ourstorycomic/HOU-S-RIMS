@@ -3,6 +3,58 @@
 // HOU S-RIMS - Application Logic (No hardcoded data)
 // ============================================================
 
+// Group invitation handler (called from notification dropdown)
+async function handleGroupInvitation(groupId, action) {
+    try {
+        const resp = await fetch('/api/topics/invitation', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({group_id: groupId, action: action})
+        });
+        if (resp.ok) {
+            const msg = action === 'accepted' ? 'Đã tham gia nhóm nghiên cứu!' : 'Đã từ chối lời mời.';
+            Swal.fire({ icon: 'success', title: 'Thành công', text: msg, timer: 2000, showConfirmButton: false })
+                .then(() => location.reload());
+        } else {
+            const data = await resp.json();
+            Swal.fire('Lỗi', data.error || 'Có lỗi xảy ra', 'error');
+        }
+    } catch(e) {
+        Swal.fire('Lỗi', e.message, 'error');
+    }
+}
+
+// ===================== DATE INPUT CONSTRAINTS =====================
+document.addEventListener('DOMContentLoaded', () => {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const dateInputPairs = [
+        { start: 'createBatchStart', end: 'createBatchEnd' },
+        { start: 'batch-start-date', end: 'batch-end-date' },
+        { start: 'batchStartDate', end: 'batchEndDate' }
+    ];
+    
+    dateInputPairs.forEach(pair => {
+        const startEl = document.getElementById(pair.start);
+        const endEl = document.getElementById(pair.end);
+        
+        if (startEl) {
+            startEl.min = today;
+            startEl.addEventListener('change', function() {
+                if (endEl) {
+                    endEl.min = this.value || today;
+                    if (endEl.value && endEl.value < this.value) {
+                        endEl.value = this.value;
+                    }
+                }
+            });
+        }
+        if (endEl) {
+            endEl.min = today;
+        }
+    });
+});
+
 // ===================== APPROVE TOPIC (Giảng viên) =====================
 let _approveTopicId = null;
 let _rejectTopicId = null;
@@ -25,10 +77,10 @@ function openRejectModal(topicId) {
     modal.show();
 }
 
-function showTopicDetail(name, desc) {
+function showTopicDetail(name, desc, students) {
     Swal.fire({
         title: name,
-        text: desc || 'Không có mô tả.',
+        html: `<strong>Mô tả:</strong> ${desc || 'Không có mô tả chi tiết.'}<br><br><strong>Sinh viên thực hiện:</strong> ${students || 'Chưa rõ'}`,
         icon: 'info',
         confirmButtonColor: '#6366f1',
         confirmButtonText: 'Đóng'
@@ -153,7 +205,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const resp = await fetch('/api/topics/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, description: desc, batch_id: parseInt(batchId), mentor_id: parseInt(mentorId), group_id: finalGroupId })
+                    body: JSON.stringify({ name, description: desc, batch_id: parseInt(batchId), mentor_id: parseInt(mentorId), group_id: finalGroupId, members: window.selectedMembersForGroup || [] })
                 });
                 const data = await resp.json();
                 if (resp.ok || resp.status === 201) {
@@ -174,6 +226,26 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+    
+    // Cancel topic registration if waiting for members
+    window.cancelTopicRegistration = async function(topicId) {
+        if (!confirm('Bạn có chắc chắn muốn hủy đăng ký đề tài này? Toàn bộ lời mời tham gia nhóm sẽ bị hủy.')) return;
+        
+        try {
+            const resp = await fetch(`/api/topics/${topicId}`, {
+                method: 'DELETE'
+            });
+            const data = await resp.json();
+            if (resp.ok) {
+                Swal.fire({icon: 'success', title: 'Đã hủy', text: 'Đã hủy đăng ký đề tài thành công.', timer: 2000, showConfirmButton: false})
+                .then(() => location.reload());
+            } else {
+                Swal.fire('Lỗi', data.error || 'Không thể hủy đề tài.', 'error');
+            }
+        } catch (ex) {
+            Swal.fire('Lỗi', ex.message, 'error');
+        }
+    };
     
     // Check batch expiration on page load
     const batchSelect = document.getElementById('batchId');
@@ -245,6 +317,69 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+
+    // ===================== SỬA / XÓA ĐỢT NCKH =====================
+    document.querySelectorAll('.btn-delete-batch').forEach(btn => {
+        btn.addEventListener('click', async function(e) {
+            e.preventDefault();
+            const id = this.getAttribute('data-id');
+            const result = await Swal.fire({
+                title: 'Xóa đợt này?',
+                text: "Bạn không thể hoàn tác!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Đồng ý xóa',
+                cancelButtonText: 'Hủy'
+            });
+            if (result.isConfirmed) {
+                try {
+                    const res = await fetch(`/api/batches/${id}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        Swal.fire('Đã xóa!', 'Đợt NCKH đã bị xóa.', 'success').then(() => location.reload());
+                    } else {
+                        const data = await res.json();
+                        Swal.fire('Lỗi', data.error || 'Xóa thất bại', 'error');
+                    }
+                } catch(e) { Swal.fire('Lỗi', e.message, 'error'); }
+            }
+        });
+    });
+
+    document.querySelectorAll('.btn-edit-batch').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('editBatchId').value = this.getAttribute('data-id');
+            document.getElementById('editBatchName').value = this.getAttribute('data-name');
+            document.getElementById('editBatchStart').value = this.getAttribute('data-start');
+            document.getElementById('editBatchSubmitDeadline').value = this.getAttribute('data-deadline');
+            document.getElementById('editBatchEnd').value = this.getAttribute('data-end');
+            
+            const year = this.getAttribute('data-year');
+            if (year) document.getElementById('editBatchYear').value = year;
+            
+            const type = this.getAttribute('data-type');
+            if (type) document.getElementById('editBatchType').value = type;
+            
+            const status = this.getAttribute('data-status');
+            if (status) document.getElementById('editBatchStatus').value = status;
+            
+            const descValue = this.getAttribute('data-desc') || '';
+            document.getElementById('editBatchDesc').value = descValue;
+            if (window.quillEdit) {
+                // Remove trailing whitespace but keep html
+                window.quillEdit.root.innerHTML = descValue;
+            }
+            document.getElementById('editBatchDoc').value = '';
+            
+            const currentDoc = this.getAttribute('data-doc');
+            const docLabel = document.getElementById('editBatchDocCurrent');
+            if(docLabel) {
+                docLabel.textContent = currentDoc ? `Tài liệu hiện tại: ${currentDoc}` : 'Chưa có tài liệu đính kèm.';
+            }
+        });
+    });
 
     // ===================== TẠO NHÓM (API) =====================
     const btnCreateGroup = document.getElementById('btnCreateGroup');
@@ -573,6 +708,7 @@ async function submitEditTopic() {
 
 function checkBatchExpiration(selectElement) {
     const btnSubmit = document.getElementById('btnSubmitRegister');
+    const guidanceLink = document.getElementById('guidanceLink');
     if (!selectElement || !btnSubmit) return;
     
     const selectedOption = selectElement.options[selectElement.selectedIndex];
@@ -584,6 +720,16 @@ function checkBatchExpiration(selectElement) {
         btnSubmit.disabled = false;
         btnSubmit.classList.remove('opacity-50');
         btnSubmit.innerHTML = 'GỬI HỒ SƠ ĐĂNG KÝ PHÊ DUYỆT';
+    }
+    
+    if (guidanceLink && selectedOption) {
+        const docName = selectedOption.getAttribute('data-guidance');
+        if (docName) {
+            guidanceLink.style.display = 'inline-block';
+            guidanceLink.href = '/static/uploads/' + encodeURIComponent(docName);
+        } else {
+            guidanceLink.style.display = 'none';
+        }
     }
 }
 
@@ -761,3 +907,320 @@ async function submitUpdateProgress() {
         }
     } catch (e) { console.error(e); }
 }
+
+async function submitEditProfile() {
+    const id = document.getElementById('editProfileId').value;
+    const name = document.getElementById('editProfileName').value;
+    const email = document.getElementById('editProfileEmail').value;
+    const phone = document.getElementById('editProfilePhone').value;
+    const bio = document.getElementById('editProfileBio').value;
+    const faculty = document.getElementById('editProfileFaculty').value;
+
+    try {
+        const res = await fetch(`/api/profile/${id}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                full_name: name,
+                email: email,
+                phone: phone,
+                bio: bio,
+                faculty: faculty
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            Swal.fire('Thành công', 'Cập nhật hồ sơ thành công!', 'success').then(() => location.reload());
+        } else {
+            Swal.fire('Lỗi', data.error || 'Cập nhật thất bại', 'error');
+        }
+    } catch (e) {
+        Swal.fire('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
+    }
+}
+
+// ===================== THÊM ĐỢT NCKH MỚI =====================
+async function submitCreateBatch() {
+    const name = document.getElementById('createBatchName').value.trim();
+    const year = document.getElementById('createBatchYear').value;
+    const type = document.getElementById('createBatchType').value;
+    const startDate = document.getElementById('createBatchStart').value;
+    const submitDeadline = document.getElementById('createBatchSubmitDeadline').value;
+    const endDate = document.getElementById('createBatchEnd').value;
+    const desc = document.getElementById('createBatchDesc').value.trim();
+    const docPath = document.getElementById('createBatchDoc').value;
+    const docName = docPath ? docPath.split('\\').pop() : '';
+    
+    if (!name) return Swal.fire('Lỗi', 'Vui lòng nhập tên đợt triển khai', 'warning');
+    if (startDate && endDate && startDate > endDate) return Swal.fire('Lỗi', 'Ngày bắt đầu không thể sau ngày kết thúc đợt', 'warning');
+    if (startDate && submitDeadline && startDate > submitDeadline) return Swal.fire('Lỗi', 'Hạn nộp đề tài phải sau ngày bắt đầu', 'warning');
+    if (submitDeadline && endDate && submitDeadline > endDate) return Swal.fire('Lỗi', 'Hạn nộp đề tài không thể sau ngày kết thúc đợt', 'warning');
+    
+    try {
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('academic_year', year);
+        formData.append('type', type);
+        formData.append('start_date', startDate);
+        formData.append('submission_deadline', submitDeadline);
+        formData.append('end_date', endDate);
+        formData.append('description', desc);
+        
+        const fileInput = document.getElementById('createBatchDoc');
+        if (fileInput.files.length > 0) {
+            for (let i = 0; i < fileInput.files.length; i++) {
+                formData.append('guidance_doc', fileInput.files[i]);
+            }
+        }
+        
+        const res = await fetch('/api/batches', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (res.ok) {
+            Swal.fire('Thành công', 'Đã tạo đợt mới thành công!', 'success').then(() => location.reload());
+        } else {
+            Swal.fire('Lỗi', data.error || 'Tạo đợt thất bại', 'error');
+        }
+    } catch (e) {
+        console.error(e);
+        Swal.fire('Lỗi kết nối', 'Không thể kết nối đến máy chủ', 'error');
+    }
+}
+
+async function submitEditBatch() {
+    const id = document.getElementById('editBatchId').value;
+    const name = document.getElementById('editBatchName').value.trim();
+    const year = document.getElementById('editBatchYear').value;
+    const type = document.getElementById('editBatchType').value;
+    const startDate = document.getElementById('editBatchStart').value;
+    const submitDeadline = document.getElementById('editBatchSubmitDeadline').value;
+    const endDate = document.getElementById('editBatchEnd').value;
+    const status = document.getElementById('editBatchStatus').value;
+    const desc = document.getElementById('editBatchDesc').value.trim();
+    const docPath = document.getElementById('editBatchDoc').value;
+    const docName = docPath ? docPath.split('\\').pop() : '';
+    
+    if (!name) return Swal.fire('Lỗi', 'Vui lòng nhập tên đợt triển khai', 'warning');
+    if (startDate && endDate && startDate > endDate) return Swal.fire('Lỗi', 'Ngày bắt đầu không thể sau ngày kết thúc đợt', 'warning');
+    if (startDate && submitDeadline && startDate > submitDeadline) return Swal.fire('Lỗi', 'Hạn nộp đề tài phải sau ngày bắt đầu', 'warning');
+    if (submitDeadline && endDate && submitDeadline > endDate) return Swal.fire('Lỗi', 'Hạn nộp đề tài không thể sau ngày kết thúc đợt', 'warning');
+    
+    try {
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('academic_year', year);
+        formData.append('type', type);
+        formData.append('start_date', startDate);
+        formData.append('submission_deadline', submitDeadline);
+        formData.append('end_date', endDate);
+        formData.append('status', status);
+        formData.append('description', desc);
+        
+        const fileInput = document.getElementById('editBatchDoc');
+        if (fileInput.files.length > 0) {
+            for (let i = 0; i < fileInput.files.length; i++) {
+                formData.append('guidance_doc', fileInput.files[i]);
+            }
+        }
+        
+        const res = await fetch(`/api/batches/${id}`, {
+            method: 'PUT',
+            body: formData
+        });
+        const data = await res.json();
+        if (res.ok) {
+            Swal.fire('Thành công', 'Đã cập nhật đợt thành công!', 'success').then(() => location.reload());
+        } else {
+            Swal.fire('Lỗi', data.error || 'Cập nhật đợt thất bại', 'error');
+        }
+    } catch (e) {
+        console.error(e);
+        Swal.fire('Lỗi kết nối', 'Không thể kết nối đến máy chủ', 'error');
+    }
+}
+
+async function deleteBatch(id, name) {
+    const result = await Swal.fire({
+        title: 'Bạn có chắc chắn muốn xóa?',
+        text: `Hành động này sẽ xóa/ẩn đợt NCKH "${name}".`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Có, xóa nó!',
+        cancelButtonText: 'Hủy'
+    });
+
+    if (result.isConfirmed) {
+        try {
+            const res = await fetch(`/api/batches/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                Swal.fire('Đã xóa!', 'Đợt NCKH đã được ẩn.', 'success').then(() => location.reload());
+            } else {
+                const data = await res.json();
+                Swal.fire('Lỗi', data.error || 'Có lỗi xảy ra', 'error');
+            }
+        } catch(e) {
+            Swal.fire('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const startInput = document.getElementById('createBatchStart');
+    const submitInput = document.getElementById('createBatchSubmitDeadline');
+    const endInput = document.getElementById('createBatchEnd');
+    
+    if (startInput) {
+        startInput.setAttribute('min', today);
+        startInput.addEventListener('change', () => {
+            if (submitInput) submitInput.setAttribute('min', startInput.value);
+            if (endInput) endInput.setAttribute('min', startInput.value);
+        });
+    }
+    
+    if (submitInput) {
+        submitInput.setAttribute('min', today);
+        submitInput.addEventListener('change', () => {
+            if (endInput) endInput.setAttribute('min', submitInput.value);
+            if (startInput && startInput.value > submitInput.value) {
+                startInput.value = submitInput.value;
+            }
+        });
+    }
+    
+    if (endInput) {
+        endInput.setAttribute('min', today);
+        endInput.addEventListener('change', () => {
+            if (submitInput && submitInput.value > endInput.value) {
+                submitInput.value = endInput.value;
+            }
+            if (startInput && startInput.value > endInput.value) {
+                startInput.value = endInput.value;
+            }
+        });
+    }
+});
+
+async function readNotification(id, content, fromAll = false) {
+    try {
+        await fetch(`/api/notifications/${id}/read`, { method: 'PATCH' });
+    } catch(e) { console.error(e); }
+
+    let parts = content.split('|||');
+    let textHtml = parts[0];
+    let htmlContent = `<div class="ql-editor" style="text-align: left; font-size: 14px; padding: 0;">${textHtml}</div>`;
+    
+    if (parts.length > 1) {
+        htmlContent += `<hr><div style="text-align:center; display: flex; flex-direction: column; gap: 8px;">`;
+        for (let i = 1; i < parts.length; i++) {
+            if (parts[i].trim() !== '') {
+                let fileName = parts[i].trim();
+                htmlContent += `<a href="/static/uploads/batches/${encodeURIComponent(fileName)}" target="_blank" class="btn btn-outline-primary rounded-pill fw-bold"><i class="fa-solid fa-download me-2"></i>Tải về ${fileName}</a>`;
+            }
+        }
+        htmlContent += `</div>`;
+    }
+
+    Swal.fire({
+        title: 'Chi tiết Thông báo',
+        html: htmlContent,
+        icon: 'info',
+        confirmButtonText: 'Đóng'
+    }).then(() => {
+        if (fromAll) {
+            showAllNotifications();
+        } else {
+            location.reload();
+        }
+    });
+}
+
+async function showAllNotifications() {
+    try {
+        const res = await fetch('/api/notifications');
+        const data = await res.json();
+        
+        if (!data || data.length === 0) {
+            Swal.fire('Thông báo', 'Bạn không có thông báo nào.', 'info');
+            return;
+        }
+
+        let html = `
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-muted small fw-bold"><i class="fa-solid fa-list me-1"></i>Danh sách thông báo</span>
+            <button class="btn btn-sm btn-outline-danger py-0 px-2 rounded-pill" onclick="Swal.close(); setTimeout(() => deleteAllReadNotifications(), 300)"><i class="fa-solid fa-trash me-1"></i>Xóa đã đọc</button>
+        </div>
+        <div class="list-group text-start" style="max-height: 400px; overflow-y: auto;">`;
+        data.forEach(n => {
+            let badge = !n.is_read ? '<span class="badge bg-danger rounded-circle p-1" style="width:8px; height:8px;"></span>' : '';
+            
+            // Strip HTML to get raw text for brief preview
+            let temp = document.createElement("div");
+            temp.innerHTML = n.content.split('|||')[0];
+            let cleanText = temp.textContent || temp.innerText || "";
+            if (cleanText.length > 80) cleanText = cleanText.substring(0, 80) + '...';
+
+            html += `
+                <a href="#" class="list-group-item list-group-item-action py-3 ${!n.is_read ? 'bg-light' : ''}" onclick="Swal.close(); setTimeout(() => readNotification(${n.id}, decodeURIComponent('${encodeURIComponent(n.content)}'), true), 100)">
+                    <div class="d-flex w-100 justify-content-between align-items-center">
+                        <strong class="mb-1 text-primary"><i class="fa-solid fa-envelope me-2"></i>Hệ thống</strong>
+                        ${badge}
+                    </div>
+                    <p class="mb-1 small text-muted text-truncate" style="max-width: 90%;">${cleanText}</p>
+                    <small class="text-muted" style="font-size: 10px;"><i class="fa-regular fa-clock me-1"></i>${n.created_at}</small>
+                </a>
+            `;
+        });
+        html += '</div>';
+
+        Swal.fire({
+            title: 'Tất cả Thông báo',
+            html: html,
+            showConfirmButton: false,
+            showCloseButton: true,
+            width: 600,
+            customClass: {
+                popup: 'p-4 rounded-4'
+            }
+        }).then((result) => {
+            if (result.isDismissed) {
+                location.reload();
+            }
+        });
+
+    } catch (e) {
+        Swal.fire('Lỗi', 'Không thể lấy danh sách thông báo.', 'error');
+    }
+}
+
+async function deleteAllReadNotifications() {
+    try {
+        const result = await Swal.fire({
+            title: 'Xóa thư đã đọc?',
+            text: "Tất cả các thông báo đã đọc sẽ bị xóa vĩnh viễn khỏi hòm thư của bạn.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Đồng ý',
+            cancelButtonText: 'Hủy'
+        });
+
+        if (result.isConfirmed) {
+            const res = await fetch('/api/notifications/read', { method: 'DELETE' });
+            if (res.ok) {
+                Swal.fire('Thành công', 'Đã xóa tất cả thông báo đã đọc.', 'success').then(() => location.reload());
+            } else {
+                Swal.fire('Lỗi', 'Không thể xóa thông báo', 'error');
+            }
+        }
+    } catch (e) {
+        Swal.fire('Lỗi', 'Có lỗi kết nối', 'error');
+    }
+}
+

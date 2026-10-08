@@ -14,7 +14,10 @@ def require_faculty():
 def inject_common_data():
     user_id = session.get('user_id')
     current_user = User.query.get(user_id) if user_id else None
-    return dict(current_user=current_user, current_time=datetime.utcnow())
+    current_year = session.get('academic_year', '2025-2026')
+    global_topic_count = Topic.query.join(Batch).filter(Batch.academic_year == current_year, Batch.status != 'hidden').count()
+    notifications = Notification.query.filter_by(user_id=user_id).order_by(Notification.is_read.asc(), Notification.created_at.desc()).all() if user_id else []
+    return dict(current_user=current_user, current_time=datetime.utcnow(), global_topic_count=global_topic_count, notifications=notifications)
 
 @faculty_bp.route('/')
 def index():
@@ -23,8 +26,8 @@ def index():
 @faculty_bp.route('/dashboard')
 def dashboard():
     current_year = session.get('academic_year', '2025-2026')
-    topics = Topic.query.join(Batch).filter(Batch.academic_year == current_year).all()
-    groups = Group.query.join(Batch).filter(Batch.academic_year == current_year).all()
+    topics = Topic.query.join(Batch).filter(Batch.academic_year == current_year, Batch.status != 'hidden').all()
+    groups = Group.query.join(Batch).filter(Batch.academic_year == current_year, Batch.status != 'hidden').all()
     mentors = User.query.filter(func.lower(User.role) == 'lecturer').all()
     students = User.query.filter_by(role='student').all()
     # stats mapping from original web.py
@@ -39,13 +42,13 @@ def dashboard():
 @faculty_bp.route('/batches')
 def batches():
     current_year = session.get('academic_year', '2025-2026')
-    all_batches = Batch.query.filter_by(academic_year=current_year).all()
+    all_batches = Batch.query.filter(Batch.academic_year == current_year, Batch.status != 'hidden').all()
     return render_template('faculty/batches.html', batches=all_batches)
 
 @faculty_bp.route('/topics')
 def topics():
     current_year = session.get('academic_year', '2025-2026')
-    all_topics = Topic.query.join(Batch).filter(Batch.academic_year == current_year).all()
+    all_topics = Topic.query.join(Batch).filter(Batch.academic_year == current_year, Batch.status != 'hidden').all()
     mentors = User.query.filter(func.lower(User.role) == 'lecturer').all()
     return render_template('faculty/topics.html', topics=all_topics, mentors=mentors)
 
@@ -73,7 +76,9 @@ def rubric():
 
 @faculty_bp.route('/stats')
 def stats_page():
-    return render_template('faculty/stats.html')
+    current_year = session.get('academic_year', '2025-2026')
+    all_topics = Topic.query.join(Batch).filter(Batch.academic_year == current_year, Batch.status != 'hidden').all()
+    return render_template('faculty/stats.html', topics=all_topics)
 
 @faculty_bp.route('/set-academic-year', methods=['POST'])
 def set_academic_year():

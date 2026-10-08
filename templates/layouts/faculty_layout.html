@@ -60,20 +60,60 @@
                 <div class="modal-header bg-primary text-white"><h5 class="modal-title fw-bold">Thiết lập Đợt NCKH Mới</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body p-4">
                     <div class="row g-3 mb-3">
-                        <div class="col-md-8"><label class="form-label">Tên đợt triển khai</label><input type="text" class="form-control" placeholder="VD: NCKH Sinh viên 2025 - Đợt 2"></div>
-                        <div class="col-md-4"><label class="form-label">Năm học áp dụng</label><select class="form-select"><option>2025-2026</option><option>2026-2027</option></select></div>
+                        <div class="col-md-8"><label class="form-label">Tên đợt triển khai</label><input type="text" id="createBatchName" class="form-control" placeholder="VD: NCKH Sinh viên 2025 - Đợt 2"></div>
+                        <div class="col-md-4"><label class="form-label">Năm học áp dụng</label><select id="createBatchYear" class="form-select"><option value="2025-2026">2025-2026</option><option value="2026-2027">2026-2027</option><option value="2024-2025">2024-2025</option></select></div>
                     </div>
                     <div class="row g-3 mb-3">
-                        <div class="col-md-12"><label class="form-label">Loại hình</label><select class="form-select"><option selected>Nghiên cứu khoa học (Chuẩn)</option><option>Khởi nghiệp sáng tạo</option></select></div>
+                        <div class="col-md-12"><label class="form-label">Loại hình</label><select id="createBatchType" class="form-select"><option value="NCKH Standard" selected>Nghiên cứu khoa học (Chuẩn)</option><option value="Khởi nghiệp sáng tạo">Khởi nghiệp sáng tạo</option></select></div>
                     </div>
                     <div class="row g-3 mb-3">
-                        <div class="col-md-6"><label class="form-label">Ngày bắt đầu</label><input type="date" class="form-control"></div>
-                        <div class="col-md-6"><label class="form-label">Hạn cuối nộp đề tài</label><input type="date" class="form-control"></div>
+                        <div class="col-md-4"><label class="form-label">Ngày bắt đầu</label><input type="date" id="createBatchStart" class="form-control"></div>
+                        <div class="col-md-4"><label class="form-label">Hạn nộp đề tài</label><input type="date" id="createBatchSubmitDeadline" class="form-control"></div>
+                        <div class="col-md-4"><label class="form-label">Ngày kết thúc</label><input type="date" id="createBatchEnd" class="form-control"></div>
                     </div>
-                    <div class="mb-3"><label class="form-label">Mô tả chi tiết / Ghi chú</label><textarea class="form-control" rows="3"></textarea></div>
-                    <div class="mb-0"><label class="form-label">Văn bản hướng dẫn (PDF/DOC)</label><input type="file" class="form-control"></div>
+                    <div class="mb-3">
+                        <label class="form-label">Mô tả chi tiết / Ghi chú</label>
+                        <div id="createBatchDescEditor" style="height: 150px; background: white; border-bottom-left-radius: 0.375rem; border-bottom-right-radius: 0.375rem;"></div>
+                        <input type="hidden" id="createBatchDesc">
+                    </div>
+                    <div class="mb-0"><label class="form-label">Văn bản hướng dẫn (PDF/DOC)</label><input type="file" id="createBatchDoc" class="form-control" multiple></div>
                 </div>
-                <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy bỏ</button><button class="btn btn-primary fw-bold px-4" onclick="showToast('Đã tạo đợt mới thành công!')" data-bs-dismiss="modal">Lưu & Ban hành</button></div>
+                <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy bỏ</button><button class="btn btn-primary fw-bold px-4" onclick="submitCreateBatch()">Lưu & Ban hành</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalEditBatch" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-primary text-white"><h5 class="modal-title fw-bold">Chỉnh sửa Đợt NCKH</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="editBatchId">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-8"><label class="form-label">Tên đợt triển khai</label><input type="text" id="editBatchName" class="form-control"></div>
+                        <div class="col-md-4"><label class="form-label">Năm học áp dụng</label><select id="editBatchYear" class="form-select"><option value="2025-2026">2025-2026</option><option value="2026-2027">2026-2027</option><option value="2024-2025">2024-2025</option></select></div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-8"><label class="form-label">Loại hình</label><select id="editBatchType" class="form-select"><option value="NCKH Standard">Nghiên cứu khoa học (Chuẩn)</option><option value="Khởi nghiệp sáng tạo">Khởi nghiệp sáng tạo</option></select></div>
+                        <div class="col-md-4"><label class="form-label">Trạng thái</label><select id="editBatchStatus" class="form-select"><option value="active">Hoạt động</option><option value="completed">Đã kết thúc</option></select></div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4"><label class="form-label">Ngày bắt đầu</label><input type="date" id="editBatchStart" class="form-control"></div>
+                        <div class="col-md-4"><label class="form-label">Hạn nộp đề tài</label><input type="date" id="editBatchSubmitDeadline" class="form-control"></div>
+                        <div class="col-md-4"><label class="form-label">Ngày kết thúc</label><input type="date" id="editBatchEnd" class="form-control"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mô tả chi tiết / Ghi chú</label>
+                        <div id="editBatchDescEditor" style="height: 150px; background: white; border-bottom-left-radius: 0.375rem; border-bottom-right-radius: 0.375rem;"></div>
+                        <input type="hidden" id="editBatchDesc">
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label">Văn bản hướng dẫn (PDF/DOC) (Tùy chọn)</label>
+                        <input type="file" id="editBatchDoc" class="form-control" multiple>
+                        <small id="editBatchDocCurrent" class="text-muted d-block mt-1"></small>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy bỏ</button><button class="btn btn-primary fw-bold px-4" onclick="submitEditBatch()">Cập nhật</button></div>
             </div>
         </div>
     </div>
@@ -200,6 +240,46 @@
                     }
                 });
             });
-        });
+        // Initialize Quill editors
+        if (document.getElementById('createBatchDescEditor')) {
+            window.quillCreate = new Quill('#createBatchDescEditor', {
+                theme: 'snow',
+                placeholder: 'Nhập mô tả chi tiết...',
+                modules: {
+                    toolbar: [
+                        ['bold', 'italic', 'underline', 'strike'],
+                        ['blockquote', 'code-block'],
+                        [{ 'header': 1 }, { 'header': 2 }],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        [{ 'color': [] }, { 'background': [] }],
+                        ['clean']
+                    ]
+                }
+            });
+            window.quillCreate.on('text-change', function() {
+                document.getElementById('createBatchDesc').value = window.quillCreate.root.innerHTML;
+            });
+        }
+
+        if (document.getElementById('editBatchDescEditor')) {
+            window.quillEdit = new Quill('#editBatchDescEditor', {
+                theme: 'snow',
+                placeholder: 'Nhập mô tả chi tiết...',
+                modules: {
+                    toolbar: [
+                        ['bold', 'italic', 'underline', 'strike'],
+                        ['blockquote', 'code-block'],
+                        [{ 'header': 1 }, { 'header': 2 }],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        [{ 'color': [] }, { 'background': [] }],
+                        ['clean']
+                    ]
+                }
+            });
+            window.quillEdit.on('text-change', function() {
+                document.getElementById('editBatchDesc').value = window.quillEdit.root.innerHTML;
+            });
+        }
+    });
     </script>
 {% endblock %}

@@ -8,7 +8,7 @@
                     {% for t in my_topics %}
                         {% set status_map = {'pending': 1, 'faculty_pending': 2, 'approved': 3} %}
                         {% set step = status_map.get(t.status, 1) %}
-                        {% set pct = (step / 3 * 100) | round | int %}
+                        {% set pct = (step - 1) * 50 %}
                         <div class="bg-light border rounded-3 p-3 mb-3">
                             <div class="d-flex justify-content-between mb-3">
                                 <div>
@@ -20,7 +20,7 @@
                                 </div>
                             </div>
                             <div class="position-relative mb-2 px-2">
-                                <div class="progress" style="height: 4px; top: 12px; position: relative; z-index: 1;">
+                                <div class="progress position-absolute" style="height: 4px; top: 10px; left: 24px; width: calc(100% - 48px); z-index: 1;">
                                     <div class="progress-bar bg-success" role="progressbar" style="width: {{ pct }}%"></div>
                                 </div>
                                 <div class="d-flex justify-content-between position-relative" style="z-index: 2;">
@@ -44,6 +44,54 @@
                                     </div>
                                 </div>
                             </div>
+                            
+                            {% if t.status == 'approved' %}
+                            <div class="mt-4 p-3 bg-white border border-success-subtle rounded-3">
+                                <h6 class="fw-bold mb-3 text-success"><i class="fa-solid fa-circle-check me-2"></i> Thông tin chi tiết đề tài</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="small text-muted mb-1">Mã đề tài (Topic ID)</div>
+                                        <div class="fw-bold">#{{ t.id }}</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="small text-muted mb-1">Giảng viên hướng dẫn</div>
+                                        <div class="fw-bold">{{ t.mentor.full_name if t.mentor else 'Chưa có' }}</div>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <div class="small text-muted mb-1">Tên đề tài</div>
+                                        <div class="fw-bold">{{ t.title }}</div>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <div class="small text-muted mb-1">Mô tả / Mục tiêu</div>
+                                        <div>{{ t.description or 'Không có mô tả.' }}</div>
+                                    </div>
+                                </div>
+                                <div class="mt-3 text-end">
+                                    <a href="{{ url_for('student.progress') }}" class="btn btn-sm btn-success rounded-pill px-4">Cập nhật Tiến độ <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                                </div>
+                            </div>
+                            {% elif t.status == 'waiting_for_members' %}
+                            {% set accepted = t.group.members | selectattr('status', 'equalto', 'accepted') | list | length if t.group else 1 %}
+                            {% set rejected = t.group.members | selectattr('status', 'equalto', 'rejected') | list | length if t.group else 0 %}
+                            {% set total = t.group.members | length if t.group else 1 %}
+                            <div class="mt-4 p-4 bg-white border {% if rejected > 0 %}border-danger{% else %}border-warning{% endif %} rounded-3 text-center">
+                                {% if rejected > 0 %}
+                                <h6 class="fw-bold mb-2 text-danger"><i class="fa-solid fa-circle-xmark me-2"></i> Có thành viên từ chối tham gia</h6>
+                                <p class="small text-muted mb-3">Một hoặc nhiều thành viên đã từ chối lời mời. Bạn cần hủy đăng ký này để tạo đề tài mới.</p>
+                                {% else %}
+                                <h6 class="fw-bold mb-2 text-warning"><i class="fa-solid fa-hourglass-half me-2"></i> Chờ thành viên xác nhận tham gia nhóm</h6>
+                                <p class="small text-muted mb-3">Đã có <strong class="text-dark">{{ accepted }}/{{ total }}</strong> thành viên đồng ý tham gia đề tài này.</p>
+                                <div class="progress mb-3 mx-auto" style="height: 6px; width: 50%;">
+                                    <div class="progress-bar bg-warning" style="width: {{ (accepted / total) * 100 }}%"></div>
+                                </div>
+                                {% endif %}
+                                {% if current_user and t.group and t.group.leader_id == current_user.id %}
+                                <button class="btn btn-outline-danger btn-sm rounded-pill px-4 fw-bold mt-2" onclick="cancelTopicRegistration({{ t.id }})">
+                                    <i class="fa-solid fa-trash me-1"></i> Hủy đăng ký đề tài
+                                </button>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                         </div>
                     {% endfor %}
                 </div>
@@ -55,11 +103,76 @@
                     <div class="card-body p-4">
                         <div class="row g-3 mb-4"><div class="col-md-6"><label class="form-label small fw-bold text-muted">TÊN ĐỀ TÀI (TIẾNG VIỆT)</label><textarea id="topicName" class="form-control bg-light" rows="2"></textarea></div><div class="col-md-6"><label class="form-label small fw-bold text-muted">MÔ TẢ TÓM TẮT</label><textarea id="topicDesc" class="form-control bg-light" rows="2"></textarea></div></div>
                         <div class="row g-3 mb-4">
-                            <div class="col-md-4"><label class="form-label small fw-bold text-muted">ĐỢT ĐĂNG KÝ NCKH</label><select id="batchId" class="form-select bg-light" onchange="checkBatchExpiration(this)">{% for batch in batches %}{% set is_expired = batch.submission_deadline and batch.submission_deadline < current_time %}<option value="{{ batch.id }}" data-expired="{{ 'true' if is_expired else 'false' }}">{{ batch.name }} {% if is_expired %}(Đã khóa){% endif %}</option>{% else %}<option value="">Không có đợt nào</option>{% endfor %}</select></div>
-                            <div class="col-md-4"><label class="form-label small fw-bold text-muted">CHUYÊN NGÀNH</label><select id="major" class="form-select bg-light"><option value="CNTT">Công nghệ thông tin</option><option value="CNPM">Công nghệ phần mềm</option><option value="HTTT">Hệ thống thông tin</option></select></div>
-                            <div class="col-md-4"><label class="form-label small fw-bold text-muted">GIẢNG VIÊN HƯỚNG DẪN</label><select id="mentor_id" class="form-select bg-light"><option value="" selected>Chọn Mentor...</option>{% for mentor in mentors %}<option value="{{ mentor.id }}">{{ mentor.full_name }}</option>{% endfor %}</select></div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-muted d-flex justify-content-between">
+                                    <span>ĐỢT ĐĂNG KÝ NCKH</span>
+                                    <a id="guidanceLink" href="#" target="_blank" class="text-primary text-decoration-none" style="display:none;"><i class="fa-solid fa-download me-1"></i>Văn bản HD</a>
+                                </label>
+                                <select id="batchId" class="form-select bg-light" onchange="checkBatchExpiration(this)">
+                                    {% for batch in batches %}
+                                        {% set is_expired = batch.submission_deadline and batch.submission_deadline < current_time %}
+                                        <option value="{{ batch.id }}" data-expired="{{ 'true' if is_expired else 'false' }}" data-guidance="{{ batch.guidance_doc or '' }}">
+                                            {{ batch.name }} {% if is_expired %}(Đã khóa){% endif %}
+                                        </option>
+                                    {% else %}
+                                        <option value="">Không có đợt nào</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-muted">CHUYÊN MÔN / HƯỚNG NGHIÊN CỨU</label>
+                                <select id="specialty" class="form-select bg-light" onchange="filterMentors(this.value)">
+                                    <option value="all" selected>-- Không chọn (Hiện tất cả Mentor) --</option>
+                                    <optgroup label="Các Bộ môn (Chuyên ngành chính)">
+                                        <option value="CNPM">Công nghệ phần mềm</option>
+                                        <option value="HTTT">Hệ thống thông tin</option>
+                                        <option value="KHMT">Khoa học máy tính</option>
+                                        <option value="MMT">Mạng máy tính và Truyền thông</option>
+                                    </optgroup>
+                                    <optgroup label="Các Hướng nghiên cứu chuyên sâu">
+                                        <option value="AI">Trí tuệ nhân tạo (AI) & Học máy (Machine Learning)</option>
+                                        <option value="DATA">Phân tích dữ liệu lớn (Big Data)</option>
+                                        <option value="WEB_MOBILE">Lập trình Web & Ứng dụng di động</option>
+                                        <option value="SEC">An toàn thông tin & An ninh mạng</option>
+                                        <option value="IOT">Internet vạn vật (IoT) & Robotics</option>
+                                        <option value="VR_AR">Đồ họa máy tính & Thực tế ảo (VR/AR)</option>
+                                        <option value="BLOCKCHAIN">Blockchain & Ứng dụng phân tán</option>
+                                        <option value="CLOUD">Điện toán đám mây (Cloud Computing)</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-muted">GIẢNG VIÊN HƯỚNG DẪN</label>
+                                <div class="d-flex gap-2">
+                                    <select id="mentor_id" class="form-select bg-light" onchange="updateMentorProfileLink(this.value)">
+                                        <option value="" selected>Chọn Mentor...</option>
+                                        {% for mentor in mentors %}
+                                            {% set spec_list = ['CNPM', 'HTTT', 'KHMT', 'MMT', 'AI', 'DATA', 'WEB_MOBILE', 'SEC', 'IOT', 'VR_AR', 'BLOCKCHAIN', 'CLOUD'] %}
+                                            {% set m_spec = spec_list[mentor.id % 12] %}
+                                            <option value="{{ mentor.id }}" data-identifier="{{ mentor.username }}" data-specialty="{{ m_spec }}" class="mentor-option">
+                                                {{ mentor.full_name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                    <a href="#" target="_blank" id="btnMentorProfile" class="btn btn-outline-primary d-none" title="Xem Profile Giảng viên"><i class="fa-regular fa-id-badge"></i></a>
+                                </div>
+                            </div>
                         </div>
-                        <div class="mb-4"><label class="form-label small fw-bold text-muted">THÀNH VIÊN NHÓM</label>
+                        <script>
+                            function updateMentorProfileLink(mentorId) {
+                                const btn = document.getElementById('btnMentorProfile');
+                                const select = document.getElementById('mentor_id');
+                                if (mentorId && select.selectedIndex > 0) {
+                                    const identifier = select.options[select.selectedIndex].getAttribute('data-identifier');
+                                    btn.href = '/profile/' + identifier;
+                                    btn.classList.remove('d-none');
+                                } else {
+                                    btn.classList.add('d-none');
+                                }
+                            }
+                        </script>
+                        <div class="mb-4" id="groupMembersContainer">
+                            <label class="form-label small fw-bold text-muted">THÀNH VIÊN NHÓM</label>
                             <div class="card p-3 bg-light border-0 mb-2">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div class="d-flex align-items-center gap-3">
@@ -72,7 +185,8 @@
                                     <span class="badge bg-primary-subtle text-primary">CHÍNH CHỦ</span>
                                 </div>
                             </div>
-                            <button class="btn btn-outline-primary border-dashed w-100 rounded-3 py-2 small fw-bold" data-bs-toggle="modal" data-bs-target="#modalAddMember">+ Thêm thành viên bằng Mã SV</button>
+                            <!-- Nút thêm thành viên nằm cuối container -->
+                            <button class="btn btn-outline-primary border-dashed w-100 rounded-3 py-2 small fw-bold mt-2" data-bs-toggle="modal" data-bs-target="#modalAddMember">+ Chọn thành viên vào nhóm</button>
                         </div>
                         <input type="hidden" id="groupId" value="{{ my_groups[0].id if my_groups is defined and my_groups else '' }}">
                         <button id="btnSubmitRegister" class="btn btn-primary w-100 py-3 fw-bold rounded-3 shadow-sm" style="background: linear-gradient(90deg, #6366f1 0%, #4f46e5 100%); border: none;">GỬI HỒ SƠ ĐĂNG KÝ PHÊ DUYỆT</button>
@@ -80,4 +194,28 @@
                 </div>
                 {% endif %}
         </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function filterMentors(spec) {
+        const mentorSelect = document.getElementById('mentor_id');
+        const options = mentorSelect.querySelectorAll('option.mentor-option');
+        
+        let hasVisible = false;
+        options.forEach(opt => {
+            if (spec === 'all' || opt.getAttribute('data-specialty') === spec) {
+                opt.style.display = '';
+                opt.hidden = false;
+                hasVisible = true;
+            } else {
+                opt.style.display = 'none';
+                opt.hidden = true;
+            }
+        });
+        
+        // Reset selection to the default placeholder
+        mentorSelect.value = "";
+    }
+</script>
 {% endblock %}

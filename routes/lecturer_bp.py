@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, session, redirect, url_for
+from flask import Blueprint, render_template, session, redirect, url_for, request
 from models import db, User, Batch, Group, Topic, TopicRegistration, Council, GroupMember, Milestone, Progress, Submission
 from datetime import datetime
 
@@ -13,7 +13,13 @@ def require_lecturer():
 def inject_common_data():
     user_id = session.get('user_id')
     current_user = User.query.get(user_id) if user_id else None
-    return dict(current_user=current_user, current_time=datetime.utcnow())
+    current_year = session.get('academic_year', '2025-2026')
+    active_batch = Batch.query.filter_by(academic_year=current_year, status='active').first()
+    
+    global_pending_topics_count = Topic.query.filter_by(mentor_id=user_id, status='pending').count() if user_id else 0
+    global_my_groups_count = Topic.query.filter(Topic.mentor_id == user_id, Topic.status == 'approved', Topic.group_id.isnot(None)).count() if user_id else 0
+    
+    return dict(current_user=current_user, current_time=datetime.utcnow(), active_batch=active_batch, global_pending_topics_count=global_pending_topics_count, global_my_groups_count=global_my_groups_count)
 
 @lecturer_bp.route('/')
 def index():
@@ -61,7 +67,13 @@ def chat():
     my_topics = Topic.query.filter_by(mentor_id=user_id, status='approved').all()
     group_ids = [t.group_id for t in my_topics if t.group_id]
     my_groups = Group.query.filter(Group.id.in_(group_ids)).all() if group_ids else []
-    return render_template('lecturer/chat.html', my_groups=my_groups)
+    
+    target_id = request.args.get('target_id')
+    target_user = None
+    if target_id:
+        target_user = User.query.get(target_id)
+        
+    return render_template('lecturer/chat.html', my_groups=my_groups, target_user=target_user)
 
 @lecturer_bp.route('/calendar')
 def calendar():

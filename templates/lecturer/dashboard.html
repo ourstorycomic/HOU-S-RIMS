@@ -2,6 +2,25 @@
 
 {% block lecturer_content %}
 <div id="view-l-profile" class="fade-in">
+            {% if active_batch %}
+            <div class="alert bg-primary text-white border-0 shadow-lg rounded-4 mb-4 p-4 position-relative overflow-hidden">
+                <div class="position-relative z-1 d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+                    <div>
+                        <h4 class="fw-bold mb-2"><i class="fa-solid fa-bullhorn me-2 text-warning"></i> CƠ HỘI NCKH ĐÃ MỞ!</h4>
+                        <p class="mb-0 opacity-75 fs-6">
+                            Đợt <strong>{{ active_batch.name }}</strong> đã bắt đầu. Mời thầy/cô xem và duyệt đề tài hướng dẫn sinh viên.
+                            <br><small><i class="fa-regular fa-clock me-1"></i> Hạn cuối nhận đăng ký: {{ active_batch.submission_deadline.strftime('%d/%m/%Y') if active_batch.submission_deadline else 'Chưa công bố' }}</small>
+                        </p>
+                    </div>
+                    <div class="mt-3 mt-md-0">
+                        <a href="{{ url_for('lecturer.approve') }}" class="btn btn-light text-primary fw-bold rounded-pill px-4 py-2 shadow-sm text-nowrap">
+                            Duyệt đề tài ngay <i class="fa-solid fa-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+                <i class="fa-solid fa-graduation-cap position-absolute" style="font-size: 120px; right: 5%; top: -10px; opacity: 0.15; transform: rotate(15deg);"></i>
+            </div>
+            {% endif %}
             <div class="row g-4">
                     <div class="col-md-4">
                         <div class="card border-0 shadow-sm rounded-4 p-4 text-center mb-4">

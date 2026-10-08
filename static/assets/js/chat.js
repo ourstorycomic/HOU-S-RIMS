@@ -97,8 +97,42 @@ function renderChatMessages(messages) {
         const bubbleWrap = document.createElement('div');
         
         let contentHtml = msg.content;
-        
         let isSticker = false;
+        
+        // --- INVITATION MESSAGE ---
+        if (msg.message_type === 'invitation' && !isMe) {
+            let meta = {};
+            try { meta = JSON.parse(msg.meta_data || '{}'); } catch(e) {}
+            const invGroupId = meta.invite_group_id;
+            bubbleWrap.className = 'd-flex gap-3 mb-4';
+            const shortName = (msg.sender_name || '?').substring(0, 2).toUpperCase();
+            bubbleWrap.innerHTML = `
+                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold flex-shrink-0 cursor-pointer" 
+                     style="width:35px;height:35px;" 
+                     onclick="showProfilePopup(${msg.sender_id}, '${msg.sender_name}')">${shortName}</div>
+                <div style="max-width: 75%;">
+                    <small class="text-muted fw-bold ms-1 text-uppercase" style="font-size:11px;">${msg.sender_name} - ${timeStr}</small>
+                    <div class="mt-1 p-3 rounded-3 border shadow-sm" style="background:#fffbeb; word-break:break-word;">
+                        <div class="fw-bold mb-2">Lời mời tham gia nhóm NCKH</div>
+                        <div class="small text-muted mb-3">${msg.content.replace('📩 ', '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</div>
+                        ${invGroupId ? (
+                            meta.invite_status === 'accepted' ? `<div class="text-success small fw-bold"><i class="fa-solid fa-check me-1"></i>Đã đồng ý</div>` :
+                            meta.invite_status === 'rejected' ? `<div class="text-danger small fw-bold"><i class="fa-solid fa-xmark me-1"></i>Đã từ chối</div>` :
+                            `<div class="d-flex gap-2" id="inv-action-${msg.id}">
+                                <button class="btn btn-sm btn-dark rounded-pill px-3" onclick="respondInvitation(${invGroupId}, 'accepted', '${msg.id}')">
+                                    <i class="fa-solid fa-check me-1"></i> Đồng ý
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="respondInvitation(${invGroupId}, 'rejected', '${msg.id}')">
+                                    <i class="fa-solid fa-xmark me-1"></i> Từ chối
+                                </button>
+                            </div>`
+                        ) : ''}
+                    </div>
+                </div>`;
+            container.appendChild(bubbleWrap);
+            return;
+        }
+        
         // Render different media types
         if (msg.message_type === 'image' && msg.file_url) {
             contentHtml = `<div>${msg.content}</div><img src="${msg.file_url}" class="img-fluid rounded mt-2" style="max-height: 200px; cursor: pointer;" onclick="window.open('${msg.file_url}')">`;
@@ -115,6 +149,9 @@ function renderChatMessages(messages) {
             bubbleWrap.className = 'd-flex gap-3 mb-4 flex-row-reverse ';
             const bubbleBg = isSticker ? 'bg-transparent' : 'bg-primary text-white shadow-sm';
             const styleAttr = isSticker ? '' : 'style="background-color:#6366f1!important; word-break: break-word;"';
+            const readStatus = msg.is_read 
+                ? '<small class="text-muted" style="font-size:10px;"><i class="fa-solid fa-check-double text-info me-1"></i>Đã xem</small>'
+                : '<small class="text-muted" style="font-size:10px;"><i class="fa-solid fa-check text-muted me-1"></i>Đã gửi</small>';
             
             bubbleWrap.innerHTML = `
                 <div style="max-width: 70%;">
@@ -122,6 +159,7 @@ function renderChatMessages(messages) {
                     <div class="mt-1 text-start p-3 rounded-3 chat-bubble-content ${bubbleBg}" ${styleAttr}>
                         ${contentHtml}
                     </div>
+                    <div class="text-end mt-1">${readStatus}</div>
                 </div>
             `;
         } else {
@@ -133,7 +171,9 @@ function renderChatMessages(messages) {
             const bubbleBg = isSticker ? 'bg-transparent' : 'bg-white shadow-sm border';
             
             bubbleWrap.innerHTML = `
-                <div class="${roleColor} text-white rounded-circle d-flex align-items-center justify-content-center fw-bold flex-shrink-0 cursor-pointer" style="width:35px;height:35px;" onclick="startPrivateChat(${msg.sender_id}, '${msg.sender_name}')">${shortName}</div>
+                <div class="${roleColor} text-white rounded-circle d-flex align-items-center justify-content-center fw-bold flex-shrink-0 cursor-pointer" 
+                     style="width:35px;height:35px;" 
+                     onclick="showProfilePopup(${msg.sender_id}, '${msg.sender_name}')">${shortName}</div>
                 <div style="max-width: 75%;">
                     <small class="text-muted fw-bold ms-1 text-uppercase" style="font-size:11px;">${msg.sender_name} - ${timeStr}</small>
                     <div class="mt-1 p-3 rounded-3 chat-bubble-content ${bubbleBg}" style="word-break: break-word;">${contentHtml}</div>
@@ -144,6 +184,63 @@ function renderChatMessages(messages) {
     });
 
     container.scrollTop = container.scrollHeight;
+}
+
+// Show a quick profile popup (mini card) instead of navigating away
+function showProfilePopup(userId, userName) {
+    const shortName = userName.substring(0, 2).toUpperCase();
+    const existing = document.getElementById('profile-popup-overlay');
+    if (existing) existing.remove();
+    
+    const overlay = document.createElement('div');
+    overlay.id = 'profile-popup-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);';
+    overlay.onclick = (e) => { if(e.target === overlay) overlay.remove(); };
+    overlay.innerHTML = `
+        <div class="card border-0 shadow-lg rounded-4 overflow-hidden" style="width:320px;">
+            <div style="height:80px;background:linear-gradient(135deg,#6366f1,#8b5cf6);"></div>
+            <div class="card-body text-center pt-0">
+                <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center fw-bold shadow" 
+                     style="width:70px;height:70px;font-size:24px;margin-top:-35px;border:4px solid white;background:linear-gradient(135deg,#6366f1,#4f46e5)!important;">
+                    ${shortName}
+                </div>
+                <h5 class="fw-bold mt-2 mb-0">${userName}</h5>
+                <p class="text-muted small mb-3">Thành viên</p>
+                <div class="d-flex gap-2 justify-content-center">
+                    <a href="/profile/${userId}" target="_blank" class="btn btn-outline-primary rounded-pill px-3 py-2 fw-bold">
+                        <i class="fa-regular fa-id-badge me-1"></i> Xem Profile
+                    </a>
+                    <button class="btn btn-primary rounded-pill px-3 py-2 fw-bold" onclick="document.getElementById('profile-popup-overlay').remove(); startPrivateChat(${userId}, '${userName}')">
+                        <i class="fa-brands fa-facebook-messenger me-1"></i> Nhắn tin
+                    </button>
+                </div>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+}
+
+// Accept/Reject invitation from chat bubble
+async function respondInvitation(groupId, action, msgId) {
+    try {
+        const resp = await fetch('/api/topics/invitation', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({group_id: groupId, action: action, msg_id: msgId})
+        });
+        if (resp.ok) {
+            const actionDiv = document.getElementById(`inv-action-${msgId}`);
+            if (actionDiv) {
+                actionDiv.innerHTML = action === 'accepted' 
+                    ? '<div class="text-success small fw-bold"><i class="fa-solid fa-check me-1"></i>Đã đồng ý</div>'
+                    : '<div class="text-danger small fw-bold"><i class="fa-solid fa-xmark me-1"></i>Đã từ chối</div>';
+            }
+            showToast(action === 'accepted' ? 'Đã tham gia nhóm NCKH!' : 'Đã từ chối lời mời.');
+        } else {
+            Swal.fire('Lỗi', 'Có lỗi xảy ra', 'error');
+        }
+    } catch(e) {
+        Swal.fire('Lỗi', e.message, 'error');
+    }
 }
 
 function cancelChatUpload() {
@@ -382,6 +479,49 @@ function updateChatHeader(chatName, chatId, chatType="group") {
 }
 
 function startPrivateChat(userId, userName) {
+    // Pin this target so fetchPrivateConversations always keeps them in the list
+    pinnedPrivateTarget = { id: userId, name: userName };
+    
+    // Switch to private tab first
+    const privateTabBtn = document.getElementById('private-tab');
+    if (privateTabBtn) {
+        const bsTab = new bootstrap.Tab(privateTabBtn);
+        bsTab.show();
+    }
+    
+    // Inject target user into private list if not already there
+    const list = document.getElementById('private-chat-list');
+    if (list) {
+        const existingItem = list.querySelector(`[data-user-id="${userId}"]`);
+        if (!existingItem) {
+            const placeholder = list.querySelector('.text-center');
+            if (placeholder) placeholder.remove();
+            
+            const newItem = document.createElement('a');
+            newItem.href = 'javascript:void(0)';
+            newItem.className = 'list-group-item list-group-item-action py-3 border-0 border-bottom active';
+            newItem.setAttribute('data-user-id', userId);
+            newItem.onclick = () => startPrivateChat(userId, userName);
+            newItem.innerHTML = `
+                <div class="d-flex w-100 justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 45px; height: 45px;">
+                            ${userName.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                            <h6 class="mb-1 fw-bold text-dark" style="font-size: 15px;">${userName}</h6>
+                            <small class="text-muted">Bắt đầu cuộc trò chuyện...</small>
+                        </div>
+                    </div>
+                </div>`;
+            list.prepend(newItem);
+        } else {
+            // Highlight existing
+            list.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
+            existingItem.classList.add('active');
+        }
+    }
+    
     updateChatHeader(userName, userId, "private");
 }
 
@@ -602,6 +742,9 @@ if (userSearchInput && userSearchDropdown) {
     });
 }
 
+// pinnedPrivateTarget: { id, name } - set when opening chat from profile
+let pinnedPrivateTarget = null;
+
 async function fetchPrivateConversations() {
     const list = document.getElementById('private-chat-list');
     if (!list) return;
@@ -610,24 +753,42 @@ async function fetchPrivateConversations() {
         const res = await fetch('/api/chat/private/conversations');
         const data = await res.json();
         
-        if (data.length === 0) {
+        // Build list items from API
+        let items = data.map(c => ({
+            id: c.id,
+            name: c.name,
+            subtitle: c.last_message,
+            timestamp: c.timestamp
+        }));
+        
+        // If there's a pinned target not in the list yet, prepend them
+        if (pinnedPrivateTarget) {
+            const alreadyIn = items.find(i => i.id == pinnedPrivateTarget.id);
+            if (!alreadyIn) {
+                items.unshift({ id: pinnedPrivateTarget.id, name: pinnedPrivateTarget.name, subtitle: 'Bắt đầu cuộc trò chuyện...', timestamp: '' });
+            }
+        }
+        
+        if (items.length === 0) {
             list.innerHTML = '<div class="text-center text-muted p-4 small">Chưa có tin nhắn riêng nào</div>';
             return;
         }
         
-        list.innerHTML = data.map(c => `
-            <a href="javascript:void(0)" class="list-group-item list-group-item-action py-3 border-0 border-bottom" onclick="startPrivateChat(${c.id}, '${c.name}')">
+        const activeId = activeChatType === 'private' ? activeChatId : null;
+        
+        list.innerHTML = items.map(c => `
+            <a href="javascript:void(0)" class="list-group-item list-group-item-action py-3 border-0 border-bottom ${activeId == c.id ? 'active' : ''}" data-user-id="${c.id}" onclick="startPrivateChat(${c.id}, '${c.name}')">
                 <div class="d-flex w-100 justify-content-between align-items-center">
                     <div class="d-flex align-items-center gap-3">
-                        <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 45px; height: 45px;">
+                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 45px; height: 45px;">
                             ${c.name.substring(0, 2).toUpperCase()}
                         </div>
                         <div>
                             <h6 class="mb-1 fw-bold text-dark" style="font-size: 15px;">${c.name}</h6>
-                            <small class="text-muted text-truncate d-inline-block" style="max-width: 150px;">${c.last_message}</small>
+                            <small class="text-muted text-truncate d-inline-block" style="max-width: 150px;">${c.subtitle}</small>
                         </div>
                     </div>
-                    <small class="text-muted" style="font-size: 11px;">${c.timestamp}</small>
+                    ${c.timestamp ? `<small class="text-muted" style="font-size: 11px;">${c.timestamp}</small>` : ''}
                 </div>
             </a>
         `).join('');
