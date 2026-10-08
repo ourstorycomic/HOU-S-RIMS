@@ -87,7 +87,7 @@ def update_progress(topic_id):
                         send_notification_email(
                             to_email=u.email,
                             subject=f"[HOU S-RIMS] Cập nhật tiến độ - {topic.title}",
-                            body=f"""Xin chào {u.full_name},
+                            content=f"""Xin chào {u.full_name},
 
 {updater_name} vừa cập nhật tiến độ cột mốc trong đề tài "{topic.title}":
 
@@ -99,8 +99,8 @@ Xem chi tiết tại: http://127.0.0.1:5000/student/progress
 Trân trọng,
 HOU S-RIMS"""
                         )
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        print(f"Email error (progress update): {e}")
                 db.session.commit()
         except Exception:
             pass

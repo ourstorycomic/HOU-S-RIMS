@@ -94,7 +94,7 @@ def add_feedback(sub_id):
             send_notification_email(
                 to_email=uploader.email,
                 subject=f"[HOU S-RIMS] Giảng viên ghi chú cho bài nộp - {topic.title}",
-                body=f"""Xin chào {uploader.full_name},
+                content=f"""Xin chào {uploader.full_name},
 
 Giảng viên {lecturer_name} vừa ghi chú cho bài báo cáo bạn đã nộp trong đề tài "{topic.title}":
 
@@ -106,7 +106,7 @@ http://127.0.0.1:5000/student/submit
 Trân trọng,
 HOU S-RIMS"""
             )
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Email error (feedback): {e}")
 
     return jsonify({"success": True, "message": "Đã lưu ghi chú thành công."})
