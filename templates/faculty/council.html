@@ -67,10 +67,10 @@
                             {% endif %}
                         </div>
                     </div>
-                    <div class="col-md-5">
-                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                    <div class="col-md-5" style="align-self: flex-start; position: sticky; top: 20px;">
+                        <div class="card border-0 shadow-sm rounded-4 p-4">
                             <h6 class="fw-bold text-success mb-4"><i class="fa-solid fa-certificate me-2"></i> HỘI ĐỒNG NGHIỆM THU</h6>
-                            <div class="d-flex flex-column align-items-center justify-content-center h-75 text-muted border border-dashed rounded-3 p-4">
+                            <div class="d-flex flex-column align-items-center justify-content-center text-muted border border-dashed rounded-3 p-4">
                                 <i class="fa-solid fa-layer-group fa-2x mb-3 text-muted opacity-50"></i>
                                 <div class="fw-bold small">CHƯA CÓ HỘI ĐỒNG</div>
                                 <button class="btn btn-success btn-sm mt-3 rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#modalAddCouncil">Thiết lập ngay</button>
@@ -197,7 +197,12 @@ function renderTags(role, badgeClass) {
     `).join('');
 }
 
+let _councilSubmitting = false;
 async function createCouncil() {
+    if (_councilSubmitting) return;
+    _councilSubmitting = true;
+    const btn = document.querySelector('#modalAddCouncil .btn-success');
+    if (btn) { btn.disabled = true; btn.textContent = 'Đang xử lý...'; }
     const name = document.getElementById('councilName').value;
     const decision_number = document.getElementById('councilDecision').value;
     const meeting_date = document.getElementById('councilDate').value;
@@ -228,15 +233,22 @@ async function createCouncil() {
         if (res.ok) {
             Swal.fire('Thành công', 'Đã lập Hội đồng mới và gửi thông báo!', 'success').then(() => window.location.reload());
         } else {
+            _councilSubmitting = false;
+            if (btn) { btn.disabled = false; btn.textContent = 'Xác nhận thành lập'; }
             Swal.fire('Lỗi', data.error || 'Có lỗi xảy ra', 'error');
         }
     } catch (e) {
+        _councilSubmitting = false;
+        if (btn) { btn.disabled = false; btn.textContent = 'Xác nhận thành lập'; }
         Swal.fire('Lỗi', 'Lỗi kết nối máy chủ', 'error');
     }
 }
 
 // Reset state when modal opens
 document.getElementById('modalAddCouncil').addEventListener('show.bs.modal', () => {
+    _councilSubmitting = false;
+    const btn = document.querySelector('#modalAddCouncil .btn-success');
+    if (btn) { btn.disabled = false; btn.textContent = 'Xác nhận thành lập'; }
     councilState.president = [];
     councilState.secretary = [];
     councilState.member = [];
