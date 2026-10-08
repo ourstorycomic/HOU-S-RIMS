@@ -127,17 +127,12 @@
                     {% for role_id, role_label, badge_class in role_configs %}
                     <div class="mb-2" id="section-{{ role_id }}">
                         <label class="form-label fw-semibold mb-1" style="font-size:13px;">{{ role_label }}</label>
-                        <div class="d-flex gap-2 mb-1">
-                            <select class="form-select form-select-sm" id="picker-{{ role_id }}">
-                                <option value="">-- Chọn giảng viên --</option>
-                                {% for m in mentors %}
-                                <option value="{{ m.id }}" data-name="{{ m.full_name }}">{{ m.full_name }}</option>
-                                {% endfor %}
-                            </select>
-                            <button type="button" class="btn btn-outline-success btn-sm px-3 fw-bold flex-shrink-0" onclick="addCouncilMember('{{ role_id }}', '{{ badge_class }}')">
-                                <i class="fa-solid fa-plus"></i> Thêm
-                            </button>
-                        </div>
+                        <select class="form-select form-select-sm mb-1" id="picker-{{ role_id }}" onchange="addCouncilMember('{{ role_id }}', '{{ badge_class }}')">
+                            <option value="">-- Chọn giảng viên để thêm --</option>
+                            {% for m in mentors %}
+                            <option value="{{ m.id }}" data-name="{{ m.full_name }}">{{ m.full_name }}</option>
+                            {% endfor %}
+                        </select>
                         <div id="tags-{{ role_id }}" class="d-flex flex-wrap gap-1 min-height-tag">
                             <!-- Tags will appear here -->
                         </div>
