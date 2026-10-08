@@ -475,6 +475,23 @@ function updateChatHeader(chatName, chatId, chatType="group") {
         bsTab.show();
     }
     
+    // Highlight the selected item in the list
+    document.querySelectorAll('.chat-group-item, .list-group-item[data-user-id]').forEach(el => {
+        el.classList.remove('bg-light', 'border-start', 'border-primary', 'border-4', 'active');
+    });
+    
+    if (chatType === 'group') {
+        const activeItem = document.querySelector(`.chat-group-item[data-group-id="${chatId}"]`);
+        if (activeItem) {
+            activeItem.classList.add('bg-light', 'border-start', 'border-primary', 'border-4');
+        }
+    } else {
+        const activeItem = document.querySelector(`.list-group-item[data-user-id="${chatId}"]`);
+        if (activeItem) {
+            activeItem.classList.add('bg-light', 'border-start', 'border-primary', 'border-4');
+        }
+    }
+    
     startChatPolling(chatId);
 }
 
