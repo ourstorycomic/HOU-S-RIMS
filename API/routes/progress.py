@@ -39,27 +39,8 @@ def update_progress(topic_id):
     ---
     tags:
       - Progress
-    parameters:
-      - in: path
-        name: topic_id
-        type: integer
-        required: true
-      - in: body
-        name: body
-        required: true
-        schema:
-          type: object
-          properties:
-            milestone_id:
-              type: integer
-            percentage:
-              type: integer
-            notes:
-              type: string
-    responses:
-      201:
-        description: Progress updated
     """
+    from flask import session
     data = request.get_json()
     if not data or 'milestone_id' not in data or 'percentage' not in data:
         return jsonify({'error': 'Missing required fields'}), 400
@@ -72,6 +53,58 @@ def update_progress(topic_id):
         )
         db.session.add(new_progress)
         db.session.commit()
+
+        # Send notifications to all topic members
+        try:
+            from models import Notification, User, Topic, Group, GroupMember
+            from email_utils import send_notification_email
+
+            milestone = Milestone.query.get(data['milestone_id'])
+            topic = Topic.query.get(topic_id)
+            updater = User.query.get(session.get('user_id'))
+            updater_name = updater.full_name if updater else "Giảng viên"
+
+            if milestone and topic:
+                pct = int(data['percentage'])
+                notif_msg = f"📊 {updater_name} đã cập nhật tiến độ cột mốc '{milestone.name}' lên {pct}% trong đề tài '{topic.title}'"
+
+                recipients = []
+                # Notify students in group
+                if topic.group_id:
+                    members = GroupMember.query.filter_by(group_id=topic.group_id).all()
+                    for m in members:
+                        recipients.append(User.query.get(m.student_id))
+                # Notify topic mentor if updater is not the mentor
+                if topic.mentor_id and topic.mentor_id != session.get('user_id'):
+                    recipients.append(User.query.get(topic.mentor_id))
+
+                for u in recipients:
+                    if not u:
+                        continue
+                    notif = Notification(user_id=u.id, content=notif_msg)
+                    db.session.add(notif)
+                    try:
+                        send_notification_email(
+                            to_email=u.email,
+                            subject=f"[HOU S-RIMS] Cập nhật tiến độ - {topic.title}",
+                            body=f"""Xin chào {u.full_name},
+
+{updater_name} vừa cập nhật tiến độ cột mốc trong đề tài "{topic.title}":
+
+📌 Cột mốc: {milestone.name}
+📊 Tiến độ mới: {pct}%
+
+Xem chi tiết tại: http://127.0.0.1:5000/student/progress
+
+Trân trọng,
+HOU S-RIMS"""
+                        )
+                    except Exception:
+                        pass
+                db.session.commit()
+        except Exception:
+            pass
+
         return jsonify({'message': 'Progress updated'}), 201
     except Exception as e:
         db.session.rollback()
