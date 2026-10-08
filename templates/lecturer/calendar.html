@@ -160,8 +160,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         });
                         Swal.fire('Thành công', 'Đã duyệt lịch họp', 'success').then(() => location.reload());
                     } else if (result.isDenied) {
-                        await fetch('/api/calendar/events/' + arg.event.id, { method: 'DELETE' });
-                        Swal.fire('Đã từ chối', 'Đã hủy lịch họp', 'success').then(() => location.reload());
+                        await fetch('/api/calendar/events/' + arg.event.id + '/status', {
+                            method: 'PUT', headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({status: 'rejected'})
+                        });
+                        Swal.fire('Đã từ chối', 'Đã từ chối lịch họp', 'success').then(() => location.reload());
                     }
                 });
             } else {

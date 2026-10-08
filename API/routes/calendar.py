@@ -118,4 +118,35 @@ def update_event_status(id):
         
     meeting.status = new_status
     db.session.commit()
+
+    # Notify student
+    from models import User, Notification
+    from email_utils import send_notification_email
+    
+    student = User.query.get(meeting.organizer_id)
+    if student:
+        lecturer_name = session.get('full_name', 'Giảng viên')
+        status_text = "phê duyệt" if new_status == 'approved' else "từ chối"
+        notif_content = f"Giảng viên {lecturer_name} đã {status_text} yêu cầu lịch hẹn '{meeting.title}' của bạn."
+        
+        notif = Notification(user_id=student.id, content=notif_content)
+        db.session.add(notif)
+        db.session.commit()
+        
+        try:
+            send_notification_email(
+                to_email=student.email,
+                subject=f"[HOU S-RIMS] Lịch hẹn đã được {status_text}",
+                content=f"""Xin chào {student.full_name},
+
+Giảng viên {lecturer_name} đã {status_text} yêu cầu lịch hẹn của bạn:
+- Tiêu đề: {meeting.title}
+- Trạng thái: {status_text.upper()}
+
+Trân trọng,
+HOU S-RIMS"""
+            )
+        except Exception as e:
+            print(f"Email error (meeting status): {e}")
+
     return jsonify({'message': 'Status updated successfully'})
