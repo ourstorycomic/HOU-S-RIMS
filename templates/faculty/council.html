@@ -18,7 +18,11 @@
                                             <div class="fw-bold">{{ c.name }}</div>
                                             <small class="text-muted">Ngày thành lập: {{ c.established_date.strftime('%d/%m/%Y') }}</small>
                                         </div>
-                                        <i class="fa-solid fa-chevron-right text-muted rotate-icon"></i>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <button class="btn btn-sm btn-outline-primary" onclick="editCouncil({{ c.id }}); event.stopPropagation();" title="Sửa"><i class="fa-solid fa-pen"></i></button>
+                                            <button class="btn btn-sm btn-outline-danger" onclick="deleteCouncil({{ c.id }}); event.stopPropagation();" title="Xóa"><i class="fa-solid fa-trash"></i></button>
+                                            <i class="fa-solid fa-chevron-right text-muted rotate-icon ms-2"></i>
+                                        </div>
                                     </div>
                                     <div class="collapse" id="councilCollapse{{ c.id }}">
                                         <div class="card-body bg-light border-top p-3">
@@ -261,4 +265,24 @@ document.getElementById('modalAddCouncil').addEventListener('show.bs.modal', () 
         if (tags) tags.innerHTML = '';
     });
 });
+
+async function deleteCouncil(id) {
+    if (!confirm('Bạn có chắc chắn muốn xóa hội đồng này không? Hệ thống sẽ gửi thông báo hủy đến tất cả các thành viên.')) return;
+    try {
+        const res = await fetch(`/api/councils/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (res.ok) {
+            Swal.fire('Thành công', 'Đã xóa hội đồng và thông báo cho thành viên.', 'success').then(() => window.location.reload());
+        } else {
+            Swal.fire('Lỗi', data.error || 'Có lỗi xảy ra', 'error');
+        }
+    } catch (e) {
+        Swal.fire('Lỗi', 'Lỗi kết nối', 'error');
+    }
+}
+
+function editCouncil(id) {
+    Swal.fire('Tính năng đang phát triển', 'Chức năng sửa hội đồng sẽ sớm ra mắt.', 'info');
+}
+
 </script>

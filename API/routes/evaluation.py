@@ -125,6 +125,85 @@ def create_council():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+
+@evaluation_bp.route('/councils/<int:council_id>', methods=['DELETE'])
+def delete_council(council_id):
+    from models import Council, CouncilMember, Topic, Notification, User
+    from app import db
+    try:
+        council = Council.query.get_or_404(council_id)
+        
+        # Free topics
+        Topic.query.filter_by(council_id=council.id).update({'council_id': None})
+        
+        # Notify lecturers before deletion
+        from email_utils import send_notification_email
+        members = CouncilMember.query.filter_by(council_id=council.id).all()
+        for m in members:
+            lecturer = User.query.get(m.mentor_id)
+            if lecturer:
+                msg = f"Hội đồng '{council.name}' đã bị hủy bỏ."
+                db.session.add(Notification(user_id=lecturer.id, content=msg))
+                try:
+                    send_notification_email(lecturer.email, "[HOU S-RIMS] Hủy Hội đồng", msg)
+                except:
+                    pass
+        
+        CouncilMember.query.filter_by(council_id=council.id).delete()
+        db.session.delete(council)
+        db.session.commit()
+        return jsonify({'message': 'Deleted successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@evaluation_bp.route('/councils/<int:council_id>', methods=['PUT'])
+def update_council(council_id):
+    from models import Council, CouncilMember, Topic, Notification, User, GroupMember
+    from email_utils import send_notification_email
+    from app import db
+    from datetime import datetime
+    
+    data = request.json
+    try:
+        council = Council.query.get_or_404(council_id)
+        council.name = data.get('name', council.name)
+        council.decision_number = data.get('decision_number', council.decision_number)
+        council.location = data.get('location', council.location)
+        
+        if data.get('meeting_date'):
+            council.meeting_date = datetime.strptime(data['meeting_date'], '%Y-%m-%d').date()
+        if data.get('meeting_time'):
+            council.meeting_time = datetime.strptime(data['meeting_time'], '%H:%M').time()
+            
+        # Update members if provided
+        if any(k in data for k in ['president', 'secretary', 'members']):
+            CouncilMember.query.filter_by(council_id=council.id).delete()
+            for p_id in (data.get('president') or []):
+                db.session.add(CouncilMember(council_id=council.id, mentor_id=p_id, role='president'))
+            for s_id in (data.get('secretary') or []):
+                db.session.add(CouncilMember(council_id=council.id, mentor_id=s_id, role='secretary'))
+            for m_id in (data.get('members') or []):
+                db.session.add(CouncilMember(council_id=council.id, mentor_id=m_id, role='member'))
+                
+        # Notify lecturers
+        members = CouncilMember.query.filter_by(council_id=council.id).all()
+        for m in members:
+            lecturer = User.query.get(m.mentor_id)
+            if lecturer:
+                msg = f"Thông tin hội đồng '{council.name}' đã được cập nhật."
+                db.session.add(Notification(user_id=lecturer.id, content=msg))
+                try:
+                    send_notification_email(lecturer.email, "[HOU S-RIMS] Cập nhật Hội đồng", msg)
+                except:
+                    pass
+                    
+        db.session.commit()
+        return jsonify({'message': 'Updated successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 @evaluation_bp.route('/rubrics', methods=['POST', 'PUT'])
 def manage_rubrics():
     """
