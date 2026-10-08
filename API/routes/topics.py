@@ -500,6 +500,86 @@ def faculty_approve_topic(topic_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+@topics_bp.route('/<int:topic_id>/faculty-reject', methods=['POST'])
+def faculty_reject_topic(topic_id):
+    """
+    Faculty rejects a topic
+    """
+    from flask import session, request
+    if session.get('role') not in ['faculty', 'admin']:
+        return jsonify({'error': 'Unauthorized'}), 403
+        
+    try:
+        topic = Topic.query.get(topic_id)
+        if not topic:
+            return jsonify({'error': 'Topic not found'}), 404
+            
+        data = request.get_json()
+        reason = data.get('note', 'Không phù hợp với tiêu chí của Khoa.')
+            
+        topic.status = 'rejected'
+        db.session.commit()
+        
+        from email_utils import send_email_async
+        from models import User, GroupMember, Notification
+        
+        # Notify Mentor
+        mentor = User.query.get(topic.mentor_id)
+        if mentor:
+            notif_content = f"""
+            <p>Xin chào <strong>{mentor.full_name}</strong>,</p>
+            <p>Đề tài NCKH <strong>{topic.title}</strong> do bạn hướng dẫn đã <strong>bị từ chối</strong> bởi Khoa.</p>
+            <p>Lý do: <em>{reason}</em></p>
+            """
+            new_notif = Notification(user_id=mentor.id, content=notif_content)
+            db.session.add(new_notif)
+            
+            if mentor.email:
+                html_content_mentor = f"""
+                <div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>
+                    <h2 style='color: #ef4444;'>Khoa Từ chối Đề tài NCKH</h2>
+                    <p>Xin chào <strong>{mentor.full_name}</strong>,</p>
+                    <p>Đề tài NCKH <strong>{topic.title}</strong> do bạn hướng dẫn đã <strong>bị từ chối</strong> bởi Khoa.</p>
+                    <p><strong>Lý do:</strong> <em>{reason}</em></p>
+                    <br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>
+                </div>
+                """
+                send_email_async(mentor.email, f"[HOU S-RIMS] Đề tài bị từ chối", f"Đề tài {topic.title} đã bị từ chối", html_content_mentor)
+            
+        # Notify Students
+        members = GroupMember.query.filter_by(group_id=topic.group_id, status='accepted').all()
+        for member in members:
+            student = User.query.get(member.student_id)
+            if student:
+                notif_content = f"""
+                <p>Xin chào <strong>{student.full_name}</strong>,</p>
+                <p>Đề tài NCKH <strong>{topic.title}</strong> của nhóm bạn đã <strong>bị từ chối</strong> bởi Khoa.</p>
+                <p>Lý do: <em>{reason}</em></p>
+                <p>Vui lòng trao đổi với giảng viên hướng dẫn để chỉnh sửa đề cương và nộp lại.</p>
+                """
+                new_notif = Notification(user_id=student.id, content=notif_content)
+                db.session.add(new_notif)
+                
+                if student.email:
+                    html_content_student = f"""
+                    <div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>
+                        <h2 style='color: #ef4444;'>Đề tài NCKH bị từ chối</h2>
+                        <p>Xin chào <strong>{student.full_name}</strong>,</p>
+                        <p>Đề tài NCKH <strong>{topic.title}</strong> của nhóm bạn đã <strong>bị từ chối</strong> bởi Khoa.</p>
+                        <p><strong>Lý do:</strong> <em>{reason}</em></p>
+                        <p>Vui lòng trao đổi với giảng viên hướng dẫn để điều chỉnh lại hướng nghiên cứu.</p>
+                        <br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>
+                    </div>
+                    """
+                    send_email_async(student.email, f"[HOU S-RIMS] Đề tài bị từ chối", f"Đề tài {topic.title} bị từ chối", html_content_student)
+                
+        db.session.commit()
+        return jsonify({'message': 'Topic rejected by faculty'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 @topics_bp.route('/<int:topic_id>/approve', methods=['POST'])
 def approve_topic(topic_id):
     """
