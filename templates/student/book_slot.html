@@ -1,0 +1,103 @@
+{% extends "layouts/student_layout.html" %}
+
+{% block extra_css %}
+<style>
+    .slot-btn { border:1px solid #c7d2fe; background:#eef2ff; color:#4338ca; font-weight:600; font-size:13px; border-radius:10px; padding:6px 12px; }
+    .slot-btn:hover { background:#4338ca; color:#fff; }
+</style>
+{% endblock %}
+
+{% block student_content %}
+<div class="fade-in">
+  <div class="row g-4">
+    <div class="col-xl-8 col-lg-7 col-12">
+      <div class="card border-0 shadow-sm rounded-4 p-4" style="min-width:0;">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+          <h5 class="fw-bold mb-0 text-primary"><i class="fa-regular fa-clock me-2"></i> ĐẶT LỊCH BÁO CÁO TIẾN ĐỘ</h5>
+          <select id="mentorSelect" class="form-select form-select-sm w-auto" onchange="loadAvailable()"></select>
+        </div>
+        <div id="availableList"><div class="text-muted small text-center py-4">Đang tải...</div></div>
+      </div>
+    </div>
+    <div class="col-xl-4 col-lg-5 col-12">
+      <div class="card border-0 shadow-sm rounded-4 p-4">
+        <h6 class="fw-bold mb-3">Lịch đã đặt của nhóm tôi</h6>
+        <div id="myBookings"><div class="text-muted small">Đang tải...</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmtVN = d => d.split('-').reverse().join('/');
+
+async function loadMentors() {
+  const res = await fetch('/api/slots/mentors');
+  const sel = document.getElementById('mentorSelect');
+  const list = res.ok ? await res.json() : [];
+  if (!list.length) {
+    sel.style.display = 'none';
+    document.getElementById('availableList').innerHTML = '<div class="text-muted text-center py-4">Nhóm của bạn chưa có giảng viên hướng dẫn nên chưa thể đặt lịch.</div>';
+    document.getElementById('myBookings').innerHTML = '<div class="text-muted small">Chưa có.</div>';
+    return;
+  }
+  sel.innerHTML = list.map(m => `<option value="${m.id}">GV ${esc(m.name)}</option>`).join('');
+  loadAvailable(); loadBookings();
+}
+
+async function loadAvailable() {
+  const id = document.getElementById('mentorSelect').value;
+  const box = document.getElementById('availableList');
+  const res = await fetch('/api/slots/available?lecturer_id=' + id);
+  if (!res.ok) { box.innerHTML = '<div class="text-danger small">Không tải được dữ liệu</div>'; return; }
+  const slots = await res.json();
+  if (!slots.length) { box.innerHTML = '<div class="text-muted text-center py-4">Giảng viên chưa mở khung giờ nào (hoặc đã kín lịch).</div>'; return; }
+  const byDate = {};
+  slots.forEach(s => (byDate[s.date] = byDate[s.date] || []).push(s));
+  box.innerHTML = Object.keys(byDate).sort().map(d => `
+    <div class="mb-4"><div class="fw-bold mb-2">${fmtVN(d)}${byDate[d][0].location ? ' <span class="text-muted small fw-normal">· ' + esc(byDate[d][0].location) + '</span>' : ''}</div>
+    <div class="d-flex flex-wrap gap-2">${byDate[d].map(s => `<button class="slot-btn" onclick="book(${s.id}, '${s.start}-${s.end} ${fmtVN(d)}')">${s.start}-${s.end}</button>`).join('')}</div></div>`).join('');
+}
+
+async function book(id, label) {
+  const c = await Swal.fire({ title: 'Đăng ký khung giờ?', text: label, icon: 'question', showCancelButton: true, confirmButtonText: 'Đăng ký', cancelButtonText: 'Hủy' });
+  if (!c.isConfirmed) return;
+  let res = await fetch(`/api/slots/${id}/book`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  let data = await res.json();
+  if (res.status === 400 && data.groups) {            // SV thuoc nhieu nhom -> chon nhom
+    const opts = Object.fromEntries(data.groups.map(g => [g.id, g.name]));
+    const pick = await Swal.fire({ title: 'Chọn nhóm', input: 'select', inputOptions: opts, showCancelButton: true });
+    if (!pick.isConfirmed) return;
+    res = await fetch(`/api/slots/${id}/book`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ group_id: +pick.value }) });
+    data = await res.json();
+  }
+  if (res.ok) Swal.fire('Thành công', 'Đã đăng ký lịch báo cáo!', 'success'); else Swal.fire('Không thể đăng ký', data.error || '', 'warning');
+  loadAvailable(); loadBookings();
+}
+
+async function loadBookings() {
+  const box = document.getElementById('myBookings');
+  const res = await fetch('/api/slots/my-bookings');
+  const list = res.ok ? await res.json() : [];
+  if (!list.length) { box.innerHTML = '<div class="text-muted small">Nhóm chưa đặt lịch nào.</div>'; return; }
+  box.innerHTML = list.map(s => `
+    <div class="border rounded-3 p-3 mb-2">
+      <div class="fw-bold small">${s.start}-${s.end} · ${fmtVN(s.date)}</div>
+      <div class="small text-muted">GV ${esc(s.lecturer_name)} · ${esc(s.group_name)}${s.location ? '<br>' + esc(s.location) : ''}${s.note ? '<br><i>' + esc(s.note) + '</i>' : ''}</div>
+      <button class="btn btn-sm btn-outline-danger rounded-pill mt-2" onclick="cancelBooking(${s.id})">Hủy lịch</button>
+    </div>`).join('');
+}
+
+async function cancelBooking(id) {
+  const c = await Swal.fire({ title: 'Hủy lịch báo cáo?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Hủy lịch', cancelButtonText: 'Giữ lại' });
+  if (!c.isConfirmed) return;
+  const res = await fetch(`/api/slots/${id}/cancel`, { method: 'POST' });
+  if (!res.ok) Swal.fire('Lỗi', (await res.json()).error || '', 'error');
+  loadAvailable(); loadBookings();
+}
+document.addEventListener('DOMContentLoaded', loadMentors);
+</script>
+{% endblock %}

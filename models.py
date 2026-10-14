@@ -246,3 +246,43 @@ class Progress(db.Model):
     percentage = db.Column(db.Integer, default=0)
     notes = db.Column(db.Text, nullable=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+# Task 1 - Le Van Dat: Lich hen noi bo (slot thoi gian ranh cua giang vien)
+class AvailabilitySlot(db.Model):
+    __tablename__ = 'availability_slots'
+    id = db.Column(db.Integer, primary_key=True)
+    lecturer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    start_time = db.Column(db.DateTime, nullable=False, index=True)
+    end_time = db.Column(db.DateTime, nullable=False)
+    location = db.Column(db.String(255), nullable=True)   # phong / link online
+    note = db.Column(db.String(255), nullable=True)
+    status = db.Column(db.String(20), default='open', nullable=False)  # open, booked
+    # Thong tin dat lich (khi status == 'booked')
+    group_id = db.Column(db.Integer, db.ForeignKey('groups.id'), nullable=True)
+    booked_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    booked_at = db.Column(db.DateTime, nullable=True)
+    meeting_id = db.Column(db.Integer, db.ForeignKey('meetings.id'), nullable=True)  # lich hien tren Calendar
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    lecturer = db.relationship('User', foreign_keys=[lecturer_id])
+    booked_by = db.relationship('User', foreign_keys=[booked_by_id])
+    group = db.relationship('Group', foreign_keys=[group_id])
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'lecturer_id': self.lecturer_id,
+            'lecturer_name': self.lecturer.full_name if self.lecturer else None,
+            'start_time': self.start_time.strftime('%Y-%m-%d %H:%M'),
+            'end_time': self.end_time.strftime('%Y-%m-%d %H:%M'),
+            'date': self.start_time.strftime('%Y-%m-%d'),
+            'start': self.start_time.strftime('%H:%M'),
+            'end': self.end_time.strftime('%H:%M'),
+            'location': self.location,
+            'note': self.note,
+            'status': self.status,
+            'group_id': self.group_id,
+            'group_name': self.group.name if self.group else None,
+            'booked_by_id': self.booked_by_id,
+            'booked_by_name': self.booked_by.full_name if self.booked_by else None,
+        }

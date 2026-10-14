@@ -87,6 +87,10 @@ def progress():
 def calendar():
     return render_template('student/calendar.html')
 
+@student_bp.route('/book-slot')
+def book_slot():
+    return render_template('student/book_slot.html')
+
 @student_bp.route('/chat')
 def chat():
     user_id = session.get('user_id')

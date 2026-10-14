@@ -84,6 +84,10 @@ def calendar():
     my_topics = Topic.query.join(Batch).filter(Topic.mentor_id == user_id, Topic.status == 'approved', Batch.status == 'active').all()
     return render_template('lecturer/calendar.html', my_topics=my_topics)
 
+@lecturer_bp.route('/slots')
+def slots():
+    return render_template('lecturer/slots.html')
+
 @lecturer_bp.route('/council')
 def council():
     user_id = session.get('user_id')
