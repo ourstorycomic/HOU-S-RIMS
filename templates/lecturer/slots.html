@@ -1,0 +1,165 @@
+{% extends "layouts/lecturer_layout.html" %}
+
+{% block extra_css %}
+<style>
+    .slot-chip { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:10px; font-size:13px; font-weight:600; border:1px solid; }
+    .slot-chip.open { background:#ecfdf5; color:#047857; border-color:#a7f3d0; }
+    .slot-chip.booked { background:#eef2ff; color:#4338ca; border-color:#c7d2fe; }
+    .slot-chip .x { cursor:pointer; opacity:.6; } .slot-chip .x:hover { opacity:1; color:#dc2626; }
+</style>
+{% endblock %}
+
+{% block lecturer_content %}
+<div class="fade-in">
+  <div class="row g-4">
+    <div class="col-xl-4 col-lg-5 col-12">
+      <div class="card border-0 shadow-sm rounded-4 p-4">
+        <h5 class="fw-bold text-primary mb-1"><i class="fa-regular fa-clock me-2"></i> TẠO LỊCH RẢNH</h5>
+        <p class="small text-muted">Chọn khoảng thời gian rảnh, hệ thống tự chia thành các khung giờ để nhóm sinh viên đăng ký báo cáo tiến độ.</p>
+
+        <div class="mb-3">
+          <label class="form-label small fw-bold">Ngày (chọn nhiều ngày)</label>
+          <div class="input-group">
+            <input type="date" id="slotDatePicker" class="form-control">
+            <button class="btn btn-outline-primary" type="button" onclick="addDate()">Thêm</button>
+          </div>
+          <div id="dateList" class="d-flex flex-wrap gap-2 mt-2"></div>
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <label class="form-label small fw-bold">Từ giờ</label>
+            <input type="time" id="slotStart" class="form-control" value="08:00">
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-bold">Đến giờ</label>
+            <input type="time" id="slotEnd" class="form-control" value="11:00">
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-bold">Mỗi nhóm (phút)</label>
+          <select id="slotMinutes" class="form-select">
+            <option value="15">15 phút</option>
+            <option value="20">20 phút</option>
+            <option value="30" selected>30 phút</option>
+            <option value="45">45 phút</option>
+            <option value="60">60 phút</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-bold">Địa điểm / Link họp</label>
+          <input type="text" id="slotLocation" class="form-control" placeholder="Phòng A305 hoặc link Google Meet">
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-bold">Ghi chú</label>
+          <input type="text" id="slotNote" class="form-control" maxlength="255" placeholder="Mang theo báo cáo bản in...">
+        </div>
+        <div class="alert alert-light border small py-2" id="slotPreview">Chưa chọn ngày.</div>
+        <button class="btn btn-primary fw-bold rounded-pill w-100" onclick="createSlots()">Tạo các khung giờ</button>
+      </div>
+    </div>
+
+    <div class="col-xl-8 col-lg-7 col-12">
+      <div class="card border-0 shadow-sm rounded-4 p-4" style="min-width:0;">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold mb-0">Các khung giờ của tôi</h5>
+          <div class="small">
+            <span class="slot-chip open me-1">Còn trống</span><span class="slot-chip booked">Đã có nhóm đặt</span>
+          </div>
+        </div>
+        <div id="slotList"><div class="text-muted small text-center py-4">Đang tải...</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const pickedDates = new Set();
+const fmtVN = d => d.split('-').reverse().join('/');
+
+function addDate() {
+  const v = document.getElementById('slotDatePicker').value;
+  if (v) pickedDates.add(v);
+  renderDates();
+}
+function removeDate(d) { pickedDates.delete(d); renderDates(); }
+function renderDates() {
+  const box = document.getElementById('dateList');
+  box.innerHTML = [...pickedDates].sort().map(d =>
+    `<span class="badge bg-primary-subtle text-primary border">${fmtVN(d)} <i class="fa-solid fa-xmark ms-1" style="cursor:pointer" onclick="removeDate('${d}')"></i></span>`).join('');
+  updatePreview();
+}
+function toMin(t) { const [h, m] = t.split(':').map(Number); return h * 60 + m; }
+function updatePreview() {
+  const s = document.getElementById('slotStart').value, e = document.getElementById('slotEnd').value;
+  const step = +document.getElementById('slotMinutes').value;
+  const el = document.getElementById('slotPreview');
+  if (!pickedDates.size || !s || !e || toMin(e) <= toMin(s)) { el.textContent = 'Chưa chọn đủ ngày/giờ hợp lệ.'; return; }
+  const per = Math.floor((toMin(e) - toMin(s)) / step);
+  el.textContent = `Mỗi ngày ${per} khung × ${pickedDates.size} ngày = ${per * pickedDates.size} khung giờ.`;
+}
+['slotStart', 'slotEnd', 'slotMinutes'].forEach(id => document.addEventListener('change', e => { if (e.target.id === id) updatePreview(); }));
+
+async function createSlots() {
+  if (!pickedDates.size) return Swal.fire('Thiếu ngày', 'Hãy thêm ít nhất 1 ngày', 'warning');
+  const body = {
+    dates: [...pickedDates],
+    start_time: document.getElementById('slotStart').value,
+    end_time: document.getElementById('slotEnd').value,
+    slot_minutes: +document.getElementById('slotMinutes').value,
+    location: document.getElementById('slotLocation').value,
+    note: document.getElementById('slotNote').value
+  };
+  const res = await fetch('/api/slots', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const data = await res.json();
+  if (!res.ok) return Swal.fire('Lỗi', data.error || 'Tạo thất bại', 'error');
+  let msg = `Đã tạo ${data.created} khung giờ.`;
+  if (data.skipped_overlap) msg += ` Bỏ qua ${data.skipped_overlap} khung trùng lịch cũ.`;
+  if (data.skipped_past) msg += ` Bỏ qua ${data.skipped_past} khung đã qua.`;
+  Swal.fire('Thành công', msg, 'success');
+  pickedDates.clear(); renderDates(); loadSlots();
+}
+
+async function deleteSlot(id, booked) {
+  const c = await Swal.fire({
+    title: booked ? 'Hủy khung giờ đã có nhóm đặt?' : 'Xóa khung giờ?',
+    text: booked ? 'Nhóm đã đăng ký sẽ nhận được thông báo.' : '',
+    icon: 'warning', showCancelButton: true, confirmButtonText: 'Xóa', cancelButtonText: 'Không'
+  });
+  if (!c.isConfirmed) return;
+  const res = await fetch('/api/slots/' + id, { method: 'DELETE' });
+  if (res.ok) loadSlots(); else Swal.fire('Lỗi', (await res.json()).error || '', 'error');
+}
+
+async function cancelBooking(id) {
+  const c = await Swal.fire({ title: 'Hủy lịch của nhóm này?', text: 'Khung giờ sẽ được mở lại cho nhóm khác.', icon: 'question', showCancelButton: true, confirmButtonText: 'Hủy lịch', cancelButtonText: 'Giữ lại' });
+  if (!c.isConfirmed) return;
+  const res = await fetch(`/api/slots/${id}/cancel`, { method: 'POST' });
+  if (res.ok) loadSlots(); else Swal.fire('Lỗi', (await res.json()).error || '', 'error');
+}
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+async function loadSlots() {
+  const res = await fetch('/api/slots/mine');
+  const box = document.getElementById('slotList');
+  if (!res.ok) { box.innerHTML = '<div class="text-danger small">Không tải được dữ liệu</div>'; return; }
+  const slots = await res.json();
+  if (!slots.length) { box.innerHTML = '<div class="text-muted small text-center py-4">Chưa có khung giờ nào. Hãy tạo ở cột bên trái.</div>'; return; }
+  const byDate = {};
+  slots.forEach(s => (byDate[s.date] = byDate[s.date] || []).push(s));
+  box.innerHTML = Object.keys(byDate).sort().map(d => {
+    const items = byDate[d];
+    const free = items.filter(s => s.status === 'open').length;
+    return `<div class="mb-4"><div class="fw-bold mb-2">${fmtVN(d)} <span class="text-muted small fw-normal">· ${free}/${items.length} còn trống${items[0].location ? ' · ' + esc(items[0].location) : ''}</span></div>
+      <div class="d-flex flex-wrap gap-2">` + items.map(s => s.status === 'booked'
+      ? `<span class="slot-chip booked" title="${esc(s.booked_by_name)}"><i class="fa-solid fa-user-group"></i> ${s.start}-${s.end} · ${esc(s.group_name)}
+          <i class="fa-solid fa-rotate-left x" title="Hủy lịch (mở lại slot)" onclick="cancelBooking(${s.id})"></i>
+          <i class="fa-solid fa-trash x" title="Xóa slot" onclick="deleteSlot(${s.id}, true)"></i></span>`
+      : `<span class="slot-chip open">${s.start}-${s.end} <i class="fa-solid fa-xmark x" title="Xóa" onclick="deleteSlot(${s.id}, false)"></i></span>`).join('') + '</div></div>';
+  }).join('');
+}
+document.addEventListener('DOMContentLoaded', () => { updatePreview(); loadSlots(); });
+</script>
+{% endblock %}
