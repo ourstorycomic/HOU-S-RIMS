@@ -20,7 +20,16 @@ def home():
 
 @web_bp.route('/admin')
 def admin_page():
-    return redirect(url_for('faculty.dashboard'))
+    if session.get('role') not in ['admin', 'faculty']:
+        return redirect(url_for('auth.login'))
+    
+    from models import Topic, User, Batch, Council, Group
+    topics = Topic.query.all()
+    users = User.query.all()
+    batches = Batch.query.order_by(Batch.id.desc()).all()
+    councils = Council.query.all()
+    groups = Group.query.all()
+    return render_template('admin.html', topics=topics, users=users, batches=batches, councils=councils, groups=groups)
 
 @web_bp.route('/repository')
 def repository_page():
