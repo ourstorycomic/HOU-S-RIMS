@@ -66,19 +66,53 @@ class Batch(db.Model):
 class Group(db.Model):
     __tablename__ = 'groups'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    batch_id = db.Column(db.Integer, db.ForeignKey('batches.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=True, default='Nhóm NCKH')
+    batch_id = db.Column(db.Integer, db.ForeignKey('batches.id'), nullable=True)
     leader_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    mentor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    status = db.Column(db.String(30), default='draft') # 'draft', 'pending_mentor', 'approved', 'rejected'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    members = db.relationship('GroupMember', backref='group', lazy=True)
+    # Relationships
+    leader = db.relationship('User', foreign_keys=[leader_id], backref='led_groups', lazy=True)
+    mentor = db.relationship('User', foreign_keys=[mentor_id], backref='mentored_groups', lazy=True)
+    members = db.relationship('GroupMember', backref='group', cascade='all, delete-orphan', lazy=True)
     topics = db.relationship('Topic', backref='group', lazy=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'batch_id': self.batch_id,
+            'leader_id': self.leader_id,
+            'leader_name': self.leader.full_name if self.leader else None,
+            'leader_student_id': self.leader.student_id if self.leader else (self.leader.username if self.leader else None),
+            'mentor_id': self.mentor_id,
+            'mentor_name': self.mentor.full_name if self.mentor else None,
+            'mentor_faculty': self.mentor.faculty if self.mentor else None,
+            'status': self.status,
+            'created_at': self.created_at.strftime('%d/%m/%Y %H:%M') if self.created_at else None,
+            'members': [m.to_dict() for m in self.members] if self.members else []
+        }
 
 class GroupMember(db.Model):
     __tablename__ = 'group_members'
     id = db.Column(db.Integer, primary_key=True)
     group_id = db.Column(db.Integer, db.ForeignKey('groups.id'), nullable=False)
     student_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    status = db.Column(db.String(20), default='accepted') # 'accepted', 'pending'
+    status = db.Column(db.String(20), default='invited') # 'invited', 'joined', 'declined', 'accepted', 'pending'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'group_id': self.group_id,
+            'user_id': self.student_id,
+            'student_id': self.student.student_id if self.student and self.student.student_id else (self.student.username if self.student else str(self.student_id)),
+            'full_name': self.student.full_name if self.student else '',
+            'email': self.student.email if self.student else '',
+            'faculty': self.student.faculty if self.student else '',
+            'status': self.status
+        }
 
 class Topic(db.Model):
     __tablename__ = 'topics'

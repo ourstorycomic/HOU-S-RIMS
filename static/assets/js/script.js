@@ -6,6 +6,7 @@ function toggleSidebar() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+
     console.log("HOU S-RIMS Scripts Loaded Successfully!");
     
     // Khởi tạo tất cả Tooltip của Bootstrap (nếu có sử dụng data-bs-toggle="tooltip")
@@ -13,7 +14,193 @@ document.addEventListener('DOMContentLoaded', function() {
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl)
     });
+    
+    // ĐẢM BẢO CHỈ VIEW ĐẦU TIÊN HIỂN THỊ KHI TRANG LOAD (HOẶC THEO HASH / SESSION)
+    const contentArea = document.querySelector('.content-area');
+    if (contentArea) {
+        const allViews = contentArea.querySelectorAll(':scope > div[id^="view-"]');
+        console.log('Initializing views, total found:', allViews.length);
+        
+        // Kiểm tra URL hash hoặc sessionStorage để hiển thị view tương ứng
+        let hash = window.location.hash.substring(1); // Bỏ dấu #
+        if (!hash) {
+            hash = sessionStorage.getItem('active_admin_tab') || '';
+        }
+        let targetViewFound = false;
+        
+        if (hash) {
+            const tabAliases = {
+                'batches': 'deployment',
+                'deployment': 'deployment',
+                'approvals': 'approval',
+                'approval': 'approval',
+                'councils': 'council',
+                'council': 'council'
+            };
+            const resolvedHash = tabAliases[hash] || hash;
+            const targetView = document.getElementById('view-' + resolvedHash) || document.getElementById('view-' + hash);
+            if (targetView) {
+                targetViewFound = true;
+                console.log('Hash/Session found, showing view:', targetView.id);
+                
+                // Ẩn tất cả views trong document
+                const allViewsInDoc = document.querySelectorAll('[id^="view-"]');
+                allViewsInDoc.forEach(view => {
+                    view.classList.add('hidden');
+                    view.classList.remove('fade-in');
+                });
+                
+                // Hiện view từ hash
+                targetView.classList.remove('hidden');
+                targetView.classList.add('fade-in');
+                
+                // Active menu item tương ứng
+                const sidebar = document.querySelector('.sidebar');
+                if (sidebar) {
+                    const navLinks = sidebar.querySelectorAll('.nav-link');
+                    const menuCategories = sidebar.querySelectorAll('.menu-category');
+                    let isStudent = false;
+                    let isLecturer = false;
+                    
+                    menuCategories.forEach(cat => {
+                        const text = cat.textContent;
+                        if (text.includes('SINH VIÊN')) isStudent = true;
+                        if (text.includes('GIẢNG VIÊN')) isLecturer = true;
+                    });
+                    
+                    navLinks.forEach(link => {
+                        link.classList.remove('active-main', 'active-purple', 'active-student');
+                        const onclick = link.getAttribute('onclick') || '';
+                        const href = link.getAttribute('href') || '';
+                        if (onclick.includes(`'${hash}'`) || onclick.includes(`'${resolvedHash}'`) || href.includes(`#${hash}`)) {
+                            if (isStudent) {
+                                link.classList.add('active-student');
+                            } else if (isLecturer) {
+                                link.classList.add('active-purple');
+                            } else {
+                                link.classList.add('active-main');
+                            }
+                        }
+                    });
+                }
+            }
+        }
+        
+        // Nếu không có hash hoặc hash không hợp lệ, hiển thị view đầu tiên
+        if (!targetViewFound) {
+            allViews.forEach((view, index) => {
+                if (index === 0) {
+                    view.classList.remove('hidden');
+                    view.classList.add('fade-in');
+                    console.log('First view shown:', view.id);
+                } else {
+                    view.classList.add('hidden');
+                    console.log('Other view hidden:', view.id);
+                }
+            });
+            const sidebar = document.querySelector('.sidebar');
+            if (sidebar) {
+                const firstLink = sidebar.querySelector('.nav-link');
+                if (firstLink) {
+                    sidebar.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active-main', 'active-purple', 'active-student'));
+                    firstLink.classList.add('active-main');
+                }
+            }
+        }
+    }
 });
+
+/**
+ * 1. HÀM CHUYỂN TAB (NAVIGATION)
+ */
+function switchTab(tabName, element) {
+    // Lưu vị trí scroll hiện tại của sidebar
+    const sidebarMenu = document.querySelector('.sidebar-menu-wrapper');
+    const currentScrollPosition = sidebarMenu ? sidebarMenu.scrollTop : 0;
+    console.log('=== switchTab START ===');
+    console.log('Tab name:', tabName);
+    console.log('Element:', element);
+    
+    // Tự động tìm element nếu chưa truyền
+    if (!element) {
+        element = document.querySelector(`.sidebar .nav-link[onclick*="'${tabName}'"]`) || 
+                  document.querySelector(`.sidebar .nav-link[href*="#${tabName}"]`);
+    }
+
+    // A. Xử lý UI của thanh điều hướng (Sidebar)
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+        // Remove active khỏi tất cả nav-link trong sidebar
+        const allNavLinks = sidebar.querySelectorAll('.nav-link');
+        allNavLinks.forEach(link => {
+            link.classList.remove('active-main', 'active-purple', 'active-student');
+        });
+        
+        // Thêm class active phù hợp cho element được click
+        if (element && element.classList && element.classList.contains('nav-link')) {
+            const menuCategories = sidebar.querySelectorAll('.menu-category');
+            let isStudent = false;
+            let isLecturer = false;
+            
+            menuCategories.forEach(cat => {
+                const text = cat.textContent;
+                if (text.includes('SINH VIÊN')) isStudent = true;
+                if (text.includes('GIẢNG VIÊN')) isLecturer = true;
+            });
+            
+            if (isStudent) {
+                element.classList.add('active-student');
+            } else if (isLecturer) {
+                element.classList.add('active-purple');
+            } else {
+                element.classList.add('active-main');
+            }
+        }
+    }
+
+    // B. Xử lý hiển thị nội dung (Content Views)
+    const allViewsInDoc = document.querySelectorAll('[id^="view-"]');
+    allViewsInDoc.forEach(view => {
+        view.classList.add('hidden');
+        view.classList.remove('fade-in');
+    });
+
+    // C. Hiện view được chọn (hỗ trợ alias mapping tự động)
+    const tabAliases = {
+        'batches': 'deployment',
+        'deployment': 'deployment',
+        'approvals': 'approval',
+        'approval': 'approval',
+        'councils': 'council',
+        'council': 'council'
+    };
+    const resolvedTab = tabAliases[tabName] || tabName;
+    let selectedView = document.getElementById('view-' + resolvedTab) || document.getElementById('view-' + tabName);
+    
+    if (selectedView) {
+        selectedView.classList.remove('hidden');
+        
+        // Reset animation để chạy lại mỗi lần click
+        selectedView.classList.remove('fade-in');
+        void selectedView.offsetWidth; // Force reflow
+        selectedView.classList.add('fade-in');
+    }
+
+    // D. Cập nhật URL hash và sessionStorage để khi reload vẫn ở đúng tab
+    try {
+        history.replaceState(null, '', '#' + tabName);
+        sessionStorage.setItem('active_admin_tab', tabName);
+    } catch(e) {}
+    
+    // Khôi phục vị trí scroll của sidebar sau khi xử lý xong
+    if (sidebarMenu) {
+        setTimeout(() => {
+            sidebarMenu.scrollTop = currentScrollPosition;
+        }, 0);
+    }
+    
+    console.log('=== switchTab END ===');
+}
 
 /**
  * 2. HÀM HIỂN THỊ THÔNG BÁO (TOAST)
@@ -57,7 +244,25 @@ function filterTable(type, btn) {
     }
 }
 
+// Hàm dùng riêng cho Faculty
+function filterTopics(status, btn) {
+    updateFilterButtonState(btn);
 
+    const pending = document.querySelectorAll('.status-pending');
+    const approved = document.querySelectorAll('.status-approved');
+
+    if (status === 'pending') {
+        pending.forEach(el => el.classList.remove('d-none'));
+        approved.forEach(el => el.classList.add('d-none'));
+    } else if (status === 'approved') {
+        pending.forEach(el => el.classList.add('d-none'));
+        approved.forEach(el => el.classList.remove('d-none'));
+    } else {
+        // 'all'
+        pending.forEach(el => el.classList.remove('d-none'));
+        approved.forEach(el => el.classList.remove('d-none'));
+    }
+}
 
 // Helper: Cập nhật trạng thái active của nút lọc
 function updateFilterButtonState(clickedBtn) {

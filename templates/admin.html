@@ -176,17 +176,32 @@
             <div class="row g-4">
                 {% if batches %}
                     {% for b in batches %}
-                    <div class="col-md-6">
-                        <div class="stat-card h-100">
-                            <div class="d-flex justify-content-between mb-3 align-items-start">
-                                <span class="badge bg-primary-subtle text-primary fw-bold text-uppercase">{{ b.status }}</span>
-                                <a href="#" class="text-muted"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                    <div class="col-md-6" id="batch-card-{{ b.id }}">
+                        <div class="stat-card h-100 d-flex flex-column">
+                            <div class="d-flex justify-content-between mb-3 align-items-center">
+                                <div>
+                                    {% if b.status == 'active' %}
+                                    <span class="badge bg-success-subtle text-success fw-bold text-uppercase"><i class="fa-solid fa-circle-check me-1"></i> Đang mở</span>
+                                    {% elif b.status == 'hidden' %}
+                                    <span class="badge bg-secondary-subtle text-secondary fw-bold text-uppercase"><i class="fa-solid fa-eye-slash me-1"></i> Đã ẩn</span>
+                                    {% elif b.status == 'completed' %}
+                                    <span class="badge bg-info-subtle text-info fw-bold text-uppercase"><i class="fa-solid fa-flag-checkered me-1"></i> Hoàn thành</span>
+                                    {% else %}
+                                    <span class="badge bg-primary-subtle text-primary fw-bold text-uppercase">{{ b.status }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <button class="btn btn-sm btn-outline-danger border-0 rounded-circle text-danger p-1" onclick="deleteBatch({{ b.id }}, '{{ b.name }}')" title="Xóa đợt NCKH này" style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                    <a href="#" class="text-muted"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                                </div>
                             </div>
                             <h5 class="fw-bold mb-4">{{ b.name }}</h5>
                             <div class="row g-0 mb-4 bg-light rounded-3 p-3 border">
                                 <div class="col-6 border-end text-center">
                                     <small class="text-muted fw-bold" style="font-size: 10px;">LOẠI HÌNH</small>
-                                    <div class="fw-bold text-dark mt-1">{{ b.type or 'NCKH' }}</div>
+                                    <div class="fw-bold text-dark mt-1">{{ b.type or 'NCKH Standard' }}</div>
                                 </div>
                                 <div class="col-6 text-center">
                                     <small class="text-muted fw-bold" style="font-size: 10px;">HẠN CUỐI</small>
@@ -195,6 +210,9 @@
                             </div>
                             <div class="d-flex gap-2 mt-auto">
                                 <button class="btn btn-dark flex-grow-1 rounded-3 fw-bold" style="font-size: 13px;" data-bs-toggle="modal" data-bs-target="#modalManageFaculty">TRẠNG THÁI CÁC KHOA</button>
+                                <button class="btn btn-outline-danger rounded-3 px-3 fw-bold" style="font-size: 13px;" onclick="deleteBatch({{ b.id }}, '{{ b.name }}')" title="Xóa đợt NCKH này">
+                                    <i class="fa-solid fa-trash-can me-1"></i> Xóa
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -480,7 +498,17 @@
                 <div class="modal-body p-4">
                     <div class="row g-3 mb-3">
                         <div class="col-md-8"><label class="form-label">Tên đợt triển khai</label><input type="text" id="batch-name" class="form-control" placeholder="VD: NCKH Sinh viên 2025 - Đợt 2"></div>
-                        <div class="col-md-4"><label class="form-label">Năm học áp dụng</label><select id="batch-year" class="form-select"><option value="2025-2026">2025-2026</option><option value="2026-2027">2026-2027</option></select></div>
+                        <div class="col-md-4">
+                            <label class="form-label">Năm học áp dụng</label>
+                            <input type="text" id="batch-year" class="form-control" placeholder="VD: 2025-2026" value="2025-2026" list="batch-year-options">
+                            <datalist id="batch-year-options">
+                                <option value="2024-2025"></option>
+                                <option value="2025-2026"></option>
+                                <option value="2026-2027"></option>
+                                <option value="2027-2028"></option>
+                                <option value="2028-2029"></option>
+                            </datalist>
+                        </div>
                     </div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-6"><label class="form-label">Loại hình</label><select id="batch-type" class="form-select"><option selected value="NCKH Standard">Nghiên cứu khoa học (Chuẩn)</option><option value="Khởi nghiệp">Khởi nghiệp sáng tạo</option></select></div>
@@ -491,7 +519,7 @@
                         <div class="col-md-6"><label class="form-label">Hạn cuối nộp đề tài</label><input type="date" id="batch-end-date" class="form-control"></div>
                     </div>
                     <div class="mb-3"><label class="form-label">Mô tả chi tiết / Ghi chú</label><textarea id="batch-description" class="form-control" rows="3"></textarea></div>
-                    <div class="mb-0"><label class="form-label">Văn bản hướng dẫn (PDF/DOC)</label><input type="file" class="form-control"></div>
+                    <div class="mb-0"><label class="form-label">Văn bản hướng dẫn (PDF/DOC)</label><input type="file" id="batch-file" name="guidance_doc" class="form-control"></div>
                 </div>
                 <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy bỏ</button><button class="btn btn-primary fw-bold px-4" onclick="saveBatch()">Lưu & Ban hành</button></div>
             </div>
