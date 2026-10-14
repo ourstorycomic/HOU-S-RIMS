@@ -29,3 +29,19 @@ def repository_page():
 @web_bp.route('/analysis')
 def analysis_page():
     return render_template('analysis.html')
+
+@web_bp.route('/student')
+def student_page():
+    if session.get('role') != 'student':
+        return redirect(url_for('auth.login'))
+    return render_template('student.html')
+# Danh sách giảng viên hướng dẫn (Mentor List)
+@web_bp.route('/mentors')
+def mentors_page():
+    return render_template('mentors.html')
+
+# Chi tiết giảng viên (Mentor Detail)
+@web_bp.route('/mentor/detail')
+@web_bp.route('/mentor/<int:mentor_id>')
+def mentor_detail_page(mentor_id=1):
+    return render_template('mentor_detail.html', mentor_id=mentor_id)

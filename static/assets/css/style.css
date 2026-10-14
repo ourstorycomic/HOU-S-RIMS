@@ -228,6 +228,10 @@ a { text-decoration: none !important; }
     width: 100%;
 }
 
+.hidden {
+    display: none !important;
+}
+
 .content-body {
     flex: 1;
     display: flex;

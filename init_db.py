@@ -7,24 +7,21 @@ with app.app_context():
     if not User.query.filter_by(username='admin').first():
         admin = User(
             username='admin',
-            password_hash='admin123', # In a real app, hash this using werkzeug.security!
-            full_name='Administrator',
-            email='admin@example.com',
-            role='Admin'
+            password='admin123', # In a real app, hash this using werkzeug.security!
+            name='Administrator',
+            role='admin'
         )
         mentor = User(
             username='mentor1',
-            password_hash='mentor123',
-            full_name='Nguyễn Văn Mentor',
-            email='mentor@example.com',
-            role='Mentor'
+            password='mentor123',
+            name='Nguyễn Văn Mentor',
+            role='lecturer'
         )
         student = User(
             username='student1',
-            password_hash='student123',
-            full_name='Lê Thị Sinh Viên',
-            email='student@example.com',
-            role='Student'
+            password='student123',
+            name='Lê Thị Sinh Viên',
+            role='student'
         )
         db.session.add_all([admin, mentor, student])
         db.session.commit()

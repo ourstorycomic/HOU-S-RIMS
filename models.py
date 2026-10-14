@@ -20,6 +20,32 @@ class User(db.Model):
     topics_mentored = db.relationship('Topic', backref='mentor', lazy=True)
     group_memberships = db.relationship('GroupMember', backref='student', lazy=True)
 
+    @property
+    def password(self):
+        return self.password_hash
+
+    @password.setter
+    def password(self, val):
+        self.password_hash = val
+
+    @property
+    def name(self):
+        return self.full_name
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'role': self.role,
+            'name': self.full_name,
+            'full_name': self.full_name,
+            'email': self.email,
+            'bio': self.bio,
+            'phone': self.phone,
+            'student_id': self.student_id,
+            'faculty': self.faculty
+        }
+
 class Batch(db.Model):
     __tablename__ = 'batches'
     id = db.Column(db.Integer, primary_key=True)
@@ -92,6 +118,18 @@ class Meeting(db.Model):
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=True)
     status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+            'start_time': self.start_time.strftime('%Y-%m-%d %H:%M:%S') if self.start_time else None,
+            'end_time': self.end_time.strftime('%Y-%m-%d %H:%M:%S') if self.end_time else None,
+            'organizer_id': self.organizer_id,
+            'topic_id': self.topic_id,
+            'status': self.status
+        }
+
 class Message(db.Model):
     __tablename__ = 'messages'
     id = db.Column(db.Integer, primary_key=True)
@@ -108,6 +146,22 @@ class Message(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     sender = db.relationship('User', foreign_keys=[sender_id])
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.sender_id,
+            'sender_id': self.sender_id,
+            'receiver_id': self.receiver_id,
+            'group_id': self.group_id,
+            'text': self.content,
+            'content': self.content,
+            'message_type': self.message_type,
+            'file_url': self.file_url,
+            'file_name': self.file_name,
+            'is_read': self.is_read,
+            'created_at': self.timestamp.strftime('%Y-%m-%d %H:%M:%S') if self.timestamp else None
+        }
 
 class Notification(db.Model):
     __tablename__ = 'notifications'
