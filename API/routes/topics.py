@@ -275,7 +275,7 @@ def handle_invitation():
         return jsonify({'error': 'Missing parameters'}), 400
         
     try:
-        from models import GroupMember, Topic, Message
+        from models import GroupMember, Topic, Message, User, Notification
         import json
         
         # Update message metadata if msg_id provided
@@ -310,7 +310,6 @@ def handle_invitation():
             elif pending_count == 0:
                 topic.status = 'pending' # Now waiting for lecturer
                 
-                from models import Notification
                 mentor = User.query.get(topic.mentor_id)
                 if mentor:
                     link = f"/lecturer/approve"
@@ -323,8 +322,6 @@ def handle_invitation():
                     db.session.add(new_notif)
                 
                 from email_utils import send_email_async
-                from models import User
-                mentor = User.query.get(topic.mentor_id)
                 if mentor and mentor.email:
                     email_link = f"http://127.0.0.1:5000/lecturer/approve"
                     email_html = f"""
@@ -361,27 +358,35 @@ def cancel_topic(topic_id):
             
         group = Group.query.get(topic.group_id)
         if not group or group.leader_id != user_id:
-            return jsonify({'error': 'Only the group leader can cancel this registration'}), 403
+            return jsonify({'error': 'Chỉ trưởng nhóm mới có quyền hủy đăng ký đề tài này'}), 403
             
-        if topic.status != 'waiting_for_members':
-            return jsonify({'error': 'Cannot cancel this topic because it has already progressed'}), 400
+        if topic.status == 'approved':
+            return jsonify({'error': 'Đề tài đã được Khoa phê duyệt chính thức nên không thể tự ý hủy!'}), 400
             
         # Delete registration
         TopicRegistration.query.filter_by(topic_id=topic.id).delete()
         
+        # Delete milestones, meetings, submissions if any
+        from models import Meeting, Milestone, Submission
+        try:
+            Meeting.query.filter_by(topic_id=topic.id).delete()
+            Milestone.query.filter_by(topic_id=topic.id).delete()
+            Submission.query.filter_by(topic_id=topic.id).delete()
+        except:
+            pass
+        
         # Delete topic
         db.session.delete(topic)
         
-        # Delete group members and group
-        GroupMember.query.filter_by(group_id=group.id).delete()
-        
-        from models import Message
-        Message.query.filter_by(group_id=group.id).delete()
-        
-        db.session.delete(group)
+        # Delete group members and group if it was attached
+        if group:
+            GroupMember.query.filter_by(group_id=group.id).delete()
+            from models import Message
+            Message.query.filter_by(group_id=group.id).delete()
+            db.session.delete(group)
         
         db.session.commit()
-        return jsonify({'message': 'Topic and group deleted successfully'}), 200
+        return jsonify({'message': 'Hủy đăng ký đề tài thành công'}), 200
         
     except Exception as e:
         db.session.rollback()

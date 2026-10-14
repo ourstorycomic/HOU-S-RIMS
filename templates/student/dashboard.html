@@ -25,10 +25,11 @@
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({group_id: groupId, action: action})
                     });
+                    const data = await resp.json().catch(() => ({}));
                     if (resp.ok) {
                         Swal.fire('Thành công', action === 'accepted' ? 'Đã tham gia nhóm!' : 'Đã từ chối lời mời.', 'success').then(() => location.reload());
                     } else {
-                        Swal.fire('Lỗi', 'Có lỗi xảy ra', 'error');
+                        Swal.fire('Lỗi', data.error || 'Có lỗi xảy ra', 'error');
                     }
                 } catch(e) {
                     Swal.fire('Lỗi', e.message, 'error');

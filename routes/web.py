@@ -43,7 +43,9 @@ def analysis_page():
 def student_page():
     if session.get('role') != 'student':
         return redirect(url_for('auth.login'))
-    return render_template('student.html')
+    user_id = session.get('user_id')
+    current_user = User.query.get(user_id) if user_id else None
+    return render_template('student.html', current_user=current_user)
 # Danh sách giảng viên hướng dẫn (Mentor List)
 @web_bp.route('/mentors')
 def mentors_page():

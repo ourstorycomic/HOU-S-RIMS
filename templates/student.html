@@ -1149,7 +1149,28 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="mb-4"><label class="form-label small fw-bold text-muted">THÀNH VIÊN NHÓM</label><div class="card p-3 bg-light border-0 mb-2"><div class="d-flex align-items-center justify-content-between"><div class="d-flex align-items-center gap-3"><div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold small" style="width: 35px; height: 35px;">VH</div><div><div class="fw-bold text-dark">Nguyễn Văn Học</div><div class="small text-muted">Trưởng nhóm</div></div></div><span class="badge bg-primary-subtle text-primary">CHÍNH CHỦ</span></div></div><button class="btn btn-outline-primary border-dashed w-100 rounded-3 py-2 small fw-bold" data-bs-toggle="modal" data-bs-target="#modalAddMember">+ Thêm thành viên bằng Mã SV</button></div>
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-muted">THÀNH VIÊN NHÓM</label>
+                            <div id="registerMembersList">
+                                <div class="card p-3 bg-light border-0 mb-2 member-card-leader">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold small" style="width: 35px; height: 35px;">
+                                                {{ (current_user.full_name[:2] | upper) if current_user and current_user.full_name else ((session.get('user_name')[:2] | upper) if session.get('user_name') else 'SV') }}
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold text-dark">{{ current_user.full_name if current_user and current_user.full_name else (session.get('user_name') or 'Bạn') }}</div>
+                                                <div class="small text-muted">Trưởng nhóm ({{ current_user.student_id if current_user and current_user.student_id else (current_user.username if current_user else (session.get('username') or 'Chính chủ')) }})</div>
+                                            </div>
+                                        </div>
+                                        <span class="badge bg-primary-subtle text-primary">CHÍNH CHỦ</span>
+                                    </div>
+                                </div>
+                                <!-- Danh sách các thành viên được thêm sẽ xuất hiện ở đây -->
+                                <div id="dynamicMembersContainer"></div>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary border-dashed w-100 rounded-3 py-2 small fw-bold mt-1" data-bs-toggle="modal" data-bs-target="#modalAddMember">+ Thêm thành viên bằng Mã SV</button>
+                        </div>
                         <button type="button" class="btn btn-primary w-100 py-3 fw-bold rounded-3 shadow-sm" style="background: linear-gradient(90deg, #6366f1 0%, #4f46e5 100%); border: none;" onclick="syncAndOpenRegisterModal()">GỬI HỒ SƠ ĐĂNG KÝ PHÊ DUYỆT</button>
                     </div>
                 </div>
@@ -1483,7 +1504,30 @@
 {% endblock %}
 
 {% block modals %}
-    <div class="modal fade" id="modalAddMember" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Thêm Thành viên Nhóm</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="mb-3"><label class="form-label small fw-bold text-muted">Nhập Mã sinh viên</label><input type="text" class="form-control"></div></div><div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-primary w-100 fw-bold" onclick="showToast('Đã thêm thành viên!')" data-bs-dismiss="modal">Thêm</button></div></div></div></div>
+    <!-- MODAL THÊM THÀNH VIÊN VÀO NHÓM -->
+    <div class="modal fade" id="modalAddMember" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold text-dark">Thêm Thành viên Nhóm</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase">NHẬP MÃ SINH VIÊN</label>
+                        <input type="text" id="inputAddMemberCode" class="form-control py-2.5" placeholder="Ví dụ: 24A1001D0342 hoặc student2" onkeydown="if(event.key === 'Enter'){ event.preventDefault(); doAddMemberByCode(); }">
+                        <div id="addMemberFeedback" class="small mt-2 d-none"></div>
+                    </div>
+                    <div class="p-3 bg-light rounded-3 small text-muted border border-dashed">
+                        <i class="fa-solid fa-circle-info text-primary me-1"></i> Nhập <strong>Mã sinh viên</strong> (hoặc tên tài khoản) của sinh viên để hệ thống tự động tìm kiếm và thêm vào nhóm nghiên cứu.
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4 pt-0">
+                    <button type="button" id="btnAddMemberSubmit" class="btn btn-primary w-100 fw-bold py-2.5 rounded-3" onclick="doAddMemberByCode()">Thêm</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="modal fade" id="modalMoreSuggestions" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Gợi ý Đề tài hệ thống</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><ul class="list-group list-group-flush"><li class="list-group-item">Ứng dụng Blockchain...</li><li class="list-group-item">Hệ thống IoT...</li></ul></div></div></div></div>
     <div class="modal fade" id="modalAllMentors" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Danh sách Giảng viên Hướng dẫn</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="row g-3"><div class="col-md-6"><div class="p-3 border rounded-3 d-flex align-items-center gap-3"><div class="bg-light rounded-circle p-2"><i class="fa-solid fa-user-tie"></i></div><div><div class="fw-bold">TS. Nguyễn Văn A</div><div class="small text-muted">Khoa CNTT - AI, Big Data</div></div></div></div></div></div></div></div></div>
     <div class="modal fade" id="modalConfirmRegister" tabindex="-1">
@@ -1506,17 +1550,25 @@
                         <div class="col-6">
                             <label class="form-label small fw-bold text-muted">Đợt NCKH</label>
                             <select id="batchId" class="form-select">
-                                <option value="1">Đợt 1 - 2026</option>
+                                {% for b in active_batches %}
+                                    <option value="{{ b.id }}" {% if loop.first %}selected{% endif %}>{{ b.name }}</option>
+                                {% else %}
+                                    {% if active_batch %}
+                                        <option value="{{ active_batch.id }}" selected>{{ active_batch.name }}</option>
+                                    {% else %}
+                                        <option value="10" selected>Đợt 1 NCKH Sinh viên 2025 - 2026</option>
+                                    {% endif %}
+                                {% endfor %}
                             </select>
                         </div>
                         <div class="col-6">
                             <label class="form-label small fw-bold text-muted">Giảng viên HD</label>
                             <select id="mentorId" class="form-select">
-                                <option value="2">TS. Nguyễn Văn A (ID: 2)</option>
+                                <option value="3">TS. Nguyễn Văn A</option>
                             </select>
                         </div>
                     </div>
-                    <input type="hidden" id="groupId" value="1">
+                    <input type="hidden" id="groupId" value="0">
                 </div>
                 <div class="modal-footer border-0 px-4 pb-4">
                     <button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy</button>
@@ -1555,8 +1607,7 @@
                 </div>
             </div>
         </div>
-    </div>
-    <div class="modal fade" id="modalProfile" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Hồ sơ Sinh viên</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="mb-3"><label class="form-label small fw-bold text-muted">Họ tên</label><input type="text" class="form-control" value="Nguyễn Văn Học" readonly></div><div class="mb-3"><label class="form-label small fw-bold text-muted">Mã sinh viên</label><input type="text" class="form-control" value="21010042" readonly></div></div><div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-primary w-100 fw-bold" onclick="showToast('Cập nhật hồ sơ thành công!')" data-bs-dismiss="modal">Lưu thay đổi</button></div></div></div></div>
+    <div class="modal fade" id="modalProfile" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Hồ sơ Sinh viên</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="mb-3"><label class="form-label small fw-bold text-muted">Họ tên</label><input type="text" class="form-control" value="{{ current_user.full_name if current_user else session.get('user_name', 'Sinh Viên') }}" readonly></div><div class="mb-3"><label class="form-label small fw-bold text-muted">Mã sinh viên</label><input type="text" class="form-control" value="{{ current_user.student_id if current_user and current_user.student_id else (current_user.username if current_user else session.get('username', 'SV001')) }}" readonly></div><div class="mb-3"><label class="form-label small fw-bold text-muted">Khoa / Viện</label><input type="text" class="form-control" value="{{ current_user.faculty if current_user and current_user.faculty else 'Khoa Công nghệ Thông tin' }}" readonly></div></div><div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-primary w-100 fw-bold" onclick="showToast('Thông tin hồ sơ sinh viên chính xác!')" data-bs-dismiss="modal">Đóng</button></div></div></div></div>
 {% endblock %}
 
 {% block extra_js %}
@@ -2329,9 +2380,140 @@ function syncRegisterDataToModal() {
     const modalMentorSelect = document.getElementById('mentorId');
     if (modalMentorSelect && mentor) {
         modalMentorSelect.innerHTML = '';
-        const opt = new Option(`${mentor} (${faculty || 'Khoa'})`, "2", true, true);
+        const MENTOR_NAME_TO_ID = {
+            'TS. Nguyễn Văn A': 3,
+            'PGS. TS. Trần Thị B': 4,
+            'TS. Lê Văn C': 8,
+            'ThS. Hoàng Thị D': 13,
+            'PGS. TS. Vũ Đình E': 14,
+            'TS. Đỗ Quỳnh Anh': 15,
+            'TS. Trần Văn Hùng': 16
+        };
+        const mentorId = MENTOR_NAME_TO_ID[mentor] || 3;
+        const opt = new Option(`${mentor} (${faculty || 'Khoa'})`, mentorId, true, true);
         modalMentorSelect.add(opt);
-        modalMentorSelect.value = "2";
+        modalMentorSelect.value = mentorId;
+    }
+}
+
+// ==========================================
+// THÊM & XÓA THÀNH VIÊN VÀO NHÓM BẰNG MÃ SV
+// ==========================================
+window.selectedMembersForGroup = window.selectedMembersForGroup || [];
+
+async function doAddMemberByCode() {
+    const input = document.getElementById('inputAddMemberCode');
+    const feedback = document.getElementById('addMemberFeedback');
+    const btn = document.getElementById('btnAddMemberSubmit');
+    if (!input) return;
+
+    const code = input.value.trim();
+    if (!code) {
+        if (feedback) {
+            feedback.className = 'small mt-2 text-danger fw-medium';
+            feedback.textContent = 'Vui lòng nhập Mã sinh viên!';
+            feedback.classList.remove('d-none');
+        }
+        input.focus();
+        return;
+    }
+
+    if (feedback) feedback.classList.add('d-none');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang kiểm tra...';
+
+    try {
+        const resp = await fetch('/api/students/lookup', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ student_id: code })
+        });
+        const data = await resp.json();
+
+        if (resp.ok && data.success) {
+            const st = data.student;
+
+            if (window.selectedMembersForGroup.includes(st.id)) {
+                if (feedback) {
+                    feedback.className = 'small mt-2 text-warning fw-medium';
+                    feedback.textContent = `Sinh viên ${st.full_name} (${st.student_id}) đã có trong nhóm!`;
+                    feedback.classList.remove('d-none');
+                }
+                btn.disabled = false;
+                btn.textContent = 'Thêm';
+                return;
+            }
+
+            window.selectedMembersForGroup.push(st.id);
+
+            const container = document.getElementById('dynamicMembersContainer');
+            if (container) {
+                const initials = (st.full_name || 'SV').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+                const card = document.createElement('div');
+                card.className = 'card p-3 bg-white border border-primary-subtle rounded-3 mb-2 shadow-xs member-card-item';
+                card.id = `member-card-${st.id}`;
+                card.innerHTML = `
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold small" style="width: 35px; height: 35px;">
+                                ${initials}
+                            </div>
+                            <div>
+                                <div class="fw-bold text-dark">${st.full_name}</div>
+                                <div class="small text-muted">
+                                    <span class="badge bg-light text-dark border me-1">${st.student_id}</span>
+                                    <span>${st.faculty || 'Khoa CNTT'}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 small">
+                                <i class="fa-solid fa-check me-1"></i> Đã chọn
+                            </span>
+                            <button type="button" class="btn btn-sm btn-outline-danger border-0 rounded-circle" style="width:30px;height:30px;padding:0;" onclick="removeSelectedMember(${st.id}, '${st.full_name}')" title="Xóa thành viên">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            }
+
+            input.value = '';
+            const modalEl = document.getElementById('modalAddMember');
+            const modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) modalInstance.hide();
+
+            if (typeof showToast === 'function') {
+                showToast(`Đã thêm thành viên ${st.full_name}!`);
+            }
+        } else {
+            if (feedback) {
+                feedback.className = 'small mt-2 text-danger fw-medium';
+                feedback.textContent = data.error || 'Không tìm thấy sinh viên với mã này!';
+                feedback.classList.remove('d-none');
+            }
+        }
+    } catch (err) {
+        if (feedback) {
+            feedback.className = 'small mt-2 text-danger';
+            feedback.textContent = 'Lỗi kết nối máy chủ!';
+            feedback.classList.remove('d-none');
+        }
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Thêm';
+    }
+}
+
+function removeSelectedMember(id, name) {
+    window.selectedMembersForGroup = (window.selectedMembersForGroup || []).filter(mid => mid !== id);
+    const card = document.getElementById(`member-card-${id}`);
+    if (card) {
+        card.remove();
+    }
+    if (typeof showToast === 'function') {
+        showToast(`Đã xóa ${name || 'thành viên'} khỏi nhóm`);
     }
 }
 
@@ -2346,6 +2528,20 @@ document.addEventListener('DOMContentLoaded', function() {
     if (modalEl) {
         modalEl.addEventListener('show.bs.modal', function() {
             syncRegisterDataToModal();
+        });
+    }
+
+    // Reset feedback khi mở modalAddMember
+    const addMemberModal = document.getElementById('modalAddMember');
+    if (addMemberModal) {
+        addMemberModal.addEventListener('show.bs.modal', function() {
+            const fb = document.getElementById('addMemberFeedback');
+            if (fb) fb.classList.add('d-none');
+            const inp = document.getElementById('inputAddMemberCode');
+            if (inp) {
+                inp.value = '';
+                setTimeout(() => inp.focus(), 300);
+            }
         });
     }
 });

@@ -35,6 +35,16 @@ jwt = JWTManager(app)
 
 db.init_app(app)
 
+@app.context_processor
+def inject_global_user():
+    from flask import session
+    from models import User, Batch
+    user_id = session.get('user_id')
+    current_user = User.query.get(user_id) if user_id else None
+    active_batches = Batch.query.filter_by(status='active').all()
+    active_batch = active_batches[0] if active_batches else None
+    return dict(current_user=current_user, active_batches=active_batches, active_batch=active_batch)
+
 init_routes(app)
 try:
     from API.routes import init_api_routes

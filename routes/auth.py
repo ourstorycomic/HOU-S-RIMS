@@ -19,9 +19,16 @@ def login():
             'sv': 'student1',
             'sv01': 'student1',
             'student': 'student1',
-            'gv': 'lecturer1',
-            'gv01': 'lecturer1',
-            'lecturer': 'lecturer1',
+            'gv': 'gv1',
+            'gv01': 'gv1',
+            'lecturer': 'gv1',
+            'lecturer1': 'gv1',
+            'lecturer2': 'gv2',
+            'lecturer3': 'gv3',
+            'lecturer4': 'gv4',
+            'lecturer5': 'gv5',
+            'lecturer6': 'gv6',
+            'lecturer7': 'gv7',
             'khoa': 'faculty1',
             'faculty': 'faculty1',
             'admin': 'admin'
@@ -65,7 +72,7 @@ def login():
                 return redirect(url_for('lecturer.dashboard'))
             return redirect(url_for('web.admin_page'))
         else:
-            flash('Sai tên đăng nhập hoặc mật khẩu! Mẹo: Bạn có thể nhập student1 / lecturer1 / faculty1 / admin (mật khẩu: 123456).')
+            flash('Sai tên đăng nhập hoặc mật khẩu! Mẹo: Bạn có thể nhập student1 / gv1 / faculty1 / admin (mật khẩu: 123456).')
 
     return render_template('login.html')
 
