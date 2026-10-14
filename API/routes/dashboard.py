@@ -1,62 +1,59 @@
-import os
-import json
+from sqlalchemy import func
 from flask import Blueprint, jsonify
+from models import Topic, Group, User
 
-dashboard_bp = Blueprint('dashboard', __name__)
+dashboard_bp = Blueprint('dashboard_api', __name__, url_prefix='/api/dashboard')
 
-BASE_DIR = os.getcwd()
-PROGRESS_FILE = os.path.join(BASE_DIR, 'data', 'progress.json')
-COUNCILS_FILE = os.path.join(BASE_DIR, 'data', 'councils.json')
+@dashboard_bp.route('/progress', methods=['GET'])
+def get_progress_dashboard():
+    """
+    Get progress dashboard data
+    ---
+    tags:
+      - Dashboard
+    responses:
+      200:
+        description: Progress data
+    """
+    from flask import session
+    from models import Batch
+    current_year = session.get('academic_year', '2025-2026')
+    total = Topic.query.join(Batch).filter(Batch.academic_year == current_year).count()
+    approved = Topic.query.join(Batch).filter(Topic.status=='approved', Batch.academic_year == current_year).count()
+    pending = Topic.query.join(Batch).filter(Topic.status=='pending', Batch.academic_year == current_year).count()
+    rejected = Topic.query.join(Batch).filter(Topic.status=='rejected', Batch.academic_year == current_year).count()
 
-def read_json(filepath, default_val):
-    if not os.path.exists(filepath):
-        return default_val
-    with open(filepath, 'r', encoding='utf-8') as f:
-        try:
-            return json.load(f)
-        except:
-            return default_val
-@dashboard_bp.route('/api/dashboard/progress', methods=['GET'])
-def get_dashboard_progress():
-    try:
-        progress_data = read_json(PROGRESS_FILE, {})
-        topic_summaries = []
-        
-        for topic_id, milestones in progress_data.items():
-            if milestones and isinstance(milestones, list):
-                total_pct = sum(m.get('percentage', 0) for m in milestones)
-                avg_percentage = round(total_pct / len(milestones), 2)
-            else:
-                avg_percentage = 0
-                
-            topic_summaries.append({
-                "topic_id": topic_id,
-                "average_percentage": avg_percentage,
-                "milestone_count": len(milestones) if isinstance(milestones, list) else 0
-            })
-            
-        return jsonify({
-            "success": True,
-            "data": topic_summaries
-        }), 200
-    except Exception as e:
-        return jsonify({"success": False, "message": f"Lỗi server: {str(e)}"}), 500
+    progress_pct = int((approved / total * 100) if total > 0 else 0)
+    return jsonify({
+        'overall_progress': progress_pct,
+        'topics_on_track': approved,
+        'topics_pending': pending,
+        'topics_rejected': rejected
+    }), 200
 
-@dashboard_bp.route('/api/dashboard/stats', methods=['GET'])
-def get_dashboard_stats():
-    try:
-        progress_data = read_json(PROGRESS_FILE, {})
-        councils_data = read_json(COUNCILS_FILE, [])
-        stats = {
-            "total_topics": len(progress_data) if len(progress_data) > 0 else 5,
-            "total_councils": len(councils_data) if len(councils_data) > 0 else 3,
-            "total_submissions": 15,
-            "completed_topics": sum(1 for milestones in progress_data.values() if any(m.get('percentage') == 100 for m in milestones))
-        }
-        
-        return jsonify({
-            "success": True,
-            "data": stats
-        }), 200
-    except Exception as e:
-        return jsonify({"success": False, "message": f"Lỗi server: {str(e)}"}), 500
+@dashboard_bp.route('/stats', methods=['GET'])
+def get_stats():
+    """
+    Get system statistics
+    ---
+    tags:
+      - Dashboard
+    responses:
+      200:
+        description: System stats
+    """
+    from flask import session
+    from models import Batch
+    current_year = session.get('academic_year', '2025-2026')
+    
+    total_topics = Topic.query.join(Batch).filter(Batch.academic_year == current_year).count()
+    total_groups = Group.query.join(Batch).filter(Batch.academic_year == current_year).count()
+    total_students = User.query.filter(func.lower(User.role) == 'student').count()
+    total_mentors = User.query.filter(func.lower(User.role) == 'lecturer').count()
+    
+    return jsonify({
+        'total_topics': total_topics,
+        'total_groups': total_groups,
+        'total_students': total_students,
+        'total_mentors': total_mentors
+    }), 200

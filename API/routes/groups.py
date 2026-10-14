@@ -5,6 +5,30 @@ groups_bp = Blueprint('groups', __name__, url_prefix='/api/groups')
 
 @groups_bp.route('', methods=['POST'])
 def create_group():
+    """
+    Create a new group
+    ---
+    tags:
+      - Groups
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            name:
+              type: string
+            batch_id:
+              type: integer
+            leader_id:
+              type: integer
+    responses:
+      201:
+        description: Group created successfully
+      400:
+        description: Missing required fields
+    """
     data = request.get_json()
     if not data or 'name' not in data or 'batch_id' not in data or 'leader_id' not in data:
         return jsonify({'error': 'Missing required fields: name, batch_id, leader_id'}), 400
@@ -38,6 +62,30 @@ def create_group():
 
 @groups_bp.route('/<int:group_id>/members', methods=['POST'])
 def add_member(group_id):
+    """
+    Add a member to a group
+    ---
+    tags:
+      - Groups
+    parameters:
+      - in: path
+        name: group_id
+        type: integer
+        required: true
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            student_id:
+              type: integer
+    responses:
+      201:
+        description: Member added successfully
+      400:
+        description: Invalid student or already a member
+    """
     data = request.get_json()
     if not data or 'student_id' not in data:
         return jsonify({'error': 'Missing student_id'}), 400

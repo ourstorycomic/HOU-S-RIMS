@@ -15,22 +15,33 @@ document.addEventListener('DOMContentLoaded', function() {
         return new bootstrap.Tooltip(tooltipTriggerEl)
     });
     
-    // ĐẢM BẢO CHỈ VIEW ĐẦU TIÊN HIỂN THỊ KHI TRANG LOAD
+    // ĐẢM BẢO CHỈ VIEW ĐẦU TIÊN HIỂN THỊ KHI TRANG LOAD (HOẶC THEO HASH / SESSION)
     const contentArea = document.querySelector('.content-area');
     if (contentArea) {
         const allViews = contentArea.querySelectorAll(':scope > div[id^="view-"]');
         console.log('Initializing views, total found:', allViews.length);
         
-        // Kiểm tra URL hash để hiển thị view tương ứng
-        const hash = window.location.hash.substring(1); // Bỏ dấu #
+        // Kiểm tra URL hash hoặc sessionStorage để hiển thị view tương ứng
+        let hash = window.location.hash.substring(1); // Bỏ dấu #
+        if (!hash) {
+            hash = sessionStorage.getItem('active_admin_tab') || '';
+        }
         let targetViewFound = false;
         
         if (hash) {
-            // Tìm view theo ID, không cần kiểm tra parentElement
-            const targetView = document.getElementById('view-' + hash);
+            const tabAliases = {
+                'batches': 'deployment',
+                'deployment': 'deployment',
+                'approvals': 'approval',
+                'approval': 'approval',
+                'councils': 'council',
+                'council': 'council'
+            };
+            const resolvedHash = tabAliases[hash] || hash;
+            const targetView = document.getElementById('view-' + resolvedHash) || document.getElementById('view-' + hash);
             if (targetView) {
                 targetViewFound = true;
-                console.log('Hash found, showing view:', 'view-' + hash);
+                console.log('Hash/Session found, showing view:', targetView.id);
                 
                 // Ẩn tất cả views trong document
                 const allViewsInDoc = document.querySelectorAll('[id^="view-"]');
@@ -59,8 +70,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     navLinks.forEach(link => {
                         link.classList.remove('active-main', 'active-purple', 'active-student');
-                        const onclick = link.getAttribute('onclick');
-                        if (onclick && onclick.includes(hash)) {
+                        const onclick = link.getAttribute('onclick') || '';
+                        const href = link.getAttribute('href') || '';
+                        if (onclick.includes(`'${hash}'`) || onclick.includes(`'${resolvedHash}'`) || href.includes(`#${hash}`)) {
                             if (isStudent) {
                                 link.classList.add('active-student');
                             } else if (isLecturer) {
@@ -86,6 +98,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('Other view hidden:', view.id);
                 }
             });
+            const sidebar = document.querySelector('.sidebar');
+            if (sidebar) {
+                const firstLink = sidebar.querySelector('.nav-link');
+                if (firstLink) {
+                    sidebar.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active-main', 'active-purple', 'active-student'));
+                    firstLink.classList.add('active-main');
+                }
+            }
         }
     }
 });
@@ -101,21 +121,23 @@ function switchTab(tabName, element) {
     console.log('Tab name:', tabName);
     console.log('Element:', element);
     
+    // Tự động tìm element nếu chưa truyền
+    if (!element) {
+        element = document.querySelector(`.sidebar .nav-link[onclick*="'${tabName}'"]`) || 
+                  document.querySelector(`.sidebar .nav-link[href*="#${tabName}"]`);
+    }
+
     // A. Xử lý UI của thanh điều hướng (Sidebar)
     const sidebar = document.querySelector('.sidebar');
     if (sidebar) {
-        console.log('Sidebar found');
         // Remove active khỏi tất cả nav-link trong sidebar
         const allNavLinks = sidebar.querySelectorAll('.nav-link');
-        console.log('Nav links found:', allNavLinks.length);
-        
         allNavLinks.forEach(link => {
             link.classList.remove('active-main', 'active-purple', 'active-student');
         });
         
         // Thêm class active phù hợp cho element được click
         if (element && element.classList && element.classList.contains('nav-link')) {
-            // Xác định role dựa vào menu category
             const menuCategories = sidebar.querySelectorAll('.menu-category');
             let isStudent = false;
             let isLecturer = false;
@@ -125,8 +147,6 @@ function switchTab(tabName, element) {
                 if (text.includes('SINH VIÊN')) isStudent = true;
                 if (text.includes('GIẢNG VIÊN')) isLecturer = true;
             });
-            
-            console.log('Role detected - Student:', isStudent, 'Lecturer:', isLecturer);
             
             if (isStudent) {
                 element.classList.add('active-student');
@@ -139,30 +159,23 @@ function switchTab(tabName, element) {
     }
 
     // B. Xử lý hiển thị nội dung (Content Views)
-    const contentArea = document.querySelector('.content-area');
-    console.log('Content area found:', !!contentArea);
-    
-    if (contentArea) {
-        // Tìm tất cả các views - thử nhiều cách
-        const allViewsDirect = contentArea.querySelectorAll(':scope > div[id^="view-"]');
-        const allViewsAny = document.querySelectorAll('[id^="view-"]');
-        
-        console.log('Direct children views found:', allViewsDirect.length);
-        console.log('All views in document:', allViewsAny.length);
-        
-        // Sử dụng tất cả views trong document để ẩn
-        allViewsAny.forEach((view, index) => {
-            console.log(`Hiding view ${index}:`, view.id);
-            view.classList.add('hidden');
-            view.classList.remove('fade-in');
-        });
-    }
+    const allViewsInDoc = document.querySelectorAll('[id^="view-"]');
+    allViewsInDoc.forEach(view => {
+        view.classList.add('hidden');
+        view.classList.remove('fade-in');
+    });
 
-    // C. Hiện view được chọn
-    const viewId = 'view-' + tabName;
-    const selectedView = document.getElementById(viewId);
-    console.log('Looking for view:', viewId);
-    console.log('Selected view found:', !!selectedView);
+    // C. Hiện view được chọn (hỗ trợ alias mapping tự động)
+    const tabAliases = {
+        'batches': 'deployment',
+        'deployment': 'deployment',
+        'approvals': 'approval',
+        'approval': 'approval',
+        'councils': 'council',
+        'council': 'council'
+    };
+    const resolvedTab = tabAliases[tabName] || tabName;
+    let selectedView = document.getElementById('view-' + resolvedTab) || document.getElementById('view-' + tabName);
     
     if (selectedView) {
         selectedView.classList.remove('hidden');
@@ -171,12 +184,13 @@ function switchTab(tabName, element) {
         selectedView.classList.remove('fade-in');
         void selectedView.offsetWidth; // Force reflow
         selectedView.classList.add('fade-in');
-        
-        console.log('View shown:', selectedView.id, 'Classes:', selectedView.className);
-    } else {
-        console.error('ERROR: View not found -', viewId);
-        console.log('Available views:', Array.from(document.querySelectorAll('[id^="view-"]')).map(v => v.id));
     }
+
+    // D. Cập nhật URL hash và sessionStorage để khi reload vẫn ở đúng tab
+    try {
+        history.replaceState(null, '', '#' + tabName);
+        sessionStorage.setItem('active_admin_tab', tabName);
+    } catch(e) {}
     
     // Khôi phục vị trí scroll của sidebar sau khi xử lý xong
     if (sidebarMenu) {
@@ -191,14 +205,17 @@ function switchTab(tabName, element) {
 /**
  * 2. HÀM HIỂN THỊ THÔNG BÁO (TOAST)
  */
-function showToast(message) {
-    const toastElement = document.getElementById('liveToast');
-    const toastBody = document.getElementById('toastMessage');
-    
-    if (toastElement && toastBody) {
-        toastBody.innerText = message;
-        const toast = new bootstrap.Toast(toastElement);
-        toast.show();
+function showToast(message, type = 'success') {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: message,
+            icon: type,
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
+        });
     } else {
         alert(message);
     }

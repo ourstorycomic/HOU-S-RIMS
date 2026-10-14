@@ -1,205 +1,10 @@
-let chartInstance = null;
-
-document.addEventListener('DOMContentLoaded', function () {
-    initUploadForm();
-    initProgressForm();
-    loadTopicProgress(1);
-    renderProgressChart();
-
-    const btnRegister = document.getElementById('btnSubmitRegister');
-    if (btnRegister) {
-        btnRegister.addEventListener('click', () => {
-            const topicData = {
-                name: document.getElementById('topicName')?.value,
-                description: document.getElementById('topicDesc')?.value,
-                batch_id: parseInt(document.getElementById('batchId')?.value) || null,
-                mentor_id: parseInt(document.getElementById('mentorId')?.value) || null,
-                group_id: parseInt(document.getElementById('groupId')?.value) || null
-            };
-            registerTopic(topicData);
-        });
-    }
-
-    const btnApprove = document.getElementById('btnApproveTopic');
-    if (btnApprove) {
-        btnApprove.addEventListener('click', () => {
-            const topicId = parseInt(document.getElementById('currentTopicId')?.value);
-            if (topicId) approveTopic(topicId, 'approved');
-        });
-    }
-
-    const btnReject = document.getElementById('btnRejectTopic');
-    if (btnReject) {
-        btnReject.addEventListener('click', () => {
-            const topicId = parseInt(document.getElementById('currentTopicId')?.value);
-            if (topicId) approveTopic(topicId, 'rejected');
-        });
-    }
-});
-
-function initUploadForm() {
-    const uploadForm = document.getElementById('uploadForm');
-    const uploadStatus = document.getElementById('uploadStatus');
-
-    if (!uploadForm) return;
-
-    uploadForm.addEventListener('submit', async function (e) {
-        e.preventDefault();
-
-        const fileInput = document.getElementById('fileInput');
-        if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-            alert('Vui lòng chọn file trước khi gửi!');
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
-
-        if (uploadStatus) uploadStatus.innerText = 'Đang tải file lên...';
-
-        try {
-            const res = await fetch('/api/submissions/upload', {
-                method: 'POST',
-                body: formData
-            });
-            const data = await res.json();
-
-            if (data.success) {
-                if (uploadStatus) {
-                    uploadStatus.innerHTML = `<span style="color: green;"> Upload thành công: ${data.data.filename}</span>`;
-                }
-                fileInput.value = '';
-            } else if (uploadStatus) {
-                uploadStatus.innerHTML = `<span style="color: red;"> Lỗi: ${data.message}</span>`;
-            }
-        } catch (err) {
-            console.error(err);
-            if (uploadStatus) {
-                uploadStatus.innerHTML = `<span style="color: red;"> Lỗi kết nối máy chủ!</span>`;
-            }
-        }
-    });
-}
-
-async function loadTopicProgress(topicId) {
-    const progressBar = document.getElementById('progressBar');
-    const progressText = document.getElementById('progressText');
-    const milestoneList = document.getElementById('milestoneList');
-
-    try {
-        const res = await fetch(`/api/topics/${topicId}/progress`);
-        const result = await res.json();
-
-        if (result.success) {
-            const milestones = result.milestones || [];
-
-            let latestPercentage = 0;
-            if (milestones.length > 0) {
-                latestPercentage = milestones[milestones.length - 1].percentage;
-            }
-            if (progressBar) {
-                progressBar.style.width = `${latestPercentage}%`;
-            }
-            if (progressText) {
-                progressText.innerText = `${latestPercentage}%`;
-            }
-            if (milestoneList) {
-                milestoneList.innerHTML = milestones.map(m => `
-                    <li>
-                        <strong>[${m.percentage}%] ${m.title}</strong> - <em>${m.note || ''}</em> 
-                        <small>(${m.created_at})</small>
-                    </li>
-                `).join('');
-            }
-        }
-    } catch (err) {
-        console.error("Lỗi tải tiến độ:", err);
-    }
-}
-
-function initProgressForm() {
-    const progressForm = document.getElementById('progressForm');
-    if (!progressForm) return;
-
-    progressForm.addEventListener('submit', async function (e) {
-        e.preventDefault();
-
-        const topicId = document.getElementById('topicIdInput')?.value || 1;
-        const title = document.getElementById('milestoneTitle')?.value;
-        const percentage = document.getElementById('milestonePct')?.value;
-        const note = document.getElementById('milestoneNote')?.value;
-
-        try {
-            const res = await fetch(`/api/topics/${topicId}/progress`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    title: title,
-                    percentage: parseInt(percentage) || 0,
-                    note: note
-                })
-            });
-            const data = await res.json();
-
-            if (data.success) {
-                alert('Cập nhật tiến độ thành công!');
-                loadTopicProgress(topicId);
-                renderProgressChart();
-            }
-        } catch (err) {
-            console.error("Lỗi lưu tiến độ:", err);
-        }
-    });
-}
-
-async function renderProgressChart() {
-    const chartCanvas = document.getElementById('progressChart');
-    if (!chartCanvas) return;
-
-    try {
-        const res = await fetch('/api/dashboard/progress');
-        const result = await res.json();
-
-        if (result.success) {
-            const data = result.data;
-            const labels = data.map(item => `Đề tài ${item.topic_id}`);
-            const percentages = data.map(item => item.average_percentage);
-
-            if (chartInstance) {
-                chartInstance.destroy();
-            }
-
-            const ctx = chartCanvas.getContext('2d');
-            chartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: '% Hoàn thành trung bình',
-                        data: percentages,
-                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 100
-                        }
-                    }
-                }
-            });
-        }
-    } catch (err) {
-        console.error("Lỗi vẽ biểu đồ:", err);
-    }
-}
+// static/assets/js/main.js
 
 /**
- * @param {Object} data
+ * Hàm hỗ trợ Đăng ký đề tài
+ * Gọi API POST /api/topics/register
+ * 
+ * @param {Object} data - Dữ liệu đăng ký (name, description, batch_id, mentor_id, group_id)
  */
 async function registerTopic(data) {
     try {
@@ -210,24 +15,27 @@ async function registerTopic(data) {
             },
             body: JSON.stringify(data)
         });
-
+        
         const result = await response.json();
-
+        
         if (response.ok) {
-            alert('Đăng ký đề tài thành công!');
+            Swal.fire('Thành công', 'Đăng ký đề tài thành công!', 'success');
             return result;
         } else {
-            alert('Lỗi: ' + (result.error || result.message || 'Đăng ký thất bại'));
+            Swal.fire('Lỗi', result.error, 'error');
         }
     } catch (error) {
         console.error('Lỗi khi đăng ký đề tài:', error);
-        alert('Đã xảy ra lỗi hệ thống khi đăng ký.');
+        Swal.fire('Lỗi', 'Đã xảy ra lỗi hệ thống khi đăng ký.', 'error');
     }
 }
 
 /**
- * @param {Number} topicId
- * @param {String} status
+ * Hàm hỗ trợ Xét duyệt đề tài
+ * Gọi API POST /api/topics/{id}/approve
+ * 
+ * @param {Number} topicId - ID của đề tài
+ * @param {String} status - Trạng thái mới (ví dụ: 'approved' hoặc 'rejected')
  */
 async function approveTopic(topicId, status) {
     try {
@@ -238,17 +46,101 @@ async function approveTopic(topicId, status) {
             },
             body: JSON.stringify({ status: status })
         });
-
+        
         const result = await response.json();
-
+        
         if (response.ok) {
-            alert(`Đã cập nhật trạng thái thành: ${status}`);
+            Swal.fire('Thành công', `Đã cập nhật trạng thái thành: ${status}`, 'success');
             return result;
         } else {
-            alert('Lỗi: ' + (result.error || result.message || 'Cập nhật thất bại'));
+            Swal.fire('Lỗi', result.error, 'error');
         }
     } catch (error) {
         console.error('Lỗi khi xét duyệt:', error);
-        alert('Đã xảy ra lỗi hệ thống khi xét duyệt.');
+        Swal.fire('Lỗi', 'Đã xảy ra lỗi hệ thống khi xét duyệt.', 'error');
     }
 }
+
+// Khi DOM load xong, gán sự kiện cho các nút nếu có
+document.addEventListener('DOMContentLoaded', () => {
+    // Gán sự kiện cho nút đăng ký trong student.html
+    const btnRegister = document.getElementById('btnSubmitRegister');
+    if (btnRegister) {
+        btnRegister.addEventListener('click', () => {
+            const nameField = document.getElementById('topicName');
+            if (!nameField || !nameField.value.trim()) {
+                Swal.fire('Lỗi', 'Vui lòng nhập tên đề tài!', 'warning');
+                return;
+            }
+
+            const topicData = {
+                name: document.getElementById('topicName').value.trim(),
+                description: document.getElementById('topicDesc').value.trim(),
+                batch_id: parseInt(document.getElementById('batchId').value),
+                mentor_id: parseInt(document.getElementById('mentorId').value),
+                group_id: parseInt(document.getElementById('groupId').value)
+            };
+
+            registerTopic(topicData).then((res) => {
+                if (res && res.topic_id) {
+                    if(typeof showToast === 'function') showToast('Đã gửi hồ sơ đăng ký thành công qua API!');
+                }
+            });
+        });
+    }
+
+    // Gán sự kiện cho nút Duyệt trong lecturer.html
+    const btnApprove = document.getElementById('btnApproveTopic');
+    if (btnApprove) {
+        btnApprove.addEventListener('click', () => {
+            // Giả sử duyệt topic số 1
+            approveTopic(1, 'approved').then(() => {
+                if(typeof showToast === 'function') showToast('Đã gọi API xác nhận hướng dẫn đề tài #1!');
+            });
+        });
+    }
+
+    // Gán sự kiện cho nút Từ chối
+    const btnReject = document.getElementById('btnRejectTopic');
+    if (btnReject) {
+        btnReject.addEventListener('click', () => {
+            const topicId = parseInt(document.getElementById('currentTopicId')?.value);
+            approveTopic(topicId, 'rejected');
+        });
+    }
+
+    // Gán sự kiện cho nút Nộp báo cáo trong student.html
+    const btnUpload = document.getElementById('btnUploadSubmission');
+    if (btnUpload) {
+        btnUpload.addEventListener('click', async () => {
+            const fileInput = document.getElementById('submissionFile');
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                Swal.fire('Lỗi', 'Vui lòng chọn file để nộp!', 'warning');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('type', document.getElementById('submissionType').value);
+            formData.append('topic_id', document.getElementById('submissionTopicId').value);
+            formData.append('uploader_id', document.getElementById('submissionUploaderId').value);
+
+            try {
+                const response = await fetch('/api/submissions/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    Swal.fire('Thành công', 'Nộp báo cáo/tài liệu thành công!', 'success');
+                } else {
+                    Swal.fire('Lỗi', result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Lỗi khi nộp bài:', error);
+                Swal.fire('Lỗi', 'Đã xảy ra lỗi hệ thống khi nộp bài.', 'error');
+            }
+        });
+    }
+});

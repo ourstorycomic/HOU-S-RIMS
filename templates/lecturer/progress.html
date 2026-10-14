@@ -1,0 +1,258 @@
+{% extends "layouts/lecturer_layout.html" %}
+
+{% block lecturer_content %}
+<div id="view-l-progress" class="fade-in ">
+                <div class="card border-0 shadow-sm rounded-4 p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+                        <div>
+                            <h5 class="fw-bold mb-1">Theo dõi tiến độ NCKH SV</h5>
+                            <div class="small text-muted">Quản lý các đề tài đang hướng dẫn ({{ all_mentored_topics|length }} đề tài)</div>
+                        </div>
+                        <button class="btn btn-light border btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalCreateMeeting">
+                            <i class="fa-regular fa-calendar me-2"></i> Lịch họp định kỳ
+                        </button>
+                    </div>
+
+                    {% if all_mentored_topics %}
+                        {% for t in all_mentored_topics %}
+                        {% set status_map = {'pending': 1, 'faculty_pending': 2, 'approved': 3} %}
+                        {% set step = status_map.get(t.status, 1) %}
+                        <div class="bg-white border rounded-4 p-4 mb-3 shadow-sm">
+                            <div class="d-flex justify-content-between mb-3">
+                                <div>
+                                    <h6 class="fw-bold text-primary mb-1">{{ t.title }}</h6>
+                                    <small class="text-muted fw-bold">Nhóm ID: {{ t.group_id or 'N/A' }} | Trạng thái:
+                                    <span class="badge {% if t.status == 'approved' %}bg-success{% elif t.status == 'faculty_pending' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                        {% if t.status == 'pending' %}Chờ GV duyệt
+                                        {% elif t.status == 'faculty_pending' %}GV đã duyệt - Chờ Khoa
+                                        {% elif t.status == 'approved' %}Khoa đã duyệt
+                                        {% else %}{{ t.status | upper }}{% endif %}
+                                    </span></small>
+                                </div>
+                                <div class="text-end">
+                                    <div class="h4 fw-bold text-primary mb-0">{{ t.total_progress | default(0) }}%</div>
+                                    <div class="small text-muted fw-bold">TIẾN ĐỘ TỔNG THỂ</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Approval timeline -->
+                            <div class="position-relative mb-4 mt-3 px-2">
+                                {% set pct_timeline = (step - 1) * 50 %}
+                                <div class="progress position-absolute" style="height: 4px; top: 10px; left: 24px; width: calc(100% - 48px); z-index: 1;">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ pct_timeline }}%"></div>
+                                </div>
+                                <div class="d-flex justify-content-between position-relative" style="z-index: 2;">
+                                    <!-- Step 1: SV đăng ký -->
+                                    <div class="text-center">
+                                        <div class="{% if step >= 1 %}bg-success{% else %}bg-white border{% endif %} text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" style="width:24px;height:24px; font-size:10px;">
+                                            {% if step >= 1 %}<i class="fa-solid fa-check"></i>{% else %}<span class="text-muted">1</span>{% endif %}
+                                        </div>
+                                        <div class="small fw-bold" style="font-size:11px;">SV đăng ký</div>
+                                    </div>
+                                    <!-- Step 2: GV duyệt -->
+                                    <div class="text-center">
+                                        <div class="{% if step >= 2 %}bg-success{% elif step == 1 %}bg-primary{% else %}bg-white border{% endif %} text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" style="width:24px;height:24px; font-size:10px;">
+                                            {% if step >= 2 %}<i class="fa-solid fa-check"></i>{% else %}<i class="fa-solid fa-hourglass-half" style="font-size:9px;"></i>{% endif %}
+                                        </div>
+                                        <div class="small fw-bold {% if step == 1 %}text-primary{% endif %}" style="font-size:11px;">GV duyệt</div>
+                                    </div>
+                                    <!-- Step 3: Khoa duyệt -->
+                                    <div class="text-center">
+                                        <div class="{% if step >= 3 %}bg-success{% elif step == 2 %}bg-primary{% else %}bg-white border{% endif %} text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" style="width:24px;height:24px; font-size:10px;">
+                                            {% if step >= 3 %}<i class="fa-solid fa-check"></i>{% elif step == 2 %}<i class="fa-solid fa-hourglass-half" style="font-size:9px;"></i>{% else %}<span class="text-muted">3</span>{% endif %}
+                                        </div>
+                                        <div class="small fw-bold {% if step == 2 %}text-primary{% endif %}" style="font-size:11px;">Khoa duyệt</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {% if t.status == 'approved' %}
+                            <div class="mt-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="fw-bold mb-0 small"><i class="fa-solid fa-list-check me-2"></i>Danh sách Cột mốc (Milestones)</h6>
+                                    <button class="btn btn-sm btn-outline-primary rounded-pill fw-bold" onclick="openAddMilestoneModal({{ t.id }})">+ Thêm Mốc</button>
+                                </div>
+                                
+                                <div class="mt-4">
+                                    <h6 class="fw-bold mb-3 small"><i class="fa-solid fa-file-arrow-down me-2"></i>Báo cáo đã nộp</h6>
+                                    {% if t.submissions %}
+                                        <div class="list-group list-group-flush border rounded-3">
+                                        {% for sub in t.submissions %}
+                                            <div class="list-group-item p-3">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div>
+                                                        <div class="fw-bold text-dark">Báo cáo {{ sub.submitted_at.strftime('%d/%m/%Y %H:%M') }}</div>
+                                                        <small class="text-muted">Sinh viên nộp (ID: {{ sub.uploader_id }})
+                                                        {% if sub.milestone %} | Cột mốc: <span class="fw-bold text-primary">{{ sub.milestone.name }}</span>{% endif %}
+                                                        </small>
+                                                        {% if sub.feedback_list %}
+                                                        <div class="mt-3">
+                                                            <div class="small fw-bold text-warning-emphasis mb-2"><i class="fa-solid fa-note-sticky text-warning me-1"></i>Lịch sử ghi chú:</div>
+                                                            <div class="d-flex flex-column gap-2">
+                                                                {% for fb in sub.feedback_list %}
+                                                                <div class="p-2 rounded-3 bg-warning-subtle border border-warning-subtle position-relative">
+                                                                    <div class="small text-dark" style="white-space: pre-wrap;">{{ fb.text }}</div>
+                                                                    {% if fb.time %}
+                                                                    <div class="text-muted mt-1" style="font-size:10px;"><i class="fa-regular fa-clock me-1"></i>{{ fb.time }}</div>
+                                                                    {% endif %}
+                                                                </div>
+                                                                {% endfor %}
+                                                            </div>
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="d-flex gap-2 flex-shrink-0 ms-3">
+                                                        <button class="btn btn-sm btn-outline-warning rounded-pill fw-bold" 
+                                                            onclick="openFeedbackModal({{ sub.id }}, '{{ sub.feedback_list|tojson|forceescape if sub.feedback_list else '[]' }}')">
+                                                            <i class="fa-solid fa-pen me-1"></i> Ghi chú
+                                                        </button>
+                                                        <a href="/api/submissions/download/{{ sub.id }}" class="btn btn-sm btn-outline-primary rounded-pill fw-bold">
+                                                            <i class="fa-solid fa-download me-1"></i> Tải về
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <div class="text-center p-3 border rounded-3 bg-light text-muted small">Chưa có báo cáo nào được nộp.</div>
+                                    {% endif %}
+                                </div>
+                                {% if t.milestones_list %}
+                                <div class="list-group list-group-flush border rounded-3">
+                                    {% for m in t.milestones_list %}
+                                    <div class="list-group-item p-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <div class="fw-bold {{ 'text-success' if m.progress_pct == 100 else 'text-dark' }}">{{ m.name }}</div>
+                                            <div class="d-flex gap-2 align-items-center">
+                                                <span class="badge bg-light text-muted border">{{ m.deadline.strftime('%d/%m/%Y') }}</span>
+                                                <button class="btn btn-sm btn-light text-primary border" onclick="updateMilestoneProgress({{ m.id }}, {{ m.progress_pct }}, '{{ m.name|replace('\'', '\\\'') }}')"><i class="fa-solid fa-pen"></i> Cập nhật</button>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="progress flex-grow-1" style="height: 6px;">
+                                                <div class="progress-bar {{ 'bg-success' if m.progress_pct == 100 else 'bg-primary' }}" style="width: {{ m.progress_pct }}%"></div>
+                                            </div>
+                                            <div class="small fw-bold {{ 'text-success' if m.progress_pct == 100 else 'text-primary' }}">{{ m.progress_pct }}%</div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                    <div class="text-center p-4 border rounded-3 bg-light text-muted small">
+                                        Đề tài này chưa thiết lập cột mốc nào.
+                                    </div>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <div class="mt-2 text-center p-4 border rounded-3 bg-light text-muted small">
+                                Đề tài đang chờ Khoa/Viện phê duyệt chính thức. Bạn chưa thể thiết lập Cột mốc tiến độ cho đề tài này.
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted py-5">
+                            <i class="fa-solid fa-clipboard-list fs-1 d-block mb-3 opacity-25"></i>
+                            <div class="fw-bold">Chưa có đề tài nào đang hướng dẫn</div>
+                            <div class="small">Sinh viên cần đăng ký và chọn bạn làm mentor</div>
+                        </div>
+                    {% endif %}
+                </div>
+        </div>
+{% endblock %}
+
+{% block modals %}
+<!-- Feedback Modal -->
+<div class="modal fade" id="modalFeedback" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-note-sticky me-2 text-warning"></i>Thêm ghi chú cho bài nộp</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4 pb-0">
+                <!-- Existing feedback history -->
+                <div id="feedbackHistory" class="mb-3" style="display:none;">
+                    <div class="small fw-bold text-muted mb-2"><i class="fa-solid fa-history me-1"></i>Ghi chú trước đó:</div>
+                    <div id="feedbackHistoryContent" class="p-3 rounded-3 bg-light border" style="font-size:13px; white-space:pre-wrap; max-height:150px; overflow-y:auto;"></div>
+                </div>
+                <!-- New note input -->
+                <p class="text-muted small mb-2">Nhập ghi chú mới để thêm vào lịch sử nhận xét:</p>
+                <textarea id="feedbackText" class="form-control" rows="4" placeholder="Ví dụ: Cần bổ sung phần tổng quan, format tài liệu chưa đúng..."></textarea>
+                <input type="hidden" id="feedbackSubId">
+                <input type="hidden" id="feedbackOldContent">
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-warning fw-bold text-white" onclick="saveFeedback()">
+                    <i class="fa-solid fa-paper-plane me-2"></i>Thêm & Thông báo SV
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openFeedbackModal(subId, feedbackListJson) {
+    document.getElementById('feedbackSubId').value = subId;
+    document.getElementById('feedbackText').value = '';
+    
+    const historyBox = document.getElementById('feedbackHistory');
+    const historyContent = document.getElementById('feedbackHistoryContent');
+    
+    let feedbackList = [];
+    try {
+        if (feedbackListJson) feedbackList = JSON.parse(feedbackListJson);
+    } catch(e) {}
+
+    if (feedbackList && feedbackList.length > 0) {
+        let html = '<div class="d-flex flex-column gap-2">';
+        feedbackList.forEach(fb => {
+            html += `
+                <div class="p-2 rounded-3 bg-white border shadow-sm">
+                    <div class="small text-dark" style="white-space: pre-wrap;">${fb.text}</div>
+                    ${fb.time ? `<div class="text-muted mt-1" style="font-size:10px;"><i class="fa-regular fa-clock me-1"></i>${fb.time}</div>` : ''}
+                </div>
+            `;
+        });
+        html += '</div>';
+        historyContent.innerHTML = html;
+        historyBox.style.display = 'block';
+    } else {
+        historyBox.style.display = 'none';
+        historyContent.innerHTML = '';
+    }
+    new bootstrap.Modal(document.getElementById('modalFeedback')).show();
+}
+
+function saveFeedback() {
+    const subId = document.getElementById('feedbackSubId').value;
+    const newNote = document.getElementById('feedbackText').value.trim();
+    
+    if (!newNote) {
+        showToast('Vui lòng nhập nội dung ghi chú mới!');
+        return;
+    }
+
+    fetch(`/api/submissions/${subId}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feedback: newNote })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('modalFeedback')).hide();
+            showToast('Đã thêm ghi chú và thông báo cho sinh viên!');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showToast(data.message || 'Có lỗi xảy ra!');
+        }
+    })
+    .catch(() => showToast('Lỗi kết nối server!'));
+}
+</script>
+{% endblock %}
