@@ -97,6 +97,9 @@
     <a href="{{ url_for('web.student_page') }}#s-explore" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-explore', this){% endif %}" class="nav-link {{ 'active-student' if request.endpoint == 'web.student_page' else '' }}">
         <i class="fa-solid fa-compass"></i> Khám phá ý tưởng
     </a>
+    <a href="{{ url_for('web.student_page') }}#s-mentors" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-mentors', this){% endif %}" class="nav-link">
+        <i class="fa-solid fa-chalkboard-user"></i> Tìm kiếm Mentor
+    </a>
     <a href="{{ url_for('web.student_page') }}#s-profile" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-profile', this){% endif %}" class="nav-link">
         <i class="fa-regular fa-id-badge"></i> Hồ sơ năng lực
     </a>

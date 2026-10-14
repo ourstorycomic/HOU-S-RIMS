@@ -223,6 +223,10 @@ a { text-decoration: none !important; }
     width: 100%;
 }
 
+.hidden {
+    display: none !important;
+}
+
 .stat-card, .card {
     background: #fff;
     border-radius: 16px;
