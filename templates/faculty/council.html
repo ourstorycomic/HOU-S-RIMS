@@ -1,0 +1,416 @@
+{% extends "layouts/faculty_layout.html" %}
+
+{% block faculty_content %}
+<div id="view-f-council" class="fade-in">
+    <div class="d-flex gap-4 align-items-start">
+        <div style="flex: 1; min-width: 0;">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h6 class="fw-bold text-primary"><i class="fa-solid fa-gavel me-2"></i> HỘI ĐỒNG PHÊ DUYỆT TM</h6>
+                                <button class="btn btn-light btn-sm rounded-circle shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAddCouncil"><i class="fa-solid fa-plus"></i></button>
+                            </div>
+                            
+                            {% if councils %}
+                                {% for c in councils %}
+                                <div class="card border shadow-sm mb-3 rounded-3 overflow-hidden">
+                                    <div class="p-3 d-flex justify-content-between align-items-center bg-white" data-bs-toggle="collapse" href="#councilCollapse{{ c.id }}" role="button" style="cursor: pointer;">
+                                        <div>
+                                            <div class="fw-bold">{{ c.name }}</div>
+                                            <small class="text-muted">Ngày thành lập: {{ c.established_date.strftime('%d/%m/%Y') }}</small>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); editCouncil({{ c.id }});" title="Sửa"><i class="fa-solid fa-pen"></i></button>
+                                            <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); deleteCouncil({{ c.id }});" title="Xóa"><i class="fa-solid fa-trash"></i></button>
+                                            <i class="fa-solid fa-chevron-right text-muted rotate-icon ms-2"></i>
+                                        </div>
+                                    </div>
+                                    <div class="collapse" id="councilCollapse{{ c.id }}">
+                                        <div class="card-body bg-light border-top p-3">
+                                            <div class="row g-3">
+                                                <div class="col-md-6">
+                                                    <div class="small fw-bold text-muted mb-2">THÔNG TIN HỌP:</div>
+                                                    <div class="small mb-1"><i class="fa-regular fa-clock me-2"></i>{{ c.meeting_time.strftime('%H:%M') if c.meeting_time else '--:--' }} | {{ c.meeting_date.strftime('%d/%m/%Y') if c.meeting_date else '--/--/----' }}</div>
+                                                    <div class="small mb-1"><i class="fa-solid fa-location-dot me-2"></i>{{ c.location or 'Chưa xác định' }}</div>
+                                                    <div class="small mb-2"><i class="fa-solid fa-hashtag me-2"></i>QĐ: {{ c.decision_number or 'Chưa có' }}</div>
+                                                    
+                                                    <div class="small fw-bold text-muted mt-3 mb-2">DANH SÁCH THÀNH VIÊN:</div>
+                                                    <ul class="list-group small">
+                                                        {% if c.members %}
+                                                            {% for m in c.members %}
+                                                            <li class="list-group-item bg-transparent border-0 py-1 ps-0 text-dark">
+                                                                <span class="badge bg-secondary me-2">{% if m.role == 'president' %}Chủ tịch{% elif m.role == 'secretary' %}Thư ký{% else %}Ủy viên{% endif %}</span> 
+                                                                {{ m.mentor.full_name if m.mentor else 'N/A' }}
+                                                            </li>
+                                                            {% endfor %}
+                                                        {% else %}
+                                                            <li class="list-group-item bg-transparent border-0 py-1 ps-0 text-muted">Chưa cập nhật thành viên</li>
+                                                        {% endif %}
+                                                    </ul>
+                                                </div>
+                                                <div class="col-md-6 border-start">
+                                                    <div class="small fw-bold text-muted mb-2">ĐỀ TÀI / NHÓM BÁO CÁO:</div>
+                                                    <ul class="list-group small">
+                                                        {% if c.topics %}
+                                                            {% for t in c.topics %}
+                                                            <li class="list-group-item bg-transparent border-0 py-1 ps-0 text-dark">
+                                                                <i class="fa-solid fa-caret-right me-1 text-primary"></i> <strong>{{ t.title }}</strong>
+                                                                {% if t.presentation_time %}
+                                                                <span class="badge bg-light text-dark border ms-2"><i class="fa-regular fa-clock text-primary"></i> {{ t.presentation_time }}</span>
+                                                                {% endif %}
+                                                                <br>
+                                                                <span class="text-muted ms-3">Nhóm: {{ t.group.name if t.group else 'N/A' }}</span>
+                                                            </li>
+                                                            {% endfor %}
+                                                        {% else %}
+                                                            <li class="list-group-item bg-transparent border-0 py-1 ps-0 text-muted">Chưa phân công đề tài.</li>
+                                                        {% endif %}
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center text-muted p-4">Chưa có hội đồng nào được thành lập.</div>
+                            {% endif %}
+            </div>
+        </div>
+        <div style="width: 360px; flex-shrink: 0; position: sticky; top: 20px; align-self: flex-start;">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <h6 class="fw-bold text-success mb-4"><i class="fa-solid fa-certificate me-2"></i> HỘI ĐỒNG NGHIỆM THU</h6>
+                <div class="d-flex flex-column align-items-center justify-content-center text-muted border border-dashed rounded-3 p-4">
+                    <i class="fa-solid fa-layer-group fa-2x mb-3 text-muted opacity-50"></i>
+                    <div class="fw-bold small">CHƯА CÓ HỘI ĐỒNG</div>
+                    <button class="btn btn-success btn-sm mt-3 rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#modalAddCouncil">Thiết lập ngay</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    <div class="modal fade" id="modalAddCouncil" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-success text-white"><h5 class="modal-title fw-bold">Thành lập Hội đồng Mới</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body p-4">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-8"><label class="form-label">Tên Hội đồng</label><input type="text" id="councilName" class="form-control" placeholder="HĐ Phê duyệt đề cương..."></div>
+                        <div class="col-md-4"><label class="form-label">Số Quyết định</label><input type="text" id="councilDecision" class="form-control" placeholder="Số: .../QĐ-CNTT"></div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4"><label class="form-label">Ngày họp</label><input type="date" id="councilDate" class="form-control" 
+                            min="{{ active_batch.start_date.strftime('%Y-%m-%d') if active_batch and active_batch.start_date else '' }}"
+                            max="{{ active_batch.end_date.strftime('%Y-%m-%d') if active_batch and active_batch.end_date else '' }}">
+                            <small class="text-muted" style="font-size: 10px;">Ngày báo cáo phải nằm trong khoảng diễn ra sự kiện</small>
+                        </div>
+                        <div class="col-md-4"><label class="form-label">Giờ bắt đầu</label><input type="time" id="councilTime" class="form-control"></div>
+                        <div class="col-md-4"><label class="form-label">Địa điểm</label><input type="text" id="councilLocation" class="form-control" placeholder="Phòng họp..."></div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    <h6 class="fw-bold mb-3 small text-muted">DANH SÁCH ĐỀ TÀI / NHÓM BÁO CÁO</h6>
+                    <div class="mb-3">
+                        <label class="form-label">Chọn các nhóm sẽ báo cáo trước Hội đồng này</label>
+                        <select id="councilTopics" class="form-select" multiple style="height: 120px;">
+                            {% for t in topics %}
+                            <option value="{{ t.id }}">{{ t.title }} - Nhóm: {{ t.group.name if t.group else 'Chưa có nhóm' }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Nhấn giữ Ctrl để chọn nhiều nhóm.</small>
+                        <div id="topicTimesContainer" class="mt-3"></div>
+                    </div>
+
+                    <hr class="my-4">
+                    <h6 class="fw-bold mb-3 small text-muted">THÀNH PHẦN HỘI ĐỒNG</h6>
+                    
+                    <!-- Hidden inputs to store selected member IDs -->
+                    <input type="hidden" id="councilPresident">
+                    <input type="hidden" id="councilSecretary">
+                    <input type="hidden" id="councilMembers">
+
+                    {% set role_configs = [
+                        ('president', 'Chủ tịch Hội đồng', 'bg-danger'),
+                        ('secretary', 'Thư ký', 'bg-warning text-dark'),
+                        ('member', 'Ủy viên', 'bg-primary')
+                    ] %}
+
+                    {% for role_id, role_label, badge_class in role_configs %}
+                    <div class="mb-2" id="section-{{ role_id }}">
+                        <label class="form-label fw-semibold mb-1" style="font-size:13px;">{{ role_label }}</label>
+                        <select class="form-select form-select-sm mb-1" id="picker-{{ role_id }}" onchange="addCouncilMember('{{ role_id }}', '{{ badge_class }}')">
+                            <option value="">-- Chọn giảng viên để thêm --</option>
+                            {% for m in mentors %}
+                            <option value="{{ m.id }}" data-name="{{ m.full_name }}">{{ m.full_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div id="tags-{{ role_id }}" class="d-flex flex-wrap gap-1 min-height-tag">
+                            <!-- Tags will appear here -->
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <div class="mb-0"><label class="form-label">File Quyết định thành lập (PDF)</label><input type="file" id="councilFile" class="form-control" multiple accept=".pdf,.doc,.docx"></div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button class="btn btn-success w-100 fw-bold" onclick="createCouncil()">Xác nhận thành lập</button>
+                </div>
+            </div>
+        </div>
+    </div>
+<style>
+.member-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    animation: tagIn 0.2s ease;
+}
+@keyframes tagIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+.member-tag .remove-tag { cursor: pointer; opacity: 0.7; font-size: 10px; }
+.member-tag .remove-tag:hover { opacity: 1; }
+.min-height-tag { min-height: 28px; padding: 4px 0; }
+</style>
+
+<script>
+window.COUNCILS_DATA = {};
+{% if councils %}
+    {% for c in councils %}
+        window.COUNCILS_DATA[{{ c.id }}] = {
+            id: {{ c.id }},
+            name: {{ c.name|tojson }},
+            decision_number: {{ (c.decision_number or '')|tojson }},
+            meeting_date: {{ (c.meeting_date|string if c.meeting_date else '')|tojson }},
+            meeting_time: {{ (c.meeting_time|string)[:5]|tojson if c.meeting_time else '""' }},
+            location: {{ (c.location or '')|tojson }},
+            president: [{% for m in c.members if m.role == 'president' %}{id: {{ m.mentor_id }}, name: {{ m.mentor.full_name|tojson }}},{% endfor %}],
+            secretary: [{% for m in c.members if m.role == 'secretary' %}{id: {{ m.mentor_id }}, name: {{ m.mentor.full_name|tojson }}},{% endfor %}],
+            member: [{% for m in c.members if m.role == 'member' %}{id: {{ m.mentor_id }}, name: {{ m.mentor.full_name|tojson }}},{% endfor %}],
+            topics: [{% for t in c.topics %}{id: {{ t.id }}, time: {{ (t.presentation_time or '')|tojson }}},{% endfor %}]
+        };
+    {% endfor %}
+{% endif %}
+
+// State to track selected members per role
+const councilState = { president: [], secretary: [], member: [] };
+
+function addCouncilMember(role, badgeClass) {
+    const picker = document.getElementById('picker-' + role);
+    const val = picker.value;
+    const name = picker.options[picker.selectedIndex]?.dataset?.name;
+    if (!val || !name) return;
+    
+    // Prevent duplicates within same role
+    if (councilState[role].some(m => m.id === val)) {
+        showToast('Giảng viên này đã được thêm!');
+        return;
+    }
+    
+    councilState[role].push({ id: val, name: name });
+    renderTags(role, badgeClass);
+    picker.value = ''; // reset picker
+}
+
+function removeMemberTag(role, id, badgeClass) {
+    councilState[role] = councilState[role].filter(m => String(m.id) !== String(id));
+    renderTags(role, badgeClass);
+}
+
+function renderTags(role, badgeClass) {
+    const container = document.getElementById('tags-' + role);
+    container.innerHTML = councilState[role].map(m => `
+        <span class="member-tag text-white ${badgeClass}">
+            <i class="fa-solid fa-user-tie" style="font-size:10px;"></i>
+            ${m.name}
+            <span class="remove-tag" onclick="removeMemberTag('${role}', '${m.id}', '${badgeClass}')">✕</span>
+        </span>
+    `).join('');
+}
+
+let _councilSubmitting = false;
+
+// Topic times logic
+function renderTopicTimes() {
+    const select = document.getElementById('councilTopics');
+    const container = document.getElementById('topicTimesContainer');
+    if (!select || !container) return;
+    
+    // Preserve existing values
+    const existingTimes = {};
+    container.querySelectorAll('input').forEach(input => {
+        existingTimes[input.dataset.topicId] = input.value;
+    });
+    
+    container.innerHTML = '';
+    Array.from(select.selectedOptions).forEach(opt => {
+        const id = opt.value;
+        const text = opt.text;
+        const div = document.createElement('div');
+        div.className = 'd-flex align-items-center mb-2 small';
+        div.innerHTML = `
+            <div class="text-truncate flex-grow-1 fw-bold me-2" title="${text}">${text}</div>
+            <input type="time" class="form-control form-control-sm w-auto topic-time-input" data-topic-id="${id}" value="${existingTimes[id] || ''}">
+        `;
+        container.appendChild(div);
+    });
+}
+document.getElementById('councilTopics').addEventListener('change', renderTopicTimes);
+
+async function createCouncil() {
+    if (_councilSubmitting) return;
+    _councilSubmitting = true;
+    const btn = document.querySelector('#modalAddCouncil .btn-success');
+    if (btn) { btn.disabled = true; btn.textContent = 'Đang xử lý...'; }
+    const name = document.getElementById('councilName').value;
+    const decision_number = document.getElementById('councilDecision').value;
+    const meeting_date = document.getElementById('councilDate').value;
+    const meeting_time = document.getElementById('councilTime').value;
+    const location = document.getElementById('councilLocation').value;
+    const topics = Array.from(document.getElementById('councilTopics').selectedOptions).map(o => {
+        const input = document.querySelector(`.topic-time-input[data-topic-id="${o.value}"]`);
+        return { id: parseInt(o.value), time: input ? input.value : '' };
+    });
+
+    const president = councilState.president.map(m => m.id);
+    const secretary = councilState.secretary.map(m => m.id);
+    const members = councilState.member.map(m => m.id);
+
+    if (!name || !meeting_date) {
+        Swal.fire('Lỗi', 'Vui lòng nhập Tên Hội đồng và Ngày họp', 'error');
+        return;
+    }
+
+    try {
+        const url = _editingCouncilId ? `/api/councils/${_editingCouncilId}` : '/api/councils';
+        const method = _editingCouncilId ? 'PUT' : 'POST';
+        const res = await fetch(url, {
+            method: method,
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                name, decision_number, meeting_date, meeting_time, location,
+                president, secretary, members, topics,
+                batch_id: {{ active_batch.id if active_batch else 'null' }}
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            Swal.fire('Thành công', 'Đã lập Hội đồng mới và gửi thông báo!', 'success').then(() => window.location.reload());
+        } else {
+            _councilSubmitting = false;
+            if (btn) { btn.disabled = false; btn.textContent = 'Xác nhận thành lập'; }
+            Swal.fire('Lỗi', data.error || 'Có lỗi xảy ra', 'error');
+        }
+    } catch (e) {
+        _councilSubmitting = false;
+        if (btn) { btn.disabled = false; btn.textContent = 'Xác nhận thành lập'; }
+        Swal.fire('Lỗi', 'Lỗi kết nối máy chủ', 'error');
+    }
+}
+
+// Append modal to body to prevent stacking context issues
+document.addEventListener('DOMContentLoaded', () => {
+    document.body.appendChild(document.getElementById('modalAddCouncil'));
+});
+
+// Reset state when modal opens
+document.getElementById('modalAddCouncil').addEventListener('show.bs.modal', () => {
+    _councilSubmitting = false;
+    if (typeof _editingCouncilId !== 'undefined' && _editingCouncilId) return;
+    const btn = document.querySelector('#modalAddCouncil .btn-success');
+    if (btn) { btn.disabled = false; btn.textContent = 'Xác nhận thành lập'; }
+    councilState.president = [];
+    councilState.secretary = [];
+    councilState.member = [];
+    ['president', 'secretary', 'member'].forEach(role => {
+        const tags = document.getElementById('tags-' + role);
+        if (tags) tags.innerHTML = '';
+    });
+});
+
+async function deleteCouncil(id) {
+    const result = await Swal.fire({
+        title: 'Xác nhận xóa?',
+        text: 'Hội đồng sẽ bị xóa và thành viên sẽ được thông báo.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Xóa',
+        cancelButtonText: 'Hủy'
+    });
+    if (!result.isConfirmed) return;
+    try {
+        const res = await fetch(`/api/councils/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (res.ok) {
+            Swal.fire('Thành công', 'Đã xóa hội đồng và thông báo cho thành viên.', 'success').then(() => window.location.reload());
+        } else {
+            Swal.fire('Lỗi', data.error || 'Có lỗi xảy ra', 'error');
+        }
+    } catch (e) {
+        Swal.fire('Lỗi', 'Lỗi kết nối', 'error');
+    }
+}
+
+
+let _editingCouncilId = null;
+
+function editCouncil(id) {
+    const data = window.COUNCILS_DATA[id];
+    if (!data) return;
+    
+    _editingCouncilId = id;
+    document.getElementById('councilName').value = data.name;
+    document.getElementById('councilDecision').value = data.decision_number;
+    document.getElementById('councilDate').value = data.meeting_date;
+    document.getElementById('councilTime').value = data.meeting_time;
+    document.getElementById('councilLocation').value = data.location;
+    
+    // Select topics
+    const topicsSelect = document.getElementById('councilTopics');
+    if (topicsSelect) {
+        Array.from(topicsSelect.options).forEach(opt => {
+            opt.selected = data.topics.some(t => t.id === parseInt(opt.value));
+        });
+        renderTopicTimes();
+        // Set times after render
+        data.topics.forEach(t => {
+            const input = document.querySelector(`.topic-time-input[data-topic-id="${t.id}"]`);
+            if (input) input.value = t.time;
+        });
+    }
+    
+    // Set members
+    councilState.president = data.president || [];
+    councilState.secretary = data.secretary || [];
+    councilState.member = data.member || [];
+    renderTags('president', 'bg-danger');
+    renderTags('secretary', 'bg-warning text-dark');
+    renderTags('member', 'bg-primary');
+    
+    // Update modal title and button
+    document.querySelector('#modalAddCouncil .modal-title').textContent = 'Cập nhật Hội đồng';
+    const btn = document.querySelector('#modalAddCouncil .btn-success');
+    if (btn) btn.textContent = 'Lưu thay đổi';
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalAddCouncil'));
+    modal.show();
+}
+
+// Intercept reset on modal close
+document.getElementById('modalAddCouncil').addEventListener('hidden.bs.modal', () => {
+    _editingCouncilId = null;
+    document.querySelector('#modalAddCouncil .modal-title').textContent = 'Thành lập Hội đồng Mới';
+    document.getElementById('councilName').value = '';
+    document.getElementById('councilDecision').value = '';
+    document.getElementById('councilDate').value = '';
+    document.getElementById('councilTime').value = '';
+    document.getElementById('councilLocation').value = '';
+    
+    councilState.president = [];
+    councilState.secretary = [];
+    councilState.member = [];
+    renderTags('president', 'bg-danger');
+    renderTags('secretary', 'bg-warning text-dark');
+    renderTags('member', 'bg-primary');
+});
+
+
+</script>
+{% endblock %}

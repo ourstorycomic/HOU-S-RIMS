@@ -3,7 +3,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db, User
 
-student_bp = Blueprint('student', __name__)
+student_bp = Blueprint('student_api', __name__)
 
 @student_bp.route('/api/students/profile', methods=['GET', 'PUT'])
 @jwt_required()

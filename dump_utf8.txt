@@ -1,0 +1,4 @@
+Topics:
+[(1, 'ee', 3, 'hidden'), (2, 'ưtgagag', 3, 'hidden'), (3, 'ggg', 10, 'active')]
+Batches:
+[(1, 'NCKH sinh viên', 'hidden'), (2, 'NCKH', 'hidden'), (3, 'NCKH 11', 'hidden'), (4, 'gagagaga', 'hidden'), (5, 'ffffffffffffffffffffffffffff', 'hidden'), (6, 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 'hidden'), (7, 'test_batch_123', 'hidden'), (8, 'gagagaga', 'hidden'), (9, 'gagagaga', 'hidden'), (10, 'gagagaga', 'active')]
