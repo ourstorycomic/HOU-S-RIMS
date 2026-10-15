@@ -13,42 +13,60 @@ def get_current_user():
     return None
 
 # ==========================================
-# 1. VIEW ROUTE: Giao diện Đăng ký nhóm NCKH
+# 1. VIEW ROUTE: Chuyển hướng sang SPA Cổng Sinh Viên (#s-group-registration)
 # ==========================================
 @group_bp.route('/student/group-registration')
 @group_bp.route('/group/register')
 def group_registration_page():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
-    
+    return redirect(url_for('web.student_page') + '#s-group-registration')
+
+@group_bp.route('/api/groups/my_group', methods=['GET'])
+def get_my_group():
     current_user = get_current_user()
-    if not current_user or current_user.role.lower() != 'student':
-        return redirect(url_for('auth.login'))
+    if not current_user:
+        return jsonify({'success': False, 'error': 'Vui lòng đăng nhập!'}), 401
     
-    # Tìm nhóm gần nhất mà sinh viên này đang làm leader hoặc là thành viên
     active_group = Group.query.filter_by(leader_id=current_user.id).order_by(Group.id.desc()).first()
     if not active_group:
-        # Nếu chưa làm leader nhóm nào, kiểm tra xem có tham gia nhóm nào không
         membership = GroupMember.query.filter_by(student_id=current_user.id).order_by(GroupMember.id.desc()).first()
         if membership:
             active_group = Group.query.get(membership.group_id)
-    
-    # Lấy danh sách Giảng viên / Mentor trong hệ thống
-    mentors = User.query.filter(func.lower(User.role) == 'lecturer').all()
-    
-    # Gom nhóm giảng viên theo Khoa để giao diện hiển thị / lọc dễ dàng
-    faculties = {}
-    for m in mentors:
-        fac = m.faculty or 'Khoa Công nghệ thông tin'
-        if fac not in faculties:
-            faculties[fac] = []
-        faculties[fac].append(m)
+            
+    if not active_group:
+        return jsonify({'success': True, 'group': None}), 200
         
-    return render_template('group_registration.html', 
-                           current_user=current_user, 
-                           current_group=active_group,
-                           mentors=mentors,
-                           faculties=faculties)
+    return jsonify({
+        'success': True,
+        'group': active_group.to_dict()
+    }), 200
+
+@group_bp.route('/api/groups/<int:group_id>/name', methods=['PUT'])
+def update_group_name(group_id):
+    current_user = get_current_user()
+    if not current_user:
+        return jsonify({'success': False, 'error': 'Vui lòng đăng nhập!'}), 401
+        
+    group = Group.query.get(group_id)
+    if not group:
+        return jsonify({'success': False, 'error': 'Không tìm thấy nhóm!'}), 404
+        
+    if group.leader_id != current_user.id:
+        return jsonify({'success': False, 'error': 'Chỉ trưởng nhóm mới có quyền đổi tên nhóm!'}), 403
+        
+    data = request.get_json(silent=True) or {}
+    new_name = (data.get('name') or '').strip()
+    if not new_name:
+        return jsonify({'success': False, 'error': 'Tên nhóm không được để trống!'}), 400
+        
+    group.name = new_name
+    db.session.commit()
+    return jsonify({
+        'success': True,
+        'message': 'Đã cập nhật tên nhóm thành công!',
+        'group': group.to_dict()
+    }), 200
 
 
 # ==========================================

@@ -84,6 +84,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 }
             }
+            if (hash === 's-chat') {
+                if (typeof initChatUI === 'function') initChatUI();
+                setTimeout(() => {
+                    const firstGroup = document.querySelector('#groups-pane .chat-group-item');
+                    if (firstGroup && (!window.activeChatId || window.activeChatType !== 'group')) {
+                        firstGroup.click();
+                    }
+                }, 100);
+            }
         }
         
         // Nếu không có hash hoặc hash không hợp lệ, hiển thị view đầu tiên
@@ -184,6 +193,22 @@ function switchTab(tabName, element) {
         selectedView.classList.remove('fade-in');
         void selectedView.offsetWidth; // Force reflow
         selectedView.classList.add('fade-in');
+
+        if (tabName === 's-group-registration' && typeof fetchSpaMyGroup === 'function') {
+            fetchSpaMyGroup();
+        }
+        if (tabName === 's-register' && typeof checkAndLoadMyTopic === 'function') {
+            checkAndLoadMyTopic();
+        }
+        if (tabName === 's-chat') {
+            if (typeof initChatUI === 'function') initChatUI();
+            setTimeout(() => {
+                const firstGroup = document.querySelector('#groups-pane .chat-group-item');
+                if (firstGroup && (!window.activeChatId || window.activeChatType !== 'group')) {
+                    firstGroup.click();
+                }
+            }, 60);
+        }
     }
 
     // D. Cập nhật URL hash và sessionStorage để khi reload vẫn ở đúng tab

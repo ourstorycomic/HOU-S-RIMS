@@ -45,7 +45,52 @@ def student_page():
         return redirect(url_for('auth.login'))
     user_id = session.get('user_id')
     current_user = User.query.get(user_id) if user_id else None
-    return render_template('student.html', current_user=current_user)
+    
+    # Tìm nhóm của sinh viên (nếu có)
+    active_group = None
+    if current_user:
+        active_group = Group.query.filter_by(leader_id=current_user.id).order_by(Group.id.desc()).first()
+        if not active_group:
+            membership = GroupMember.query.filter_by(student_id=current_user.id).order_by(GroupMember.id.desc()).first()
+            if membership:
+                active_group = Group.query.get(membership.group_id)
+                
+    # Lấy danh sách nhóm & đề tài của sinh viên
+    my_groups = []
+    my_topics = []
+    if current_user:
+        member_group_ids = [m.group_id for m in GroupMember.query.filter_by(student_id=current_user.id).all()]
+        my_groups = Group.query.filter(
+            (Group.leader_id == current_user.id) | (Group.id.in_(member_group_ids))
+        ).all()
+        if my_groups:
+            group_ids = [g.id for g in my_groups]
+            my_topics = Topic.query.filter(Topic.group_id.in_(group_ids)).order_by(Topic.id.desc()).all()
+        else:
+            my_topics = Topic.query.join(Group).filter(Group.leader_id == current_user.id).order_by(Topic.id.desc()).all()
+
+    batches = Batch.query.filter_by(status='active').order_by(Batch.id.desc()).all()
+    if not batches:
+        batches = Batch.query.order_by(Batch.id.desc()).all()
+
+    # Lấy danh sách giảng viên / Mentor
+    from sqlalchemy import func
+    mentors = User.query.filter(func.lower(User.role) == 'lecturer').all()
+    faculties = {}
+    for m in mentors:
+        fac = m.faculty or 'Khoa Công nghệ thông tin'
+        if fac not in faculties:
+            faculties[fac] = []
+        faculties[fac].append(m)
+
+    return render_template('student.html', 
+                           current_user=current_user,
+                           current_group=active_group,
+                           my_groups=my_groups,
+                           my_topics=my_topics,
+                           batches=batches,
+                           mentors=mentors,
+                           faculties=faculties)
 # Danh sách giảng viên hướng dẫn (Mentor List)
 @web_bp.route('/mentors')
 def mentors_page():

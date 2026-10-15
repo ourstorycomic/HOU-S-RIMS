@@ -210,14 +210,24 @@ document.addEventListener('DOMContentLoaded', function () {
                 const data = await resp.json();
                 if (resp.ok || resp.status === 201) {
                     // Close modal if open
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalRegisterTopic'));
-                    if (modal) modal.hide();
+                    const modalConfirm = (typeof bootstrap !== 'undefined') ? (
+                        bootstrap.Modal.getInstance(document.getElementById('modalConfirmRegister')) ||
+                        bootstrap.Modal.getInstance(document.getElementById('modalRegisterTopic'))
+                    ) : null;
+                    if (modalConfirm) modalConfirm.hide();
+
                     await Swal.fire({
                         icon: 'success', title: 'Đăng ký thành công!',
                         text: 'Đề tài đã được gửi và đang chờ giảng viên duyệt.',
                         timer: 2000, showConfirmButton: false
                     });
-                    location.reload();
+
+                    if (typeof checkAndLoadMyTopic === 'function') {
+                        await checkAndLoadMyTopic();
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    } else {
+                        location.reload();
+                    }
                 } else {
                     Swal.fire('Lỗi', data.error || 'Đăng ký thất bại.', 'error');
                 }
@@ -237,8 +247,13 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             const data = await resp.json();
             if (resp.ok) {
-                Swal.fire({icon: 'success', title: 'Đã hủy', text: 'Đã hủy đăng ký đề tài thành công.', timer: 2000, showConfirmButton: false})
-                .then(() => location.reload());
+                Swal.fire({icon: 'success', title: 'Đã hủy', text: 'Đã hủy đăng ký đề tài thành công.', timer: 2000, showConfirmButton: false});
+                if (typeof renderTopicFormView === 'function') {
+                    renderTopicFormView();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    location.reload();
+                }
             } else {
                 Swal.fire('Lỗi', data.error || 'Không thể hủy đề tài.', 'error');
             }

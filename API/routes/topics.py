@@ -62,6 +62,65 @@ def get_topics():
         })
     return jsonify(result), 200
 
+@topics_bp.route('/my-topic', methods=['GET'])
+def get_my_topic():
+    from flask import session
+    from models import Group, GroupMember, Topic, User, Batch
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    member_group_ids = [m.group_id for m in GroupMember.query.filter_by(student_id=user_id).all()]
+    groups = Group.query.filter(
+        (Group.leader_id == user_id) | (Group.id.in_(member_group_ids))
+    ).all()
+    
+    topic = None
+    if groups:
+        group_ids = [g.id for g in groups]
+        topic = Topic.query.filter(Topic.group_id.in_(group_ids)).order_by(Topic.id.desc()).first()
+    else:
+        topic = Topic.query.join(Group).filter(Group.leader_id == user_id).order_by(Topic.id.desc()).first()
+        
+    if not topic:
+        return jsonify({'has_topic': False, 'topic': None}), 200
+        
+    status_map = {'waiting_for_members': 0, 'pending': 1, 'faculty_pending': 2, 'approved': 3, 'rejected': 0}
+    step = status_map.get(topic.status, 1)
+    pct = 100 if topic.status == 'approved' else (50 if topic.status == 'faculty_pending' else (10 if topic.status == 'pending' else 0))
+    
+    status_labels = {
+        'approved': 'ĐÃ PHÊ DUYỆT CHÍNH THỨC',
+        'faculty_pending': 'GV ĐÃ DUYỆT • CHỜ KHOA DUYỆT',
+        'waiting_for_members': 'CHỜ THÀNH VIÊN XÁC NHẬN',
+        'rejected': 'TỪ CHỐI PHÊ DUYỆT',
+        'pending': 'ĐANG CHỜ GV DUYỆT'
+    }
+    status_label = status_labels.get(topic.status, 'ĐANG CHỜ GV DUYỆT')
+    
+    is_leader = bool(topic.group and topic.group.leader_id == user_id)
+    
+    return jsonify({
+        'has_topic': True,
+        'topic': {
+            'id': topic.id,
+            'title': topic.title,
+            'description': topic.description or '',
+            'status': topic.status,
+            'status_label': status_label,
+            'batch_id': topic.batch_id,
+            'batch_name': topic.batch.name if topic.batch else 'Đợt 1 NCKH Sinh viên 2025 - 2026',
+            'created_at': topic.created_at.strftime('%d/%m/%Y %H:%M') if topic.created_at else '',
+            'mentor_id': topic.mentor_id,
+            'mentor_name': topic.mentor.full_name if topic.mentor else 'Chưa có',
+            'group_id': topic.group_id,
+            'group_name': topic.group.name if topic.group else f"Nhóm ID: {topic.group_id}",
+            'is_leader': is_leader,
+            'step': step,
+            'pct': pct
+        }
+    }), 200
+
 # Task 3: Lấy danh sách mentor
 mentors_bp = Blueprint('mentors', __name__, url_prefix='/api/mentors')
 
@@ -266,15 +325,16 @@ def handle_invitation():
     if not user_id:
         return jsonify({'error': 'Unauthorized'}), 401
     
-    data = request.get_json()
-    group_id = data.get('group_id')
+    data = request.get_json() or {}
+    raw_group_id = data.get('group_id')
     action = data.get('action') # 'accepted' or 'rejected'
     msg_id = data.get('msg_id')
     
-    if not group_id or not action:
+    if not raw_group_id or not action:
         return jsonify({'error': 'Missing parameters'}), 400
         
     try:
+        group_id = int(raw_group_id)
         from models import GroupMember, Topic, Message, User, Notification
         import json
         
@@ -289,9 +349,23 @@ def handle_invitation():
                 except:
                     pass
                     
-        member = GroupMember.query.filter_by(group_id=group_id, student_id=user_id, status='pending').first()
+        member = GroupMember.query.filter(
+            GroupMember.group_id == group_id,
+            GroupMember.student_id == user_id,
+            GroupMember.status.in_(['pending', 'invited'])
+        ).first()
+        
         if not member:
-            return jsonify({'error': 'Invitation not found'}), 404
+            # Check if already accepted/rejected or wrong account
+            existing = GroupMember.query.filter_by(group_id=group_id, student_id=user_id).first()
+            curr_user = User.query.get(user_id)
+            user_label = curr_user.full_name if curr_user else f"ID {user_id}"
+            if existing:
+                if existing.status in ['accepted', 'joined']:
+                    return jsonify({'error': f'Tài khoản {user_label} đã tham gia nhóm này rồi!'}), 400
+                elif existing.status in ['rejected', 'declined']:
+                    return jsonify({'error': f'Tài khoản {user_label} đã từ chối lời mời này.'}), 400
+            return jsonify({'error': f'Không tìm thấy lời mời nhóm #{group_id} cho tài khoản {user_label}. Vui lòng kiểm tra lại tài khoản sinh viên đang đăng nhập!'}), 404
             
         if action == 'rejected':
             member.status = 'rejected'
@@ -300,8 +374,14 @@ def handle_invitation():
             
         # Check if all members accepted
         db.session.flush()
-        pending_count = GroupMember.query.filter_by(group_id=group_id, status='pending').count()
-        rejected_count = GroupMember.query.filter_by(group_id=group_id, status='rejected').count()
+        pending_count = GroupMember.query.filter(
+            GroupMember.group_id == group_id,
+            GroupMember.status.in_(['pending', 'invited'])
+        ).count()
+        rejected_count = GroupMember.query.filter(
+            GroupMember.group_id == group_id,
+            GroupMember.status.in_(['rejected', 'declined'])
+        ).count()
         topic = Topic.query.filter_by(group_id=group_id).first()
         
         if topic and topic.status == 'waiting_for_members':
@@ -441,6 +521,13 @@ def faculty_approve_topic(topic_id):
             return jsonify({'error': 'Topic not found'}), 404
             
         topic.status = 'approved'
+        if topic.group_id:
+            from models import Group
+            group = Group.query.get(topic.group_id)
+            if group:
+                group.status = 'approved'
+                if topic.mentor_id:
+                    group.mentor_id = topic.mentor_id
         db.session.commit()
         
         from email_utils import send_email_async
@@ -627,6 +714,13 @@ def approve_topic(topic_id):
             return jsonify({'error': 'Invalid status'}), 400
             
         topic.status = data['status']
+        if topic.status == 'approved' and topic.group_id:
+            from models import Group
+            group = Group.query.get(topic.group_id)
+            if group:
+                group.status = 'approved'
+                if topic.mentor_id:
+                    group.mentor_id = topic.mentor_id
         db.session.commit()
         
         from email_utils import send_email_async

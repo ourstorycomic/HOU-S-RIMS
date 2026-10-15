@@ -105,36 +105,36 @@
 
     {% if session.get('role') == 'student' %}
     <div class="menu-category">SINH VIÊN PORTAL</div>
-    <a href="{{ url_for('student.dashboard') }}" class="nav-link {{ 'active-student' if request.endpoint == 'student.dashboard' else '' }}">
+    <a href="{{ url_for('web.student_page') }}#s-explore" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-explore', this){% endif %}" class="nav-link {{ 'active-student' if request.endpoint == 'web.student_page' else '' }}">
         <i class="fa-solid fa-compass"></i> Khám phá ý tưởng
     </a>
     <a href="{{ url_for('web.student_page') }}#s-mentors" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-mentors', this){% endif %}" class="nav-link">
         <i class="fa-solid fa-chalkboard-user"></i> Tìm kiếm Mentor
     </a>
-    <a href="{{ url_for('student.portfolio') }}" class="nav-link {{ 'active-student' if request.endpoint == 'student.portfolio' else '' }}">
+    <a href="{{ url_for('web.student_page') }}#s-profile" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-profile', this){% endif %}" class="nav-link">
         <i class="fa-regular fa-id-badge"></i> Hồ sơ năng lực
     </a>
-    <a href="{{ url_for('group_registration.group_registration_page') }}" class="nav-link {{ 'active-student' if request.endpoint == 'group_registration.group_registration_page' else '' }}">
+    <a href="{{ url_for('web.student_page') }}#s-group-registration" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-group-registration', this){% endif %}" class="nav-link">
         <i class="fa-solid fa-users"></i> Đăng ký Nhóm NCKH
     </a>
-    <a href="{{ url_for('student.register') }}" class="nav-link {{ 'active-student' if request.endpoint == 'student.register' else '' }}">
-        <i class="fa-solid fa-pen-to-square"></i> Đăng ký NCKH
+    <a href="{{ url_for('web.student_page') }}#s-register" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-register', this){% endif %}" class="nav-link">
+        <i class="fa-solid fa-pen-to-square"></i> Đăng ký Đề tài
     </a>
-    <a href="{{ url_for('student.progress') }}" class="nav-link {{ 'active-student' if request.endpoint == 'student.progress' else '' }}">
+    <a href="{{ url_for('web.student_page') }}#s-group" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-group', this){% endif %}" class="nav-link">
         <i class="fa-solid fa-layer-group"></i> Nhóm nghiên cứu
     </a>
-    <a href="{{ url_for('student.templates_page') }}" class="nav-link {{ 'active-student' if request.endpoint == 'student.templates_page' else '' }}">
+    <a href="{{ url_for('web.student_page') }}#s-templates" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-templates', this){% endif %}" class="nav-link">
         <i class="fa-regular fa-folder-open"></i> Tài liệu mẫu
     </a>
-    <a href="{{ url_for('student.submit') }}" class="nav-link {{ 'active-student' if request.endpoint == 'student.submit' else '' }}">
+    <a href="{{ url_for('web.student_page') }}#s-submit" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-submit', this){% endif %}" class="nav-link">
         <i class="fa-solid fa-cloud-arrow-up"></i> Nộp báo cáo
     </a>
-    <a href="{{ url_for('student.chat') }}" class="nav-link {{ 'active-student' if request.endpoint == 'student.chat' else '' }}">
+    <a href="{{ url_for('web.student_page') }}#s-chat" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-chat', this){% endif %}" class="nav-link">
         <i class="fa-regular fa-comments"></i> Chatgroups
         {% set sg_count = global_my_groups_count if global_my_groups_count is defined else (my_groups | length if my_groups is defined else 0) %}
         {% if sg_count > 0 %}<span class="badge bg-primary rounded-pill ms-1" style="font-size: 9px;">{{ sg_count }}</span>{% endif %}
     </a>
-    <a href="{{ url_for('student.calendar') }}" class="nav-link {{ 'active-student' if request.endpoint == 'student.calendar' else '' }}">
+    <a href="{{ url_for('web.student_page') }}#s-calendar" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-calendar', this){% endif %}" class="nav-link">
         <i class="fa-regular fa-calendar"></i> Lịch & Thông báo
     </a>
     <a href="{{ url_for('student.result') }}" class="nav-link {{ 'active-student' if request.endpoint == 'student.result' else '' }}">
