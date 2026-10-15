@@ -91,3 +91,7 @@ def set_academic_year():
         session['academic_year'] = year
         return jsonify({'success': True})
     return jsonify({'error': 'No year provided'}), 400
+
+@faculty_bp.route('/assignment')
+def assignment():
+    return render_template('faculty/assignment.html')
