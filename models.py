@@ -7,7 +7,7 @@ class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
+    password_hash = db.Column(db.Text, nullable=False)
     full_name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     phone = db.Column(db.String(20), nullable=True)
@@ -41,8 +41,11 @@ class Group(db.Model):
     __tablename__ = 'groups'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    batch_id = db.Column(db.Integer, db.ForeignKey('batches.id'), nullable=False)
+    batch_id = db.Column(db.Integer, db.ForeignKey('batches.id'), nullable=True)
     leader_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    mentor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    status = db.Column(db.String(20), default='active')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     members = db.relationship('GroupMember', backref='group', lazy=True)
     topics = db.relationship('Topic', backref='group', lazy=True)
@@ -113,7 +116,7 @@ class Notification(db.Model):
     __tablename__ = 'notifications'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    content = db.Column(db.String(255), nullable=False)
+    content = db.Column(db.Text, nullable=False)
     is_read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -166,12 +169,12 @@ class DocumentTemplate(db.Model):
 class Council(db.Model):
     __tablename__ = 'councils'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
+    name = db.Column(db.String(255), nullable=False)
     decision_number = db.Column(db.String(100), nullable=True)
     meeting_date = db.Column(db.Date, nullable=True)
     meeting_time = db.Column(db.Time, nullable=True)
     location = db.Column(db.String(255), nullable=True)
-    decision_file_url = db.Column(db.String(255), nullable=True)
+    decision_file_url = db.Column(db.Text, nullable=True)
     batch_id = db.Column(db.Integer, db.ForeignKey('batches.id'), nullable=False)
     established_date = db.Column(db.DateTime, default=datetime.utcnow)
     

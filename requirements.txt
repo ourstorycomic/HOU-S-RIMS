@@ -29,5 +29,6 @@ gunicorn
 
 python-docx
 Flask-SQLAlchemy
+psycopg2-binary
 
 flasgger
