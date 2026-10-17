@@ -25,14 +25,25 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024 # 50MB
 # Swagger setup
 swagger = Swagger(app)
 
-# Cấu hình Database
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+# Database configuration
+db_url = (os.getenv('DATABASE_URL') or os.getenv('SUPABASE_DB_URL') or '').strip()
+if not db_url:
+    db_url = 'sqlite:///database.db'
+elif db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql+psycopg2://", 1)
+elif db_url.startswith("postgresql://") and not db_url.startswith("postgresql+"):
+    db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,
+    'pool_recycle': 300,
+}
 
 # Cấu hình JWT
 app.config['JWT_SECRET_KEY'] = 'super-secret-jwt-key'
 jwt = JWTManager(app)
-
 db.init_app(app)
 
 init_routes(app)

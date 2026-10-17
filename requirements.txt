@@ -28,6 +28,7 @@ python-dotenv
 gunicorn
 
 python-docx
+psycopg2-binary
 
 # Database and Authentication
 Flask-SQLAlchemy>=3.1.1
