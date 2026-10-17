@@ -105,7 +105,17 @@
                 <div class="modal-body p-4">
                     <div class="row g-3 mb-3">
                         <div class="col-md-8"><label class="form-label">Tên đợt triển khai</label><input type="text" id="createBatchName" class="form-control" placeholder="VD: NCKH Sinh viên 2025 - Đợt 2"></div>
-                        <div class="col-md-4"><label class="form-label">Năm học áp dụng</label><select id="createBatchYear" class="form-select"><option value="2025-2026">2025-2026</option><option value="2026-2027">2026-2027</option><option value="2024-2025">2024-2025</option></select></div>
+                        <div class="col-md-4">
+                            <label class="form-label">Năm học áp dụng</label>
+                            <input type="text" id="createBatchYear" class="form-control" placeholder="VD: 2025-2026" value="2025-2026" list="faculty-year-options">
+                            <datalist id="faculty-year-options">
+                                <option value="2024-2025"></option>
+                                <option value="2025-2026"></option>
+                                <option value="2026-2027"></option>
+                                <option value="2027-2028"></option>
+                                <option value="2028-2029"></option>
+                            </datalist>
+                        </div>
                     </div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-12"><label class="form-label">Loại hình</label><select id="createBatchType" class="form-select"><option value="NCKH Standard" selected>Nghiên cứu khoa học (Chuẩn)</option><option value="Khởi nghiệp sáng tạo">Khởi nghiệp sáng tạo</option></select></div>
@@ -135,7 +145,10 @@
                     <input type="hidden" id="editBatchId">
                     <div class="row g-3 mb-3">
                         <div class="col-md-8"><label class="form-label">Tên đợt triển khai</label><input type="text" id="editBatchName" class="form-control"></div>
-                        <div class="col-md-4"><label class="form-label">Năm học áp dụng</label><select id="editBatchYear" class="form-select"><option value="2025-2026">2025-2026</option><option value="2026-2027">2026-2027</option><option value="2024-2025">2024-2025</option></select></div>
+                        <div class="col-md-4">
+                            <label class="form-label">Năm học áp dụng</label>
+                            <input type="text" id="editBatchYear" class="form-control" placeholder="VD: 2025-2026" list="faculty-year-options">
+                        </div>
                     </div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-8"><label class="form-label">Loại hình</label><select id="editBatchType" class="form-select"><option value="NCKH Standard">Nghiên cứu khoa học (Chuẩn)</option><option value="Khởi nghiệp sáng tạo">Khởi nghiệp sáng tạo</option></select></div>

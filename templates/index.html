@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Quản lý Đề tài & Tiến độ</title>
+    <style>
+        .container { width: 80%; margin: 20px auto; font-family: Arial, sans-serif; }
+        .card { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+        .progress-container { width: 100%; background: #e0e0e0; border-radius: 10px; height: 20px; }
+        .progress-bar { height: 100%; background: #4caf50; width: 0%; border-radius: 10px; transition: width 0.4s; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Hệ thống Quản lý Tiến độ Đồ án</h1>
+
+    <div class="card">
+        <h3>1. Nộp file Báo cáo / Tài liệu</h3>
+        <form id="uploadForm">
+            <input type="file" id="fileInput" required>
+            <button type="submit">Upload</button>
+        </form>
+        <div id="uploadStatus" style="margin-top: 10px;"></div>
+    </div>
+
+    <div class="card">
+        <h3>2. Tiến độ Đề tài 1: <span id="progressText">0%</span></h3>
+        <div class="progress-container">
+            <div id="progressBar" class="progress-bar"></div>
+        </div>
+
+        <h4 style="margin-top: 15px;">Thêm mốc tiến độ mới:</h4>
+        <form id="progressForm">
+            <input type="hidden" id="topicIdInput" value="1">
+            <input type="text" id="milestoneTitle" placeholder="Tên mốc (vd: Nộp Báo cáo)" required>
+            <input type="number" id="milestonePct" placeholder="% (0 - 100)" min="0" max="100" required>
+            <input type="text" id="milestoneNote" placeholder="Ghi chú">
+            <button type="submit">Cập nhật Tiến độ</button>
+        </form>
+
+        <h4>Lịch sử Tiến độ:</h4>
+        <ul id="milestoneList"></ul>
+    </div>
+
+    <div class="card">
+        <h3>3. Thống kê Tiến độ Trung bình (Biểu đồ Chart.js)</h3>
+        <canvas id="progressChart"></canvas>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='main.js') }}"></script>
+
+</body>
+</html>

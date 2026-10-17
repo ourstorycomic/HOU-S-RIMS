@@ -20,7 +20,16 @@ def home():
 
 @web_bp.route('/admin')
 def admin_page():
-    return redirect(url_for('faculty.dashboard'))
+    if session.get('role') not in ['admin', 'faculty']:
+        return redirect(url_for('auth.login'))
+    
+    from models import Topic, User, Batch, Council, Group
+    topics = Topic.query.all()
+    users = User.query.all()
+    batches = Batch.query.order_by(Batch.id.desc()).all()
+    councils = Council.query.all()
+    groups = Group.query.all()
+    return render_template('admin.html', topics=topics, users=users, batches=batches, councils=councils, groups=groups)
 
 @web_bp.route('/repository')
 def repository_page():
@@ -29,3 +38,19 @@ def repository_page():
 @web_bp.route('/analysis')
 def analysis_page():
     return render_template('analysis.html')
+
+@web_bp.route('/student')
+def student_page():
+    if session.get('role') != 'student':
+        return redirect(url_for('auth.login'))
+    return render_template('student.html')
+# Danh sách giảng viên hướng dẫn (Mentor List)
+@web_bp.route('/mentors')
+def mentors_page():
+    return render_template('mentors.html')
+
+# Chi tiết giảng viên (Mentor Detail)
+@web_bp.route('/mentor/detail')
+@web_bp.route('/mentor/<int:mentor_id>')
+def mentor_detail_page(mentor_id=1):
+    return render_template('mentor_detail.html', mentor_id=mentor_id)

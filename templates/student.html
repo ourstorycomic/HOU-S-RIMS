@@ -1,0 +1,2353 @@
+
+<!--templates/student.html-->
+{% extends "base.html" %}
+
+{% block title %}Cổng Sinh Viên - HOU S-RIMS{% endblock %}
+
+{% block content %}
+        <div class="top-bar">
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-light border-0 d-lg-none me-2" onclick="toggleSidebar()">
+                    <i class="fa-solid fa-bars fs-5"></i>
+                </button>
+                <i class="fa-solid fa-building-columns text-muted"></i> 
+                <span class="fw-bold text-uppercase small">HANOI OPEN UNIVERSITY</span>
+            </div>
+
+            <div class="d-flex align-items-center gap-3">
+                <div class="dropdown">
+                    <button class="btn btn-light border-0 btn-sm fw-bold text-muted position-relative" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fa-regular fa-bell" style="font-size: 1.1rem;"></i>
+                        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle">
+                            <span class="visually-hidden">New alerts</span>
+                        </span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg p-0 mt-3" style="width: 320px; border-radius: 12px; overflow: hidden;">
+                        <li class="p-3 bg-white border-bottom d-flex justify-content-between align-items-center">
+                            <h6 class="fw-bold mb-0 text-dark">Thông báo</h6>
+                            <a href="#" class="small text-primary fw-bold text-decoration-none" onclick="switchTab('s-calendar', document.querySelector('.sub-nav-item:last-child'))">Xem tất cả</a>
+                        </li>
+                        
+                        <div style="max-height: 300px; overflow-y: auto;">
+                            <li><a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start bg-light" href="#">
+                                <div class="bg-danger-subtle text-danger rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;"><i class="fa-solid fa-circle-exclamation"></i></div>
+                                <div>
+                                    <div class="fw-bold small text-dark mb-1">Nhắc nhở quan trọng</div>
+                                    <div class="small text-muted mb-1" style="line-height: 1.4;">Hạn nộp báo cáo tiến độ Đợt 1 là ngày 20/01.</div>
+                                    <div class="text-muted" style="font-size: 10px;">10 phút trước</div>
+                                </div>
+                            </a></li>
+                            <li><a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start" href="#">
+                                <div class="bg-info-subtle text-info rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;"><i class="fa-solid fa-comment-dots"></i></div>
+                                <div>
+                                    <div class="fw-bold small text-dark mb-1">Mentor phản hồi</div>
+                                    <div class="small text-muted mb-1" style="line-height: 1.4;">TS. Nguyễn Văn A đã bình luận vào file báo cáo của nhóm.</div>
+                                    <div class="text-muted" style="font-size: 10px;">1 giờ trước</div>
+                                </div>
+                            </a></li>
+                            <li><a class="dropdown-item p-3 d-flex gap-3 align-items-start" href="#">
+                                <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;"><i class="fa-regular fa-calendar-check"></i></div>
+                                <div>
+                                    <div class="fw-bold small text-dark mb-1">Lịch bảo vệ thử</div>
+                                    <div class="small text-muted mb-1" style="line-height: 1.4;">Danh sách đề tài đủ điều kiện bảo vệ thử đã được công bố.</div>
+                                    <div class="text-muted" style="font-size: 10px;">Hôm qua</div>
+                                </div>
+                            </a></li>
+                        </div>
+
+                        <li class="p-2 bg-light text-center border-top">
+                            <a href="#" class="small text-muted fw-bold text-decoration-none" style="font-size: 11px;">Đánh dấu tất cả là đã đọc</a>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="dropdown border-start ps-3">
+                    <div class="d-flex align-items-center gap-2 cursor-pointer dropdown-toggle no-arrow" data-bs-toggle="dropdown">
+                        <div class="text-end">
+                            <div class="fw-bold text-dark" style="font-size: 13px;">
+                                {{ session.get('user_name', 'Sinh Viên') }}
+                            </div>
+                            <div class="fw-bold text-uppercase" style="font-size: 10px; color: #6366f1 !important;">
+                                K21-CNTT / SV001
+                            </div>
+                        </div>
+                        <div class="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 35px; height: 35px; font-size: 12px; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;">
+                            {{ session.get('user_name', 'S')[0] | upper }}
+                        </div>
+                    </div>
+                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow mt-2">
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalProfile"><i class="fa-regular fa-id-badge me-2"></i> Hồ sơ cá nhân</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="fa-solid fa-right-from-bracket me-2"></i> Đăng xuất</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    <div class="content-area">
+        
+        <div id="view-s-explore" class="fade-in">
+            <div class="row g-4">
+                    <div class="col-md-8">
+                        <div class="card border-0 shadow-sm rounded-4 p-5 h-100 text-white position-relative overflow-hidden" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);">
+                            <div class="position-relative z-1" style="max-width: 90%;">
+                                <h3 class="fw-bold mb-3"><i class="fa-solid fa-lightbulb me-2"></i> Gợi ý đề tài nghiên cứu</h3>
+                                <p class="opacity-90 mb-4">Dựa trên kết quả học tập và sở thích của bạn, hệ thống đề xuất các hướng nghiên cứu phù hợp nhất.</p>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button class="btn btn-light text-primary fw-bold rounded-pill px-3 shadow-sm border-0 small"># Generative AI in Law</button>
+                                    <button class="btn btn-light text-primary fw-bold rounded-pill px-3 shadow-sm border-0 small"># EdTech Gamification</button>
+                                    <button class="btn btn-outline-light fw-bold rounded-pill px-3 small text-white" style="border: 1px solid rgba(255,255,255,0.5);">Xem thêm...</button>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-bolt position-absolute" style="font-size: 180px; right: -20px; bottom: -40px; opacity: 0.15; transform: rotate(-15deg);"></i>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                            <h6 class="fw-bold mb-3"><i class="fa-solid fa-user-plus me-2 text-primary"></i> Tìm Mentor</h6>
+                            <div class="d-flex flex-column gap-3">
+                                <div class="d-flex align-items-center gap-3 p-2 bg-white border rounded-3 hover-shadow">
+                                    <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 40px; height: 40px;">GV</div>
+                                    <div><div class="fw-bold text-dark small">TS. Nguyễn Văn A</div><small class="text-muted" style="font-size: 10px;">Học máy, NLP, Big Data</small></div>
+                                </div>
+                                <div class="d-flex align-items-center gap-3 p-2 bg-white border rounded-3 hover-shadow">
+                                    <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 40px; height: 40px;">GV</div>
+                                    <div><div class="fw-bold text-dark small">ThS. Trần Thị B</div><small class="text-muted" style="font-size: 10px;">IoT, Smart City</small></div>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary-subtle text-primary fw-bold w-100 mt-auto rounded-pill py-2 small" onclick="switchTab('s-mentors', document.querySelector('a[href*=\'s-mentors\']'))">Tất cả giảng viên</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <h6 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-arrow-trend-up me-2"></i> Xu hướng NCKH sinh viên 2025-2026</h6>
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="card border-0 shadow-sm rounded-4 p-3 h-100">
+                                <span class="badge bg-primary-subtle text-primary w-auto mb-2 align-self-start">KINH TẾ</span>
+                                <div class="fw-bold mb-2">Kinh tế tuần hoàn trong doanh nghiệp nhỏ</div>
+                                <div class="small text-muted mt-auto"><i class="fa-regular fa-clock me-1"></i> 2 tuần trước • <i class="fa-regular fa-user me-1"></i> 1.2k lượt xem</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-0 shadow-sm rounded-4 p-3 h-100">
+                                <span class="badge bg-primary-subtle text-primary w-auto mb-2 align-self-start">CNTT</span>
+                                <div class="fw-bold mb-2">Nhận dạng ngôn ngữ ký hiệu</div>
+                                <div class="small text-muted mt-auto"><i class="fa-regular fa-clock me-1"></i> 2 tuần trước • <i class="fa-regular fa-user me-1"></i> 3.4k lượt xem</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-0 shadow-sm rounded-4 p-3 h-100">
+                                <span class="badge bg-primary-subtle text-primary w-auto mb-2 align-self-start">EDTECH</span>
+                                <div class="fw-bold mb-2">Chuyển đổi số trong đào tạo từ xa</div>
+                                <div class="small text-muted mt-auto"><i class="fa-regular fa-clock me-1"></i> 2 tuần trước • <i class="fa-regular fa-user me-1"></i> 2.1k lượt xem</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: TÌM KIẾM MENTOR (DANH SÁCH GIẢNG VIÊN HƯỚNG DẪN) -->
+        <div id="view-s-mentors" class="fade-in hidden">
+            <!-- 1. SUBVIEW: DANH SÁCH MENTORS -->
+            <div id="s-mentors-list">
+                <!-- Blue Header Banner -->
+                <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 text-white position-relative overflow-hidden" style="background: #3b5ee6;">
+                    <div class="position-relative z-1">
+                        <h4 class="fw-bold mb-1 text-uppercase tracking-wide">DANH SÁCH GIẢNG VIÊN HƯỚNG DẪN</h4>
+                        <p class="mb-0 text-white-50 small font-medium">NĂM HỌC 2025 - 2026 • ĐỢT 1</p>
+                    </div>
+                </div>
+
+                <!-- Search & Filter Bar -->
+                <div class="row g-3 mb-4 align-items-center">
+                    <div class="col-md-8 col-sm-12">
+                        <div class="input-group bg-white rounded-3 shadow-xs border">
+                            <span class="input-group-text bg-transparent border-0 text-muted ps-3"><i class="fa-solid fa-magnifying-glass"></i></span>
+                            <input type="text" id="studentMentorSearch" onkeyup="filterStudentMentors()" class="form-control border-0 bg-transparent py-2 ps-2" placeholder="Tìm tên giảng viên hoặc lĩnh vực...">
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-12">
+                        <select id="studentMentorDept" onchange="filterStudentMentors()" class="form-select bg-white rounded-3 shadow-xs border py-2 fw-medium text-secondary">
+                            <option value="all" selected>Tất cả các Khoa</option>
+                            <option value="Khoa Công nghệ Thông tin">Khoa Công nghệ Thông tin</option>
+                            <option value="Khoa Kinh tế & QTKD">Khoa Kinh tế & QTKD</option>
+                            <option value="Khoa Ngoại ngữ">Khoa Ngoại ngữ</option>
+                            <option value="Khoa Luật">Khoa Luật</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Cards Grid (2 Columns) -->
+                <div class="row g-4" id="studentMentorsContainer">
+                    <!-- CARD 1: TS. Nguyễn Văn A -->
+                    <!-- CARD 1: TS. Nguyễn Văn A -->
+                    <div class="col-lg-6 col-12 mentor-item" data-name="Nguyễn Văn A" data-dept="Khoa Công nghệ Thông tin" data-field="Trí tuệ nhân tạo AI Machine Learning Deep Learning Python Học máy NLP LLM">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-xs" style="width: 50px; height: 50px; background-color: #fef3c7; color: #b45309; font-size: 16px;">
+                                            NA
+                                        </div>
+                                        <div>
+                                            <h5 class="fw-bold mb-0 text-dark">TS. Nguyễn Văn A</h5>
+                                            <small class="text-muted">Khoa Công nghệ Thông tin</small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                        <i class="fa-solid fa-circle-check me-1"></i> Đang nhận nhóm
+                                    </span>
+                                </div>
+                                <div class="mb-3">
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 small fw-semibold">
+                                        <i class="fa-solid fa-brain me-1"></i> Trí tuệ nhân tạo (AI)
+                                    </span>
+                                </div>
+                                <p class="text-muted small mb-4" style="line-height: 1.6;">
+                                    "Chào các bạn, tôi ưu tiên các nhóm có khả năng lập trình tốt và quan tâm đến việc ứng dụng AI vào thực tế..."
+                                </p>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                <div class="small text-muted font-medium">
+                                    Tải trọng: <strong class="text-dark fw-bold">2/5 nhóm</strong>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-3 fw-bold px-3" onclick="showStudentMentorDetail('TS. Nguyễn Văn A')">
+                                        Chi tiết <i class="fa-solid fa-arrow-right ms-1"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm rounded-3 fw-bold px-3" style="background-color: #3b5ee6; border-color: #3b5ee6;" onclick="applyForMentor('TS. Nguyễn Văn A')">
+                                        Chọn Mentor
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 2: PGS. TS. Trần Thị B -->
+                    <div class="col-lg-6 col-12 mentor-item" data-name="Trần Thị B" data-dept="Khoa Công nghệ Thông tin" data-field="Ứng dụng di động Mobile App iOS Android Flutter React Native IoT Di động Cộng đồng">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-xs" style="width: 50px; height: 50px; background-color: #e2e8f0; color: #475569; font-size: 16px;">
+                                            TB
+                                        </div>
+                                        <div>
+                                            <h5 class="fw-bold mb-0 text-dark">PGS. TS. Trần Thị B</h5>
+                                            <small class="text-muted">Khoa Công nghệ Thông tin</small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1">
+                                        <i class="fa-solid fa-circle-xmark me-1"></i> Đã đủ chỉ tiêu
+                                    </span>
+                                </div>
+                                <div class="mb-3">
+                                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill px-2.5 py-1 small fw-semibold">
+                                        <i class="fa-solid fa-mobile-screen-button me-1"></i> Ứng dụng Di động & IoT
+                                    </span>
+                                </div>
+                                <p class="text-muted small mb-4" style="line-height: 1.6;">
+                                    "Nhóm NCKH năm nay của cô tập trung vào phát triển ứng dụng di động cho cộng đồng."
+                                </p>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                <div class="small text-danger font-medium">
+                                    Tải trọng: <strong class="text-danger fw-bold">5/5 nhóm</strong>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-3 fw-bold px-3" onclick="showStudentMentorDetail('PGS. TS. Trần Thị B')">
+                                        Chi tiết <i class="fa-solid fa-arrow-right ms-1"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-light text-muted btn-sm rounded-3 fw-bold px-3 border-0" disabled>
+                                        Đã chốt sổ
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 3: TS. Lê Văn C -->
+                    <div class="col-lg-6 col-12 mentor-item" data-name="Lê Văn C" data-dept="Khoa Công nghệ Thông tin" data-field="An toàn thông tin Cyber Security Bảo mật Blockchain Mạng máy tính Mật mã học An ninh mạng">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-xs" style="width: 50px; height: 50px; background-color: #dbeafe; color: #1d4ed8; font-size: 16px;">
+                                            LC
+                                        </div>
+                                        <div>
+                                            <h5 class="fw-bold mb-0 text-dark">TS. Lê Văn C</h5>
+                                            <small class="text-muted">Khoa Công nghệ Thông tin</small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                        <i class="fa-solid fa-circle-check me-1"></i> Đang nhận nhóm
+                                    </span>
+                                </div>
+                                <div class="mb-3">
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1 small fw-semibold">
+                                        <i class="fa-solid fa-shield-halved me-1"></i> An toàn thông tin & Blockchain
+                                    </span>
+                                </div>
+                                <p class="text-muted small mb-4" style="line-height: 1.6;">
+                                    "Chào đón các nhóm sinh viên đam mê An ninh mạng, mật mã học ứng dụng và bảo mật hệ thống thông tin."
+                                </p>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                <div class="small text-muted font-medium">
+                                    Tải trọng: <strong class="text-dark fw-bold">3/5 nhóm</strong>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-3 fw-bold px-3" onclick="showStudentMentorDetail('TS. Lê Văn C')">
+                                        Chi tiết <i class="fa-solid fa-arrow-right ms-1"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm rounded-3 fw-bold px-3" style="background-color: #3b5ee6; border-color: #3b5ee6;" onclick="applyForMentor('TS. Lê Văn C')">
+                                        Chọn Mentor
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 4: ThS. Hoàng Thị D -->
+                    <div class="col-lg-6 col-12 mentor-item" data-name="Hoàng Thị D" data-dept="Khoa Công nghệ Thông tin" data-field="Khoa học dữ liệu Data Science Trực quan hóa Trí tuệ nhân tạo AI Machine Learning Big Data Khai phá dữ liệu Hệ thống khuyến nghị">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-xs" style="width: 50px; height: 50px; background-color: #f3e8ff; color: #7e22ce; font-size: 16px;">
+                                            HD
+                                        </div>
+                                        <div>
+                                            <h5 class="fw-bold mb-0 text-dark">ThS. Hoàng Thị D</h5>
+                                            <small class="text-muted">Khoa Công nghệ Thông tin</small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                        <i class="fa-solid fa-circle-check me-1"></i> Đang nhận nhóm
+                                    </span>
+                                </div>
+                                <div class="mb-3">
+                                    <span class="badge border rounded-pill px-2.5 py-1 small fw-semibold" style="background-color: #f3e8ff; color: #7e22ce; border-color: #e9d5ff;">
+                                        <i class="fa-solid fa-chart-pie me-1"></i> Khoa học Dữ liệu & AI
+                                    </span>
+                                </div>
+                                <p class="text-muted small mb-4" style="line-height: 1.6;">
+                                    "Hướng dẫn các đề tài phân tích dữ liệu lớn, khai phá xu hướng mạng xã hội và hệ thống khuyến nghị thông minh."
+                                </p>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                <div class="small text-muted font-medium">
+                                    Tải trọng: <strong class="text-dark fw-bold">1/5 nhóm</strong>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-3 fw-bold px-3" onclick="showStudentMentorDetail('ThS. Hoàng Thị D')">
+                                        Chi tiết <i class="fa-solid fa-arrow-right ms-1"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm rounded-3 fw-bold px-3" style="background-color: #3b5ee6; border-color: #3b5ee6;" onclick="applyForMentor('ThS. Hoàng Thị D')">
+                                        Chọn Mentor
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 17: TS. Đinh Công Thắng (Khoa CNTT - Thị giác máy tính & AI) -->
+                    <div class="col-lg-6 col-12 mentor-item" data-name="Đinh Công Thắng" data-dept="Khoa Công nghệ Thông tin" data-field="Trí tuệ nhân tạo AI Thị giác máy tính Computer Vision Xử lý ảnh OpenCV Deep Learning Nhận diện khuôn mặt Xe tự hành">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-xs" style="width: 50px; height: 50px; background-color: #e0f2fe; color: #0369a1; font-size: 16px;">
+                                            CT
+                                        </div>
+                                        <div>
+                                            <h5 class="fw-bold mb-0 text-dark">TS. Đinh Công Thắng</h5>
+                                            <small class="text-muted">Khoa Công nghệ Thông tin</small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                        <i class="fa-solid fa-circle-check me-1"></i> Đang nhận nhóm
+                                    </span>
+                                </div>
+                                <div class="mb-3">
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 small fw-semibold">
+                                        <i class="fa-solid fa-eye me-1"></i> Thị giác máy tính & AI
+                                    </span>
+                                </div>
+                                <p class="text-muted small mb-4" style="line-height: 1.6;">
+                                    "Nghiên cứu ứng dụng Computer Vision và Deep Learning trong nhận dạng hành vi, xe tự hành và kiểm tra sản phẩm công nghiệp tự động."
+                                </p>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                <div class="small text-muted font-medium">
+                                    Tải trọng: <strong class="text-dark fw-bold">1/5 nhóm</strong>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-3 fw-bold px-3" onclick="showStudentMentorDetail('TS. Đinh Công Thắng')">
+                                        Chi tiết <i class="fa-solid fa-arrow-right ms-1"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm rounded-3 fw-bold px-3" style="background-color: #3b5ee6; border-color: #3b5ee6;" onclick="applyForMentor('TS. Đinh Công Thắng')">
+                                        Chọn Mentor
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 18: ThS. Phạm Quang Huy (Khoa CNTT - Điện toán đám mây & DevOps) -->
+                    <div class="col-lg-6 col-12 mentor-item" data-name="Phạm Quang Huy" data-dept="Khoa Công nghệ Thông tin" data-field="Điện toán đám mây Cloud Computing DevOps Docker Kubernetes CI/CD AWS GCP Microservices Backend">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-xs" style="width: 50px; height: 50px; background-color: #e0e7ff; color: #4338ca; font-size: 16px;">
+                                            QH
+                                        </div>
+                                        <div>
+                                            <h5 class="fw-bold mb-0 text-dark">ThS. Phạm Quang Huy</h5>
+                                            <small class="text-muted">Khoa Công nghệ Thông tin</small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                        <i class="fa-solid fa-circle-check me-1"></i> Đang nhận nhóm
+                                    </span>
+                                </div>
+                                <div class="mb-3">
+                                    <span class="badge border rounded-pill px-2.5 py-1 small fw-semibold" style="background-color: #e0e7ff; color: #4338ca; border-color: #c7d2fe;">
+                                        <i class="fa-solid fa-cloud me-1"></i> Điện toán đám mây & DevOps
+                                    </span>
+                                </div>
+                                <p class="text-muted small mb-4" style="line-height: 1.6;">
+                                    "Định hướng các đề tài thiết kế kiến trúc vi dịch vụ (Microservices), tự động hóa triển khai CI/CD và tối ưu hóa hạ tầng đám mây."
+                                </p>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                <div class="small text-muted font-medium">
+                                    Tải trọng: <strong class="text-dark fw-bold">2/5 nhóm</strong>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-3 fw-bold px-3" onclick="showStudentMentorDetail('ThS. Phạm Quang Huy')">
+                                        Chi tiết <i class="fa-solid fa-arrow-right ms-1"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm rounded-3 fw-bold px-3" style="background-color: #3b5ee6; border-color: #3b5ee6;" onclick="applyForMentor('ThS. Phạm Quang Huy')">
+                                        Chọn Mentor
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 19: TS. Ngô Thị Bích Loan (Khoa CNTT - Hệ thống thông tin & Web GIS) -->
+                    <div class="col-lg-6 col-12 mentor-item" data-name="Ngô Thị Bích Loan" data-dept="Khoa Công nghệ Thông tin" data-field="Hệ thống thông tin Web GIS Bản đồ số Chuyển đổi số Database CSDL Không gian Trí tuệ nhân tạo AI Địa tin học">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-xs" style="width: 50px; height: 50px; background-color: #ccfbf1; color: #0f766e; font-size: 16px;">
+                                            BL
+                                        </div>
+                                        <div>
+                                            <h5 class="fw-bold mb-0 text-dark">TS. Ngô Thị Bích Loan</h5>
+                                            <small class="text-muted">Khoa Công nghệ Thông tin</small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                        <i class="fa-solid fa-circle-check me-1"></i> Đang nhận nhóm
+                                    </span>
+                                </div>
+                                <div class="mb-3">
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 small fw-semibold">
+                                        <i class="fa-solid fa-map-location-dot me-1"></i> Hệ thống thông tin & Web GIS
+                                    </span>
+                                </div>
+                                <p class="text-muted small mb-4" style="line-height: 1.6;">
+                                    "Nghiên cứu tích hợp hệ thông tin địa lý (GIS), bản đồ số tương tác và cơ sở dữ liệu không gian hỗ trợ quy hoạch đô thị và môi trường."
+                                </p>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                <div class="small text-muted font-medium">
+                                    Tải trọng: <strong class="text-dark fw-bold">2/5 nhóm</strong>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-3 fw-bold px-3" onclick="showStudentMentorDetail('TS. Ngô Thị Bích Loan')">
+                                        Chi tiết <i class="fa-solid fa-arrow-right ms-1"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm rounded-3 fw-bold px-3" style="background-color: #3b5ee6; border-color: #3b5ee6;" onclick="applyForMentor('TS. Ngô Thị Bích Loan')">
+                                        Chọn Mentor
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 20: ThS. Vũ Hải Nam (Khoa CNTT - Hệ thống nhúng & IoT Công nghiệp) -->
+                    <div class="col-lg-6 col-12 mentor-item" data-name="Vũ Hải Nam" data-dept="Khoa Công nghệ Thông tin" data-field="Hệ thống nhúng Vi mạch IoT Công nghiệp STM32 ESP32 Arduino Phần cứng Cảm biến Tự động hóa Smart Home">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-xs" style="width: 50px; height: 50px; background-color: #ffedd5; color: #c2410c; font-size: 16px;">
+                                            HN
+                                        </div>
+                                        <div>
+                                            <h5 class="fw-bold mb-0 text-dark">ThS. Vũ Hải Nam</h5>
+                                            <small class="text-muted">Khoa Công nghệ Thông tin</small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                        <i class="fa-solid fa-circle-check me-1"></i> Đang nhận nhóm
+                                    </span>
+                                </div>
+                                <div class="mb-3">
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2.5 py-1 small fw-semibold">
+                                        <i class="fa-solid fa-microchip me-1"></i> Hệ thống nhúng & IoT
+                                    </span>
+                                </div>
+                                <p class="text-muted small mb-4" style="line-height: 1.6;">
+                                    "Thiết kế phần cứng mạch nhúng, thu thập dữ liệu cảm biến thời gian thực và tự động hóa trong nông nghiệp công nghệ cao."
+                                </p>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                <div class="small text-muted font-medium">
+                                    Tải trọng: <strong class="text-dark fw-bold">1/5 nhóm</strong>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-3 fw-bold px-3" onclick="showStudentMentorDetail('ThS. Vũ Hải Nam')">
+                                        Chi tiết <i class="fa-solid fa-arrow-right ms-1"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm rounded-3 fw-bold px-3" style="background-color: #3b5ee6; border-color: #3b5ee6;" onclick="applyForMentor('ThS. Vũ Hải Nam')">
+                                        Chọn Mentor
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 5: PGS. TS. Vũ Đình E (Khoa Kinh tế & QTKD) -->
+                    <div class="col-lg-6 col-12 mentor-item" data-name="Vũ Đình E" data-dept="Khoa Kinh tế & QTKD" data-field="Kinh tế số Kinh tế tuần hoàn Chuỗi cung ứng Tài chính xanh">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-xs" style="width: 50px; height: 50px; background-color: #d1fae5; color: #047857; font-size: 16px;">
+                                            VE
+                                        </div>
+                                        <div>
+                                            <h5 class="fw-bold mb-0 text-dark">PGS. TS. Vũ Đình E</h5>
+                                            <small class="text-muted">Khoa Kinh tế & QTKD</small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                        <i class="fa-solid fa-circle-check me-1"></i> Đang nhận nhóm
+                                    </span>
+                                </div>
+                                <p class="text-muted small mb-4" style="line-height: 1.6;">
+                                    "Định hướng nghiên cứu Kinh tế số, Kinh tế tuần hoàn và Quản trị chuỗi cung ứng xanh cho các doanh nghiệp vừa và nhỏ."
+                                </p>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                <div class="small text-muted font-medium">
+                                    Tải trọng: <strong class="text-dark fw-bold">1/5 nhóm</strong>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-3 fw-bold px-3" onclick="showStudentMentorDetail('PGS. TS. Vũ Đình E', 'Khoa Kinh tế & QTKD', '1/5 nhóm', 'Đang nhận thêm', 'VE', 'Chào các bạn sinh viên Khoa Kinh tế & QTKD, nhóm nghiên cứu tập trung vào các mô hình kinh tế tuần hoàn, quản trị chuỗi cung ứng thông minh và tài chính xanh. Ưu tiên sinh viên có kỹ năng phân tích dữ liệu SPSS, STATA hoặc Python.', 'Kinh tế số & Chuỗi cung ứng')">
+                                        Chi tiết <i class="fa-solid fa-arrow-right ms-1"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm rounded-3 fw-bold px-3" style="background-color: #3b5ee6; border-color: #3b5ee6;" onclick="applyForMentor('PGS. TS. Vũ Đình E')">
+                                        Chọn Mentor
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 6: TS. Phạm Thu Trang (Khoa Kinh tế & QTKD) -->
+                    <div class="col-lg-6 col-12 mentor-item" data-name="Phạm Thu Trang" data-dept="Khoa Kinh tế & QTKD" data-field="Marketing Thương mại điện tử E-commerce Khởi nghiệp Hành vi tiêu dùng">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-xs" style="width: 50px; height: 50px; background-color: #ffe4e6; color: #be123c; font-size: 16px;">
+                                            PT
+                                        </div>
+                                        <div>
+                                            <h5 class="fw-bold mb-0 text-dark">TS. Phạm Thu Trang</h5>
+                                            <small class="text-muted">Khoa Kinh tế & QTKD</small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                        <i class="fa-solid fa-circle-check me-1"></i> Đang nhận nhóm
+                                    </span>
+                                </div>
+                                <p class="text-muted small mb-4" style="line-height: 1.6;">
+                                    "Ưu tiên các đề tài về Hành vi người tiêu dùng trên sàn thương mại điện tử, Digital Marketing và Khởi nghiệp đổi mới sáng tạo."
+                                </p>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                <div class="small text-muted font-medium">
+                                    Tải trọng: <strong class="text-dark fw-bold">3/5 nhóm</strong>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-3 fw-bold px-3" onclick="showStudentMentorDetail('TS. Phạm Thu Trang', 'Khoa Kinh tế & QTKD', '3/5 nhóm', 'Đang nhận thêm', 'PT', 'Hướng dẫn các đề tài nghiên cứu về hành vi tiêu dùng thế hệ Gen Z, chuyển đổi số trong marketing bán lẻ và chiến lược kinh doanh đa kênh (Omnichannel). Yêu cầu sinh viên năng động, chủ động khảo sát thị trường.', 'Thương mại điện tử & Marketing')">
+                                        Chi tiết <i class="fa-solid fa-arrow-right ms-1"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm rounded-3 fw-bold px-3" style="background-color: #3b5ee6; border-color: #3b5ee6;" onclick="applyForMentor('TS. Phạm Thu Trang')">
+                                        Chọn Mentor
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 7: TS. Đỗ Quỳnh Anh (Khoa Ngoại ngữ) -->
+                    <div class="col-lg-6 col-12 mentor-item" data-name="Đỗ Quỳnh Anh" data-dept="Khoa Ngoại ngữ" data-field="Ngôn ngữ học Tiếng Anh EdTech Dịch thuật Giảng dạy ngoại ngữ CALL">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-xs" style="width: 50px; height: 50px; background-color: #ede9fe; color: #6d28d9; font-size: 16px;">
+                                            QA
+                                        </div>
+                                        <div>
+                                            <h5 class="fw-bold mb-0 text-dark">TS. Đỗ Quỳnh Anh</h5>
+                                            <small class="text-muted">Khoa Ngoại ngữ</small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                        <i class="fa-solid fa-circle-check me-1"></i> Đang nhận nhóm
+                                    </span>
+                                </div>
+                                <p class="text-muted small mb-4" style="line-height: 1.6;">
+                                    "Nghiên cứu ứng dụng công nghệ trong giảng dạy tiếng Anh (CALL/MALL), Ngôn ngữ học ứng dụng và Dịch thuật chuyên ngành."
+                                </p>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                <div class="small text-muted font-medium">
+                                    Tải trọng: <strong class="text-dark fw-bold">2/5 nhóm</strong>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-3 fw-bold px-3" onclick="showStudentMentorDetail('TS. Đỗ Quỳnh Anh', 'Khoa Ngoại ngữ', '2/5 nhóm', 'Đang nhận thêm', 'QA', 'Chào đón sinh viên đam mê phương pháp giảng dạy tiếng Anh hiện đại kết hợp công nghệ AI, phân tích diễn ngôn và đánh giá năng lực ngoại ngữ theo khung tham chiếu châu Âu (CEFR).', 'Ngôn ngữ học & EdTech')">
+                                        Chi tiết <i class="fa-solid fa-arrow-right ms-1"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm rounded-3 fw-bold px-3" style="background-color: #3b5ee6; border-color: #3b5ee6;" onclick="applyForMentor('TS. Đỗ Quỳnh Anh')">
+                                        Chọn Mentor
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 8: ThS. Nguyễn Hoàng Long (Khoa Ngoại ngữ) -->
+                    <div class="col-lg-6 col-12 mentor-item" data-name="Nguyễn Hoàng Long" data-dept="Khoa Ngoại ngữ" data-field="Giao tiếp liên văn hóa Ngôn ngữ học đối chiếu AI học ngoại ngữ Biên phiên dịch">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-xs" style="width: 50px; height: 50px; background-color: #cffafe; color: #0e7490; font-size: 16px;">
+                                            NL
+                                        </div>
+                                        <div>
+                                            <h5 class="fw-bold mb-0 text-dark">ThS. Nguyễn Hoàng Long</h5>
+                                            <small class="text-muted">Khoa Ngoại ngữ</small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                        <i class="fa-solid fa-circle-check me-1"></i> Đang nhận nhóm
+                                    </span>
+                                </div>
+                                <p class="text-muted small mb-4" style="line-height: 1.6;">
+                                    "Hướng dẫn sinh viên nghiên cứu Giao tiếp liên văn hóa, Ngôn ngữ học đối chiếu Anh - Việt và ứng dụng AI hỗ trợ học ngoại ngữ."
+                                </p>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                <div class="small text-muted font-medium">
+                                    Tải trọng: <strong class="text-dark fw-bold">2/5 nhóm</strong>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-3 fw-bold px-3" onclick="showStudentMentorDetail('ThS. Nguyễn Hoàng Long', 'Khoa Ngoại ngữ', '2/5 nhóm', 'Đang nhận thêm', 'NL', 'Tập trung vào đối chiếu cấu trúc ngữ pháp - ngữ nghĩa Anh - Việt, biên phiên dịch tự động và giao tiếp đa văn hóa trong môi trường làm việc quốc tế.', 'Giao tiếp liên văn hóa')">
+                                        Chi tiết <i class="fa-solid fa-arrow-right ms-1"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm rounded-3 fw-bold px-3" style="background-color: #3b5ee6; border-color: #3b5ee6;" onclick="applyForMentor('ThS. Nguyễn Hoàng Long')">
+                                        Chọn Mentor
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 9: TS. Trần Văn Hùng (Khoa Luật) -->
+                    <div class="col-lg-6 col-12 mentor-item" data-name="Trần Văn Hùng" data-dept="Khoa Luật" data-field="Pháp luật AI Sở hữu trí tuệ Dữ liệu cá nhân Luật kinh tế Luật số">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-xs" style="width: 50px; height: 50px; background-color: #e0e7ff; color: #3730a3; font-size: 16px;">
+                                            TH
+                                        </div>
+                                        <div>
+                                            <h5 class="fw-bold mb-0 text-dark">TS. Trần Văn Hùng</h5>
+                                            <small class="text-muted">Khoa Luật</small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                        <i class="fa-solid fa-circle-check me-1"></i> Đang nhận nhóm
+                                    </span>
+                                </div>
+                                <p class="text-muted small mb-4" style="line-height: 1.6;">
+                                    "Nghiên cứu Pháp luật về bảo vệ dữ liệu cá nhân, Sở hữu trí tuệ trong kỷ nguyên số và Khung pháp lý cho Trí tuệ nhân tạo (AI Law)."
+                                </p>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                <div class="small text-muted font-medium">
+                                    Tải trọng: <strong class="text-dark fw-bold">1/5 nhóm</strong>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-3 fw-bold px-3" onclick="showStudentMentorDetail('TS. Trần Văn Hùng', 'Khoa Luật', '1/5 nhóm', 'Đang nhận thêm', 'TH', 'Định hướng nghiên cứu chuyên sâu về luật bảo vệ người tiêu dùng số, bảo vệ quyền riêng tư, an ninh mạng và các vấn đề pháp lý mới nổi liên quan đến trí tuệ nhân tạo.', 'Pháp luật số & Sở hữu trí tuệ')">
+                                        Chi tiết <i class="fa-solid fa-arrow-right ms-1"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm rounded-3 fw-bold px-3" style="background-color: #3b5ee6; border-color: #3b5ee6;" onclick="applyForMentor('TS. Trần Văn Hùng')">
+                                        Chọn Mentor
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 10: TS. Nguyễn Mạnh Cường (Khoa Kinh tế & QTKD) -->
+                    <div class="col-lg-6 col-12 mentor-item" data-name="Nguyễn Mạnh Cường" data-dept="Khoa Kinh tế & QTKD" data-field="Tài chính Doanh nghiệp Fintech Ngân hàng số Đầu tư ESG Thị trường chứng khoán">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-xs" style="width: 50px; height: 50px; background-color: #fef3c7; color: #92400e; font-size: 16px;">
+                                            NC
+                                        </div>
+                                        <div>
+                                            <h5 class="fw-bold mb-0 text-dark">TS. Nguyễn Mạnh Cường</h5>
+                                            <small class="text-muted">Khoa Kinh tế & QTKD</small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                        <i class="fa-solid fa-circle-check me-1"></i> Đang nhận nhóm
+                                    </span>
+                                </div>
+                                <p class="text-muted small mb-4" style="line-height: 1.6;">
+                                    "Hướng dẫn các đề tài phân tích Tài chính doanh nghiệp, ứng dụng Fintech, Ngân hàng số và xu hướng đầu tư theo tiêu chuẩn ESG."
+                                </p>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                <div class="small text-muted font-medium">
+                                    Tải trọng: <strong class="text-dark fw-bold">2/5 nhóm</strong>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-3 fw-bold px-3" onclick="showStudentMentorDetail('TS. Nguyễn Mạnh Cường', 'Khoa Kinh tế & QTKD', '2/5 nhóm', 'Đang nhận thêm', 'NC', 'Chào đón sinh viên say mê nghiên cứu Tài chính - Ngân hàng số, mô hình định giá tài sản và quản trị tài chính bền vững ESG. Ưu tiên các bạn thành thạo xử lý số liệu tài chính.', 'Tài chính số & Ngân hàng ESG')">
+                                        Chi tiết <i class="fa-solid fa-arrow-right ms-1"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm rounded-3 fw-bold px-3" style="background-color: #3b5ee6; border-color: #3b5ee6;" onclick="applyForMentor('TS. Nguyễn Mạnh Cường')">
+                                        Chọn Mentor
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 11: ThS. Lê Thị Thảo (Khoa Kinh tế & QTKD) -->
+                    <div class="col-lg-6 col-12 mentor-item" data-name="Lê Thị Thảo" data-dept="Khoa Kinh tế & QTKD" data-field="Kế toán quản trị ERP IFRS Kiểm toán Phân tích báo cáo tài chính Thuế">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-xs" style="width: 50px; height: 50px; background-color: #fce7f3; color: #9d174d; font-size: 16px;">
+                                            LT
+                                        </div>
+                                        <div>
+                                            <h5 class="fw-bold mb-0 text-dark">ThS. Lê Thị Thảo</h5>
+                                            <small class="text-muted">Khoa Kinh tế & QTKD</small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                        <i class="fa-solid fa-circle-check me-1"></i> Đang nhận nhóm
+                                    </span>
+                                </div>
+                                <p class="text-muted small mb-4" style="line-height: 1.6;">
+                                    "Nghiên cứu ứng dụng hệ thống ERP trong quản trị kế toán, chuẩn mực IFRS và phân tích chuyên sâu báo cáo tài chính doanh nghiệp niêm yết."
+                                </p>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                <div class="small text-muted font-medium">
+                                    Tải trọng: <strong class="text-dark fw-bold">3/5 nhóm</strong>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-3 fw-bold px-3" onclick="showStudentMentorDetail('ThS. Lê Thị Thảo', 'Khoa Kinh tế & QTKD', '3/5 nhóm', 'Đang nhận thêm', 'LT', 'Tập trung vào chuyển đổi số công tác kế toán, kiểm toán nội bộ và phân tích sức khỏe tài chính doanh nghiệp trong bối cảnh hội nhập quốc tế.', 'Kế toán quản trị & ERP')">
+                                        Chi tiết <i class="fa-solid fa-arrow-right ms-1"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm rounded-3 fw-bold px-3" style="background-color: #3b5ee6; border-color: #3b5ee6;" onclick="applyForMentor('ThS. Lê Thị Thảo')">
+                                        Chọn Mentor
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 12: TS. Đặng Quốc Bảo (Khoa Kinh tế & QTKD) -->
+                    <div class="col-lg-6 col-12 mentor-item" data-name="Đặng Quốc Bảo" data-dept="Khoa Kinh tế & QTKD" data-field="Kinh tế quốc tế Logistics Xuất nhập khẩu Chuỗi cung ứng EVFTA Hải quan điện tử">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-xs" style="width: 50px; height: 50px; background-color: #dcfce7; color: #166534; font-size: 16px;">
+                                            QB
+                                        </div>
+                                        <div>
+                                            <h5 class="fw-bold mb-0 text-dark">TS. Đặng Quốc Bảo</h5>
+                                            <small class="text-muted">Khoa Kinh tế & QTKD</small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                        <i class="fa-solid fa-circle-check me-1"></i> Đang nhận nhóm
+                                    </span>
+                                </div>
+                                <p class="text-muted small mb-4" style="line-height: 1.6;">
+                                    "Định hướng nghiên cứu Logistics quốc tế, Tối ưu hóa chuỗi vận tải đa phương thức và tác động của các hiệp định FTA tới xuất nhập khẩu."
+                                </p>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                <div class="small text-muted font-medium">
+                                    Tải trọng: <strong class="text-dark fw-bold">1/5 nhóm</strong>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-3 fw-bold px-3" onclick="showStudentMentorDetail('TS. Đặng Quốc Bảo', 'Khoa Kinh tế & QTKD', '1/5 nhóm', 'Đang nhận thêm', 'QB', 'Hướng dẫn sinh viên thực hiện các nghiên cứu định lượng về dòng chảy thương mại quốc tế, logistics xanh và giải pháp nâng cao năng lực cạnh tranh chuỗi cung ứng.', 'Logistics & Kinh tế quốc tế')">
+                                        Chi tiết <i class="fa-solid fa-arrow-right ms-1"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm rounded-3 fw-bold px-3" style="background-color: #3b5ee6; border-color: #3b5ee6;" onclick="applyForMentor('TS. Đặng Quốc Bảo')">
+                                        Chọn Mentor
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 13: ThS. Vũ Phương Mai (Khoa Ngoại ngữ) -->
+                    <div class="col-lg-6 col-12 mentor-item" data-name="Vũ Phương Mai" data-dept="Khoa Ngoại ngữ" data-field="TESOL Phương pháp giảng dạy tiếng Anh Tâm lý học ngôn ngữ SLA EdTech Khung CEFR">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-xs" style="width: 50px; height: 50px; background-color: #fae8ff; color: #86198f; font-size: 16px;">
+                                            PM
+                                        </div>
+                                        <div>
+                                            <h5 class="fw-bold mb-0 text-dark">ThS. Vũ Phương Mai</h5>
+                                            <small class="text-muted">Khoa Ngoại ngữ</small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                        <i class="fa-solid fa-circle-check me-1"></i> Đang nhận nhóm
+                                    </span>
+                                </div>
+                                <p class="text-muted small mb-4" style="line-height: 1.6;">
+                                    "Nghiên cứu ứng dụng phương pháp Task-based learning, tâm lý học tiếp nhận ngôn ngữ (SLA) và công nghệ trong kiểm tra đánh giá năng lực ngoại ngữ."
+                                </p>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                <div class="small text-muted font-medium">
+                                    Tải trọng: <strong class="text-dark fw-bold">3/5 nhóm</strong>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-3 fw-bold px-3" onclick="showStudentMentorDetail('ThS. Vũ Phương Mai', 'Khoa Ngoại ngữ', '3/5 nhóm', 'Đang nhận thêm', 'PM', 'Định hướng sinh viên nghiên cứu các phương pháp sư phạm ngôn ngữ hiện đại, nâng cao động lực học tập tiếng Anh cho người học trực tuyến và thiết kế học liệu số.', 'TESOL & Sư phạm ngoại ngữ')">
+                                        Chi tiết <i class="fa-solid fa-arrow-right ms-1"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm rounded-3 fw-bold px-3" style="background-color: #3b5ee6; border-color: #3b5ee6;" onclick="applyForMentor('ThS. Vũ Phương Mai')">
+                                        Chọn Mentor
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 14: TS. Hoàng Minh Trí (Khoa Ngoại ngữ) -->
+                    <div class="col-lg-6 col-12 mentor-item" data-name="Hoàng Minh Trí" data-dept="Khoa Ngoại ngữ" data-field="Ngôn ngữ học tri nhận Dịch thuật chuyên ngành Đối chiếu ngôn ngữ NLP CAT Tools">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-xs" style="width: 50px; height: 50px; background-color: #e0e7ff; color: #4338ca; font-size: 16px;">
+                                            MT
+                                        </div>
+                                        <div>
+                                            <h5 class="fw-bold mb-0 text-dark">TS. Hoàng Minh Trí</h5>
+                                            <small class="text-muted">Khoa Ngoại ngữ</small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                        <i class="fa-solid fa-circle-check me-1"></i> Đang nhận nhóm
+                                    </span>
+                                </div>
+                                <p class="text-muted small mb-4" style="line-height: 1.6;">
+                                    "Chào đón sinh viên có đam mê nghiên cứu Ngôn ngữ học tri nhận, Dịch thuật song ngữ Anh - Việt và các mô hình xử lý ngôn ngữ tự nhiên ứng dụng."
+                                </p>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                <div class="small text-muted font-medium">
+                                    Tải trọng: <strong class="text-dark fw-bold">2/5 nhóm</strong>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-3 fw-bold px-3" onclick="showStudentMentorDetail('TS. Hoàng Minh Trí', 'Khoa Ngoại ngữ', '2/5 nhóm', 'Đang nhận thêm', 'MT', 'Hướng dẫn nghiên cứu chuyên sâu về cấu trúc ngữ nghĩa, ẩn dụ tri nhận trong văn bản báo chí - kinh tế và ứng dụng công cụ hỗ trợ dịch thuật thông minh CAT tools.', 'Ngôn ngữ học tri nhận & Dịch thuật')">
+                                        Chi tiết <i class="fa-solid fa-arrow-right ms-1"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm rounded-3 fw-bold px-3" style="background-color: #3b5ee6; border-color: #3b5ee6;" onclick="applyForMentor('TS. Hoàng Minh Trí')">
+                                        Chọn Mentor
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 15: ThS. Bùi Thị Thanh Hà (Khoa Ngoại ngữ) -->
+                    <div class="col-lg-6 col-12 mentor-item" data-name="Bùi Thị Thanh Hà" data-dept="Khoa Ngoại ngữ" data-field="Tiếng Anh thương mại ESP Đàm phán quốc tế Văn hóa kinh doanh Giao tiếp liên văn hóa">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-xs" style="width: 50px; height: 50px; background-color: #ffedd5; color: #c2410c; font-size: 16px;">
+                                            BH
+                                        </div>
+                                        <div>
+                                            <h5 class="fw-bold mb-0 text-dark">ThS. Bùi Thị Thanh Hà</h5>
+                                            <small class="text-muted">Khoa Ngoại ngữ</small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                        <i class="fa-solid fa-circle-check me-1"></i> Đang nhận nhóm
+                                    </span>
+                                </div>
+                                <p class="text-muted small mb-4" style="line-height: 1.6;">
+                                    "Tập trung vào Tiếng Anh chuyên ngành Kinh tế - Ngoại thương (ESP), kỹ năng đàm phán hợp đồng thương mại quốc tế và nghi thức giao tiếp liên văn hóa."
+                                </p>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                <div class="small text-muted font-medium">
+                                    Tải trọng: <strong class="text-dark fw-bold">1/5 nhóm</strong>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-3 fw-bold px-3" onclick="showStudentMentorDetail('ThS. Bùi Thị Thanh Hà', 'Khoa Ngoại ngữ', '1/5 nhóm', 'Đang nhận thêm', 'BH', 'Định hướng các đề tài phân tích diễn ngôn thương mại, kỹ năng thuyết trình - thương thuyết bằng tiếng Anh chuyên ngành trong môi trường đa quốc gia.', 'Tiếng Anh thương mại (ESP)')">
+                                        Chi tiết <i class="fa-solid fa-arrow-right ms-1"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm rounded-3 fw-bold px-3" style="background-color: #3b5ee6; border-color: #3b5ee6;" onclick="applyForMentor('ThS. Bùi Thị Thanh Hà')">
+                                        Chọn Mentor
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 16: ThS. Lê Minh Đức (Khoa Luật) -->
+                    <div class="col-lg-6 col-12 mentor-item" data-name="Lê Minh Đức" data-dept="Khoa Luật" data-field="Luật kinh tế Hợp đồng thương mại Tranh chấp thương mại Trọng tài thương mại Pháp luật số">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-xs" style="width: 50px; height: 50px; background-color: #f1f5f9; color: #334155; font-size: 16px;">
+                                            MĐ
+                                        </div>
+                                        <div>
+                                            <h5 class="fw-bold mb-0 text-dark">ThS. Lê Minh Đức</h5>
+                                            <small class="text-muted">Khoa Luật</small>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                        <i class="fa-solid fa-circle-check me-1"></i> Đang nhận nhóm
+                                    </span>
+                                </div>
+                                <p class="text-muted small mb-4" style="line-height: 1.6;">
+                                    "Hướng dẫn các đề tài về Pháp luật Hợp đồng thương mại điện tử, Giải quyết tranh chấp thương mại quốc tế qua Trọng tài và Tố tụng kinh tế số."
+                                </p>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                <div class="small text-muted font-medium">
+                                    Tải trọng: <strong class="text-dark fw-bold">2/5 nhóm</strong>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-3 fw-bold px-3" onclick="showStudentMentorDetail('ThS. Lê Minh Đức', 'Khoa Luật', '2/5 nhóm', 'Đang nhận thêm', 'MĐ', 'Tập trung nghiên cứu hoàn thiện khung pháp lý về giao dịch điện tử, hợp đồng thông minh (Smart Contract) và các phương thức giải quyết tranh chấp trực tuyến (ODR).', 'Luật Kinh tế & Trọng tài')">
+                                        Chi tiết <i class="fa-solid fa-arrow-right ms-1"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm rounded-3 fw-bold px-3" style="background-color: #3b5ee6; border-color: #3b5ee6;" onclick="applyForMentor('ThS. Lê Minh Đức')">
+                                        Chọn Mentor
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div id="noStudentMentorsFound" class="card border-0 shadow-sm rounded-4 p-5 text-center d-none">
+                    <div class="text-muted mb-2"><i class="fa-solid fa-user-slash fs-2"></i></div>
+                    <h6 class="fw-bold text-dark">Không tìm thấy giảng viên phù hợp</h6>
+                    <small class="text-muted">Hãy thử tìm theo từ khóa khác hoặc chuyển sang khoa khác.</small>
+                </div>
+            </div>
+
+            <!-- 2. SUBVIEW: CHI TIẾT MENTOR (IN-PAGE SPA) -->
+            <div id="s-mentors-detail" class="d-none">
+                <!-- Back Button -->
+                <div class="mb-3">
+                    <button type="button" class="btn btn-white bg-white border rounded-3 btn-sm fw-bold shadow-xs px-3 py-2 text-dark" onclick="hideStudentMentorDetail()">
+                        <i class="fa-solid fa-arrow-left me-2"></i> Quay lại danh sách
+                    </button>
+                </div>
+
+                <!-- Profile Banner -->
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+                    <div class="p-4 p-md-5 text-white" style="background: linear-gradient(135deg, #3b5ee6 0%, #60a5fa 100%);">
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-4">
+                            <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center gap-4">
+                                <div id="detailMentorAvatar" class="rounded-circle bg-white text-primary fw-bold d-flex align-items-center justify-content-center shadow-lg" style="width: 80px; height: 80px; font-size: 28px; border: 4px solid rgba(255,255,255,0.4);">
+                                    NA
+                                </div>
+                                <div>
+                                    <h3 id="detailMentorName" class="fw-bold mb-1 text-white">TS. Nguyễn Văn A</h3>
+                                    <div class="d-flex align-items-center gap-2 mb-2 text-white-50 small">
+                                        <i class="fa-solid fa-building"></i>
+                                        <span id="detailMentorDept">Khoa Công nghệ Thông tin</span>
+                                    </div>
+                                    <div>
+                                        <span id="detailMentorTag" class="badge rounded-pill px-3 py-1 fw-bold small" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.3);">
+                                            <i class="fa-solid fa-brain me-1"></i> Trí tuệ nhân tạo (AI)
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="p-3 rounded-4 shadow-sm" style="background: rgba(255,255,255,0.18); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.3); min-width: 200px;">
+                                <div class="small text-white-50">Tải trọng hiện tại:</div>
+                                <div id="detailMentorLoad" class="h5 fw-bold text-white mb-2">2/5 nhóm</div>
+                                <div class="pt-2 border-top border-white-50 d-flex align-items-center gap-2">
+                                    <span class="p-1 bg-success rounded-circle"></span>
+                                    <span id="detailMentorStatus" class="fw-bold small text-white">Đang nhận thêm</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Body Grid -->
+                    <div class="card-body p-4 p-md-5 bg-white">
+                        <div class="row g-5">
+                            <!-- Left Column: Bio & Action -->
+                            <div class="col-lg-4 col-12 border-end-lg">
+                                <h6 class="fw-bold text-dark pb-2 border-bottom mb-3">
+                                    <i class="fa-solid fa-circle-info text-primary me-2"></i> Giới thiệu (Bio)
+                                </h6>
+                                <p id="detailMentorBio" class="text-muted small mb-4" style="line-height: 1.7; text-align: justify;">
+                                    Ưu tiên sinh viên code cứng Python, nắm chắc kiến thức cơ bản về Machine Learning và Deep Learning. Nhóm nghiên cứu yêu cầu tinh thần chủ động cao, khả năng đọc hiểu tài liệu nghiên cứu bằng tiếng Anh và có định hướng công bố bài báo khoa học hoặc tham gia hội thi NCKH các cấp của Trường và Bộ.
+                                </p>
+
+                                <div class="p-3 bg-light rounded-4 border border-light-subtle">
+                                    <div class="small text-muted fw-bold mb-2">
+                                        <i class="fa-solid fa-headset me-1 text-primary"></i> Liên hệ & Đăng ký
+                                    </div>
+                                    <button type="button" class="btn btn-white bg-white border w-100 fw-bold py-2 text-dark shadow-xs mb-2" onclick="showToast('Đã mở cuộc trò chuyện trao đổi!')">
+                                        <i class="fa-regular fa-comment-dots text-primary me-2"></i> Nhắn tin trao đổi
+                                    </button>
+                                    <button type="button" class="btn btn-primary w-100 fw-bold py-2 shadow-xs text-white" style="background-color: #3b5ee6; border-color: #3b5ee6;" onclick="applyForMentor(document.getElementById('detailMentorName').textContent, document.getElementById('detailMentorDept').textContent)">
+                                        <i class="fa-solid fa-check me-2"></i> Chọn làm Giảng viên Hướng dẫn
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Right Column: Portfolio -->
+                            <div class="col-lg-8 col-12">
+                                <div class="d-flex justify-content-between align-items-center pb-2 border-bottom mb-4">
+                                    <h6 class="fw-bold text-dark mb-0">
+                                        <i class="fa-solid fa-award text-primary me-2"></i> Lịch sử hướng dẫn (Portfolio)
+                                    </h6>
+                                    <span id="detailMentorProjectsCount" class="badge bg-light text-muted fw-bold">3 đề tài tiêu biểu</span>
+                                </div>
+
+                                <div id="detailMentorProjectsContainer" class="d-flex flex-column gap-3">
+                                    <!-- Rendered dynamically by showStudentMentorDetail -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-s-profile" class="fade-in hidden">
+                <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-2 text-center"><div class="bg-primary text-white rounded-4 d-flex align-items-center justify-content-center mx-auto shadow" style="width: 100px; height: 100px; font-size: 40px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">VH</div></div>
+                        <div class="col-md-7">
+                            <h3 class="fw-bold mb-1">NGUYỄN VĂN HỌC</h3>
+                            <p class="text-muted fw-bold mb-3">Lớp K21-CNTT • Mã SV: 21010042</p>
+                            <div class="d-flex gap-4">
+                                <div class="text-center bg-light rounded-3 p-2 px-3"><div class="small text-muted fw-bold">ĐỀ TÀI THAM GIA</div><div class="h5 fw-bold mb-0">03</div></div>
+                                <div class="text-center bg-light rounded-3 p-2 px-3"><div class="small text-muted fw-bold">GIẢI THƯỞNG</div><div class="h5 fw-bold text-success mb-0">01</div></div>
+                                <div class="text-center bg-light rounded-3 p-2 px-3"><div class="small text-muted fw-bold">ĐIỂM NCKH</div><div class="h5 fw-bold text-primary mb-0">9.2</div></div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-end"><button class="btn btn-dark rounded-pill px-4 py-2 fw-bold" onclick="showToast('Đang tải xuống Portfolio...')"><i class="fa-solid fa-file-arrow-down me-2"></i> XUẤT PORTFOLIO (PDF)</button></div>
+                    </div>
+                </div>
+                <div class="row g-4">
+                    <div class="col-md-6"><div class="card border-0 shadow-sm rounded-4 p-4 h-100"><h6 class="fw-bold text-warning mb-3"><i class="fa-solid fa-medal me-2"></i> Chứng nhận & Giải thưởng</h6><div class="p-3 bg-warning-subtle rounded-3 border border-warning-subtle"><div class="fw-bold text-dark mb-1"><i class="fa-solid fa-star text-warning me-2"></i> Giải Nhì - HOU Innovation 2024</div><small class="text-muted">Đề tài: AI trong hỗ trợ người khiếm thính</small></div></div></div>
+                    <div class="col-md-6"><div class="card border-0 shadow-sm rounded-4 p-4 h-100"><h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-wand-magic-sparkles me-2"></i> Kỹ năng NCKH</h6><div class="d-flex flex-wrap gap-2"><span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill">Python/ML</span><span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill">Viết báo cáo khoa học</span><span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill">Phân tích dữ liệu</span></div></div></div>
+                </div>
+        </div>
+
+        <div id="view-s-register" class="fade-in hidden">
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                    <div class="bg-primary text-white p-4"><h4 class="fw-bold mb-1">ĐĂNG KÝ ĐỀ TÀI NCKH TRỰC TUYẾN</h4><p class="mb-0 opacity-75 small">NĂM HỌC 2025 - 2026 • ĐỢT 1</p></div>
+                    <div class="card-body p-4">
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-muted">TÊN ĐỀ TÀI (TIẾNG VIỆT)</label>
+                                <textarea id="registerTopicNameVi" class="form-control bg-light" rows="2" placeholder="Nhập tên đề tài bằng tiếng Việt..."></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-muted">TÊN ĐỀ TÀI (TIẾNG ANH)</label>
+                                <textarea id="registerTopicNameEn" class="form-control bg-light" rows="2" placeholder="Nhập tên đề tài bằng tiếng Anh (nếu có)..."></textarea>
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-4">
+                            <!-- 1. CHỌN KHOA -->
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-muted">KHOA CHUYÊN MÔN</label>
+                                <select id="registerFacultySelect" onchange="onRegisterFacultyChange()" class="form-select bg-light">
+                                    <option value="" selected>-- Chọn Khoa --</option>
+                                    <option value="Khoa Công nghệ Thông tin">Khoa Công nghệ Thông tin</option>
+                                    <option value="Khoa Kinh tế & QTKD">Khoa Kinh tế & QTKD</option>
+                                    <option value="Khoa Ngoại ngữ">Khoa Ngoại ngữ</option>
+                                    <option value="Khoa Luật">Khoa Luật</option>
+                                </select>
+                            </div>
+
+                            <!-- 2. GIẢNG VIÊN HƯỚNG DẪN (TỰ ĐỘNG LỌC THEO KHOA ĐÃ CHỌN) -->
+                            <div class="col-md-5">
+                                <label class="form-label small fw-bold text-muted">GIẢNG VIÊN HƯỚNG DẪN</label>
+                                <select id="registerMentorSelect" class="form-select bg-light">
+                                    <option value="" selected>-- Vui lòng chọn Khoa trước --</option>
+                                </select>
+                            </div>
+
+                            <!-- 3. LĨNH VỰC NGHIÊN CỨU -->
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-muted">LĨNH VỰC NGHIÊN CỨU</label>
+                                <div class="d-flex gap-3 pt-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="domain" id="tech" checked>
+                                        <label class="form-check-label small" for="tech">Kỹ thuật</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="domain" id="eco">
+                                        <label class="form-check-label small" for="eco">Kinh tế</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-4"><label class="form-label small fw-bold text-muted">THÀNH VIÊN NHÓM</label><div class="card p-3 bg-light border-0 mb-2"><div class="d-flex align-items-center justify-content-between"><div class="d-flex align-items-center gap-3"><div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold small" style="width: 35px; height: 35px;">VH</div><div><div class="fw-bold text-dark">Nguyễn Văn Học</div><div class="small text-muted">Trưởng nhóm</div></div></div><span class="badge bg-primary-subtle text-primary">CHÍNH CHỦ</span></div></div><button class="btn btn-outline-primary border-dashed w-100 rounded-3 py-2 small fw-bold" data-bs-toggle="modal" data-bs-target="#modalAddMember">+ Thêm thành viên bằng Mã SV</button></div>
+                        <button type="button" class="btn btn-primary w-100 py-3 fw-bold rounded-3 shadow-sm" style="background: linear-gradient(90deg, #6366f1 0%, #4f46e5 100%); border: none;" onclick="syncAndOpenRegisterModal()">GỬI HỒ SƠ ĐĂNG KÝ PHÊ DUYỆT</button>
+                    </div>
+                </div>
+        </div>
+
+        <div id="view-s-group" class="fade-in hidden">
+                <div class="row g-4">
+                    <div class="col-md-8">
+                        <div class="card border-0 shadow-sm rounded-4 p-5 h-100">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <span class="badge bg-success-subtle text-success rounded-pill px-3 py-2 fw-bold small">GIAI ĐOẠN: THỰC NGHIỆM</span>
+                                <div class="text-end">
+                                    <div class="small fw-bold text-primary mb-1">65% Hoàn thành</div>
+                                    <div class="progress" style="height: 6px; width: 150px;">
+                                        <div class="progress-bar bg-primary" style="width: 65%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <h3 class="fw-bold mb-5" style="line-height: 1.4;">Hệ thống nhận diện cử chỉ tay<br>hỗ trợ người khiếm thính</h3>
+
+                            <h6 class="fw-bold text-muted text-uppercase mb-4 small"><i class="fa-solid fa-diagram-project me-2"></i> TIMELINE & MILESTONE</h6>
+                            
+                            <div class="timeline-container ps-2">
+                                <div class="timeline-item active">
+                                    <div class="timeline-dot"></div>
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <div class="fw-bold text-dark">Nghiên cứu cơ sở lý thuyết</div>
+                                            <small class="text-muted">15/11/2025</small>
+                                        </div>
+                                        <i class="fa-solid fa-circle-check text-success fs-5"></i>
+                                    </div>
+                                </div>
+                                <div class="timeline-item active">
+                                    <div class="timeline-dot"></div>
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <div class="fw-bold text-dark">Thiết kế kiến trúc hệ thống</div>
+                                            <small class="text-muted">20/12/2025</small>
+                                        </div>
+                                        <i class="fa-solid fa-circle-check text-success fs-5"></i>
+                                    </div>
+                                </div>
+                                <div class="timeline-item current">
+                                    <div class="timeline-dot"></div>
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <div class="fw-bold text-primary">Thực nghiệm & Thu thập dữ liệu</div>
+                                            <small class="text-primary fw-bold">10/01/2026 - Nay</small>
+                                        </div>
+                                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                    </div>
+                                </div>
+                                <div class="timeline-item">
+                                    <div class="timeline-dot"></div>
+                                    <div>
+                                        <div class="fw-bold text-muted">Viết báo cáo tổng kết</div>
+                                        <small class="text-muted">20/02/2026</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 d-flex flex-column gap-4">
+                        <div class="card border-0 shadow-sm rounded-4 p-4">
+                            <h6 class="fw-bold mb-3"><i class="fa-solid fa-users me-2 text-primary"></i> Nhóm của tôi</h6>
+                            <div class="d-flex flex-column gap-3">
+                                <div class="d-flex align-items-center justify-content-between p-2 bg-light rounded-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold small" style="width: 35px; height: 35px;">N</div>
+                                        <div><div class="fw-bold text-dark small">Nguyễn Văn Học</div><small class="text-muted" style="font-size: 10px;">Trưởng nhóm</small></div>
+                                    </div>
+                                    <i class="fa-regular fa-comment text-muted"></i>
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between p-2 bg-light rounded-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="bg-white border rounded-circle d-flex align-items-center justify-content-center fw-bold small" style="width: 35px; height: 35px;">L</div>
+                                        <div><div class="fw-bold text-dark small">Lê Thị Lan</div><small class="text-muted" style="font-size: 10px;">Thành viên</small></div>
+                                    </div>
+                                    <i class="fa-regular fa-comment text-muted"></i>
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between p-2 bg-light rounded-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="bg-white border rounded-circle d-flex align-items-center justify-content-center fw-bold small" style="width: 35px; height: 35px;">T</div>
+                                        <div><div class="fw-bold text-dark small">Trần Minh Đức</div><small class="text-muted" style="font-size: 10px;">Thành viên</small></div>
+                                    </div>
+                                    <i class="fa-regular fa-comment text-muted"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card border-0 shadow-sm rounded-4 p-4 mt-auto">
+                            <h6 class="fw-bold mb-3"><i class="fa-solid fa-chalkboard-user me-2 text-primary"></i> Mentor Phụ trách</h6>
+                            <div class="d-flex align-items-center gap-3 mb-4">
+                                <div class="bg-primary text-white rounded-3 d-flex align-items-center justify-content-center fw-bold" style="width: 50px; height: 50px;">GV</div>
+                                <div><div class="fw-bold">TS. Nguyễn Văn A</div><small class="text-primary fw-bold text-uppercase" style="font-size: 11px;">KHOA CNTT</small></div>
+                            </div>
+                            <button class="btn btn-primary w-100 rounded-pill fw-bold small py-2 shadow-sm" style="background-color: #6366f1;">Đặt lịch họp với Mentor</button>
+                        </div>
+                    </div>
+                </div>
+        </div>
+
+        <div id="view-s-chat" class="fade-in hidden">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden" style="height: 650px;">
+                    <div class="row g-0 h-100">
+                        <div class="col-md-3 border-end bg-white d-flex flex-column">
+                            <div class="p-4 border-bottom">
+                                <h6 class="fw-bold text-uppercase text-muted small mb-0">Phòng thảo luận</h6>
+                            </div>
+                            <div class="list-group list-group-flush flex-grow-1 overflow-auto">
+                                <a href="#" class="list-group-item list-group-item-action border-0 p-3 chat-item-active">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px; background-color: #6366f1 !important;"><i class="fa-solid fa-users"></i></div>
+                                        <div class="overflow-hidden">
+                                            <div class="d-flex justify-content-between">
+                                                <span class="fw-bold text-dark text-truncate">Nhóm NCKH HOU-042</span>
+                                                <span class="small text-muted ms-2">2m</span>
+                                            </div>
+                                            <small class="text-muted text-truncate d-block">Lan: Em đã cập nhật báo cáo...</small>
+                                        </div>
+                                    </div>
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action border-0 p-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px;"><i class="fa-solid fa-hashtag"></i></div>
+                                        <div class="overflow-hidden">
+                                            <div class="d-flex justify-content-between">
+                                                <span class="fw-bold text-dark text-truncate">K21-CNTT Cộng đồng NCKH</span>
+                                                <span class="small text-muted ms-2">1h</span>
+                                            </div>
+                                            <small class="text-muted text-truncate d-block">Ad: Thông báo nộp thuyết minh...</small>
+                                        </div>
+                                    </div>
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action border-0 p-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px;"><i class="fa-regular fa-user"></i></div>
+                                        <div class="overflow-hidden">
+                                            <div class="d-flex justify-content-between">
+                                                <span class="fw-bold text-dark text-truncate">TS. Nguyễn Văn A</span>
+                                                <span class="small text-muted ms-2">3h</span>
+                                            </div>
+                                            <small class="text-muted text-truncate d-block">Thầy: Chào các em, sáng mai...</small>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="col-md-9 d-flex flex-column bg-white">
+                            <div class="px-4 py-3 border-bottom d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold small" style="width: 40px; height: 40px; background-color: #6366f1 !important;">42</div>
+                                    <div>
+                                        <div class="fw-bold text-dark">Nhóm NCKH HOU-2026-042</div>
+                                        <div class="small text-success"><i class="fa-solid fa-circle" style="font-size: 6px; vertical-align: middle;"></i> 3 thành viên đang trực tuyến</div>
+                                    </div>
+                                </div>
+                                <div class="text-muted fs-5">
+                                    <i class="fa-regular fa-calendar me-3 cursor-pointer"></i>
+                                    <i class="fa-solid fa-ellipsis-vertical cursor-pointer"></i>
+                                </div>
+                            </div>
+
+                            <div class="flex-grow-1 p-4 chat-scroll" style="background-color: #fff; overflow-y: auto;">
+                                <div class="text-center small text-muted fw-bold mb-4 bg-light d-inline-block px-3 py-1 rounded-pill mx-auto">HÔM NAY</div>
+                                
+                                <div class="d-flex gap-3 mb-4">
+                                    <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold flex-shrink-0" style="width: 35px; height: 35px;">LA</div>
+                                    <div style="max-width: 70%;">
+                                        <small class="text-muted fw-bold ms-1">Lê Thị Lan - 09:30</small>
+                                        <div class="chat-bubble-other mt-1 shadow-sm">
+                                            Mọi người ơi, em vừa nộp bản thảo Chương 2 lên hệ thống rồi nhé. Cả nhóm xem và góp ý giúp em với!
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex gap-3 mb-4 flex-row-reverse">
+                                    <div style="max-width: 70%;">
+                                        <div class="text-end"><small class="text-muted fw-bold me-1">Bạn - 09:35</small></div>
+                                        <div class="chat-bubble-me mt-1 text-start">
+                                            Oki Lan, để mình tải về xem luôn. @Trần Minh Đức rảnh thì vào check phần số liệu ở Mục 2.3 nhé.
+                                        </div>
+                                        <div class="text-end mt-1"><i class="fa-solid fa-check-double text-primary small"></i></div>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex gap-3 mb-4">
+                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold flex-shrink-0" style="width: 35px; height: 35px; background-color: #6366f1 !important;">GV</div>
+                                    <div style="max-width: 75%;">
+                                        <small class="text-primary fw-bold ms-1 text-uppercase" style="font-size: 11px;">Mentor Nguyễn Văn A • 10:15</small>
+                                        <div class="chat-bubble-mentor mt-1">
+                                            Chào các em, thầy đã nhận được thông báo nộp file. Tầm chiều nay thầy sẽ feedback chi tiết trong mục <strong>Theo dõi tiến độ</strong> nhé. Cố gắng bám sát đề cương.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="p-3 bg-white">
+                                <div class="input-group bg-light rounded-pill p-1 border">
+                                    <button class="btn btn-link text-muted"><i class="fa-solid fa-paperclip"></i></button>
+                                    <input type="text" class="form-control border-0 bg-transparent shadow-none" placeholder="Nhập tin nhắn thảo luận...">
+                                    <button class="btn btn-link text-muted"><i class="fa-regular fa-face-smile"></i></button>
+                                    <button class="btn btn-primary rounded-circle m-1 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; background-color: #6366f1; border: none;"><i class="fa-solid fa-paper-plane text-white" style="font-size: 14px;"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </div>
+
+        <div id="view-s-calendar" class="fade-in hidden">
+                <div class="row g-4">
+                    <div class="col-md-8">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h5 class="fw-bold mb-0 text-primary"><i class="fa-regular fa-calendar-check me-2"></i> LỊCH TRÌNH NCKH CỦA TÔI</h5>
+                                <div class="d-flex align-items-center gap-2 bg-light rounded-pill px-2 py-1">
+                                    <button class="btn btn-light btn-sm rounded-circle shadow-none"><i class="fa-solid fa-chevron-left text-muted"></i></button>
+                                    <span class="fw-bold small text-muted px-2">THÁNG 01, 2026</span>
+                                    <button class="btn btn-light btn-sm rounded-circle shadow-none"><i class="fa-solid fa-chevron-right text-muted"></i></button>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-bordered align-top" style="height: 450px;">
+                                    <thead class="text-muted small text-uppercase text-center border-0">
+                                        <tr>
+                                            <th class="border-0 fw-bold">T2</th><th class="border-0 fw-bold">T3</th><th class="border-0 fw-bold">T4</th>
+                                            <th class="border-0 fw-bold">T5</th><th class="border-0 fw-bold">T6</th><th class="border-0 fw-bold">T7</th>
+                                            <th class="border-0 fw-bold">CN</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-muted fw-bold small">
+                                        <tr><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td></tr>
+                                        <tr><td>8</td><td>9</td><td>10</td><td>11</td><td>12</td><td>13</td>
+                                            <td class="text-center position-relative bg-light">
+                                                <div class="calendar-day-circle active mb-1">14</div>
+                                                <div class="calendar-event-tag bg-warning-subtle text-warning border border-warning-subtle">Họp nhóm ...</div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>15</td><td>16</td><td>17</td><td>18</td><td>19</td>
+                                            <td class="text-center">
+                                                <div class="calendar-day-circle mb-1">20</div>
+                                                <div class="calendar-event-tag bg-danger-subtle text-danger border border-danger-subtle">Hạn nộp đợ...</div>
+                                            </td>
+                                            <td>21</td>
+                                        </tr>
+                                        <tr>
+                                            <td>22</td><td>23</td><td>24</td>
+                                            <td class="position-relative">
+                                                <div class="calendar-day-circle">25</div>
+                                                <div class="position-absolute translate-middle p-1 bg-primary border border-light rounded-circle" style="top: 60%; left: 50%;"></div>
+                                            </td>
+                                            <td>26</td><td>27</td><td>28</td>
+                                        </tr>
+                                        <tr><td>29</td><td>30</td><td>31</td><td></td><td></td><td></td><td></td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 d-flex flex-column gap-4">
+                        <div class="card border-0 shadow-sm rounded-4 p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold mb-0 text-dark"><i class="fa-regular fa-bell me-2 text-danger"></i> Thông báo mới</h6>
+                                <a href="#" class="small fw-bold text-primary text-decoration-none">Xem tất cả</a>
+                            </div>
+
+                            <div class="d-flex flex-column gap-3">
+                                <div class="bg-danger-subtle p-3 rounded-3 notif-card-item cursor-pointer">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="badge bg-white text-danger fw-bold border border-danger-subtle">PHÒNG QLKH</span>
+                                        <small class="text-muted" style="font-size: 10px;">10p trước</small>
+                                    </div>
+                                    <div class="fw-bold text-dark small" style="line-height: 1.4;">Mở đợt đăng ký NCKH đợt 2 cấp Trường.</div>
+                                </div>
+                                <div class="bg-info-subtle p-3 rounded-3 notif-card-item cursor-pointer">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="badge bg-white text-info fw-bold border border-info-subtle">MENTOR A</span>
+                                        <small class="text-muted" style="font-size: 10px;">1h trước</small>
+                                    </div>
+                                    <div class="fw-bold text-dark small" style="line-height: 1.4;">Thầy đã gửi nhận xét Chương 2 cho nhóm.</div>
+                                </div>
+                                <div class="bg-light p-3 rounded-3 border notif-card-item cursor-pointer">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="badge bg-white text-dark fw-bold border">KHOA CNTT</span>
+                                        <small class="text-muted" style="font-size: 10px;">Hôm qua</small>
+                                    </div>
+                                    <div class="fw-bold text-dark small" style="line-height: 1.4;">Danh sách đề tài đủ điều kiện bảo vệ thử.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card border-0 shadow-sm rounded-4 p-4 text-white text-center position-relative overflow-hidden mt-auto" style="background-color: #1e1b4b;">
+                            <h5 class="fw-bold mb-1">HỖ TRỢ NCKH</h5>
+                            <i class="fa-solid fa-headset fs-1 mb-3 text-white-50"></i>
+                            <p class="small opacity-75 mb-4 px-2" style="font-size: 11px;">"Mọi thắc mắc về kỹ thuật và quy chế, sinh viên có thể liên hệ trực tiếp Ban quản trị."</p>
+                            <button class="btn btn-light text-primary fw-bold rounded-pill w-100 shadow-sm">CHAT VỚI SUPPORT</button>
+                            <i class="fa-regular fa-life-ring position-absolute" style="font-size: 100px; right: -20px; bottom: -20px; opacity: 0.05;"></i>
+                        </div>
+                    </div>
+                </div>
+        </div>
+
+        <div id="view-s-templates" class="fade-in hidden">
+                <div class="bg-white p-4 rounded-4 shadow-sm mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4"><h5 class="fw-bold mb-0">Tài liệu & Biểu mẫu</h5><input type="text" class="form-control rounded-pill bg-light border-0 px-4 small" placeholder="Tìm tài liệu..." style="width: 250px;"></div>
+                    <div class="row g-4">
+                        <div class="col-md-3"><div class="card border-0 shadow-sm p-4 h-100 text-center hover-shadow"><div class="mb-3"><i class="fa-regular fa-file-word text-primary fs-1"></i></div><div class="fw-bold mb-1">Mẫu thuyết minh</div><button class="btn btn-light btn-sm fw-bold w-100 text-primary" onclick="showToast('Đang tải xuống...')">Tải xuống</button></div></div>
+                        <div class="col-md-3"><div class="card border-0 shadow-sm p-4 h-100 text-center hover-shadow"><div class="mb-3"><i class="fa-regular fa-file-pdf text-danger fs-1"></i></div><div class="fw-bold mb-1">Quy định trình bày</div><button class="btn btn-light btn-sm fw-bold w-100 text-primary" onclick="showToast('Đang tải xuống...')">Tải xuống</button></div></div>
+                    </div>
+                </div>
+        </div>
+
+        <div id="view-s-submit" class="fade-in hidden">
+                <div class="card border-0 shadow-sm rounded-4 p-5 text-center">
+                    <h4 class="fw-bold mb-2">Nộp báo cáo tiến độ đợt 1</h4><p class="text-danger fw-bold mb-5 small">Hạn cuối: 23:59 - 20/01/2026</p>
+                    <div class="upload-zone p-5 rounded-4 mb-4 d-flex flex-column align-items-center justify-content-center"><div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;"><i class="fa-solid fa-cloud-arrow-up fs-3"></i></div><h6 class="fw-bold mb-1">Kéo thả file vào đây</h6></div>
+                    <div class="text-start mb-4"><label class="form-label small fw-bold text-muted">GHI CHÚ</label><textarea class="form-control bg-light" rows="3"></textarea></div>
+                    <button class="btn btn-primary w-100 py-3 fw-bold rounded-3 shadow-sm" style="background: linear-gradient(90deg, #6366f1 0%, #4f46e5 100%); border: none;" data-bs-toggle="modal" data-bs-target="#modalConfirmSubmit">XÁC NHẬN NỘP BÁO CÁO</button>
+                </div>
+        </div>
+
+    </div>
+{% endblock %}
+
+{% block modals %}
+    <div class="modal fade" id="modalAddMember" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Thêm Thành viên Nhóm</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="mb-3"><label class="form-label small fw-bold text-muted">Nhập Mã sinh viên</label><input type="text" class="form-control"></div></div><div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-primary w-100 fw-bold" onclick="showToast('Đã thêm thành viên!')" data-bs-dismiss="modal">Thêm</button></div></div></div></div>
+    <div class="modal fade" id="modalMoreSuggestions" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Gợi ý Đề tài hệ thống</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><ul class="list-group list-group-flush"><li class="list-group-item">Ứng dụng Blockchain...</li><li class="list-group-item">Hệ thống IoT...</li></ul></div></div></div></div>
+    <div class="modal fade" id="modalAllMentors" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Danh sách Giảng viên Hướng dẫn</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="row g-3"><div class="col-md-6"><div class="p-3 border rounded-3 d-flex align-items-center gap-3"><div class="bg-light rounded-circle p-2"><i class="fa-solid fa-user-tie"></i></div><div><div class="fw-bold">TS. Nguyễn Văn A</div><div class="small text-muted">Khoa CNTT - AI, Big Data</div></div></div></div></div></div></div></div></div>
+    <div class="modal fade" id="modalConfirmRegister" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title fw-bold">Đăng ký Đề tài Mới</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Tên đề tài</label>
+                        <input type="text" id="topicName" class="form-control" placeholder="Nhập tên đề tài..." required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Mô tả tóm tắt</label>
+                        <textarea id="topicDesc" class="form-control" rows="3" placeholder="Mô tả mục tiêu, công nghệ..."></textarea>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">Đợt NCKH</label>
+                            <select id="batchId" class="form-select">
+                                <option value="1">Đợt 1 - 2026</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">Giảng viên HD</label>
+                            <select id="mentorId" class="form-select">
+                                <option value="2">TS. Nguyễn Văn A (ID: 2)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <input type="hidden" id="groupId" value="1">
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy</button>
+                    <button id="btnSubmitRegister" class="btn btn-success fw-bold px-4" data-bs-dismiss="modal">Đồng ý gửi</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="modalConfirmSubmit" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold">Nộp báo cáo / Tài liệu</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Loại tài liệu</label>
+                        <select id="submissionType" class="form-select">
+                            <option value="report">Báo cáo định kỳ</option>
+                            <option value="final">Báo cáo tổng kết</option>
+                            <option value="other">Tài liệu khác</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Chọn file</label>
+                        <input type="file" id="submissionFile" class="form-control" required>
+                        <div class="form-text">Hỗ trợ: PDF, DOCX, ZIP (Tối đa 50MB)</div>
+                    </div>
+                    <input type="hidden" id="submissionTopicId" value="1">
+                    <input type="hidden" id="submissionUploaderId" value="3">
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy</button>
+                    <button id="btnUploadSubmission" class="btn btn-primary fw-bold px-4" data-bs-dismiss="modal">Nộp ngay</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="modalProfile" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg rounded-4"><div class="modal-header border-bottom-0"><h5 class="modal-title fw-bold">Hồ sơ Sinh viên</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><div class="mb-3"><label class="form-label small fw-bold text-muted">Họ tên</label><input type="text" class="form-control" value="Nguyễn Văn Học" readonly></div><div class="mb-3"><label class="form-label small fw-bold text-muted">Mã sinh viên</label><input type="text" class="form-control" value="21010042" readonly></div></div><div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-primary w-100 fw-bold" onclick="showToast('Cập nhật hồ sơ thành công!')" data-bs-dismiss="modal">Lưu thay đổi</button></div></div></div></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filterStudentMentors() {
+    const query = (document.getElementById('studentMentorSearch')?.value || '').toLowerCase().trim();
+    const dept = document.getElementById('studentMentorDept')?.value || 'all';
+    const items = document.querySelectorAll('.mentor-item');
+    let visibleCount = 0;
+
+    items.forEach(item => {
+        const name = (item.getAttribute('data-name') || '').toLowerCase();
+        const itemDept = item.getAttribute('data-dept') || '';
+        const field = (item.getAttribute('data-field') || '').toLowerCase();
+
+        const matchQuery = !query || name.includes(query) || field.includes(query);
+        const matchDept = (dept === 'all') || (itemDept === dept);
+
+        if (matchQuery && matchDept) {
+            item.style.display = 'block';
+            visibleCount++;
+        } else {
+            item.style.display = 'none';
+        }
+    });
+
+    const emptyBox = document.getElementById('noStudentMentorsFound');
+    if (emptyBox) {
+        if (visibleCount === 0) {
+            emptyBox.classList.remove('d-none');
+        } else {
+            emptyBox.classList.add('d-none');
+        }
+    }
+}
+
+const MENTOR_PROFILES = {
+    // KHOA CÔNG NGHỆ THÔNG TIN
+    "TS. Nguyễn Văn A": {
+        name: "TS. Nguyễn Văn A",
+        dept: "Khoa Công nghệ Thông tin",
+        tag: "Trí tuệ nhân tạo (AI)",
+        icon: "fa-brain",
+        avatar: "NA",
+        load: "2/5 nhóm",
+        status: "Đang nhận thêm",
+        bio: "Ưu tiên sinh viên code cứng Python, nắm chắc kiến thức cơ bản về Machine Learning và Deep Learning. Nhóm nghiên cứu yêu cầu tinh thần chủ động cao, khả năng đọc hiểu tài liệu tiếng Anh và có định hướng công bố bài báo khoa học hoặc tham gia hội thi NCKH các cấp.",
+        projects: [
+            {
+                title: "Hệ thống phát hiện sớm bất thường trên ảnh X-quang phổi sử dụng Vision Transformer",
+                year: 2025,
+                desc: "Nghiên cứu ứng dụng mô hình Swin Transformer tối ưu hóa trích xuất đặc trưng vùng tổn thương vi mô trong chẩn đoán hình ảnh y tế.",
+                badges: [
+                    { text: "Giải Nhất NCKH cấp Trường", bg: "warning", icon: "fa-trophy" },
+                    { text: "01 Bài báo IEEE", bg: "primary", icon: "fa-newspaper" }
+                ]
+            },
+            {
+                title: "Mô hình ngôn ngữ lớn (LLM) hỗ trợ tư vấn tuyển sinh đại học theo thời gian thực",
+                year: 2024,
+                desc: "Xây dựng pipeline RAG kết hợp cơ sở tri thức quy chế đào tạo, cải thiện độ chính xác câu trả lời và giảm thiểu hiện tượng ảo giác.",
+                badges: [
+                    { text: "Giải Ba cấp Bộ", bg: "danger", icon: "fa-medal" },
+                    { text: "Giải Nhất NCKH cấp Trường", bg: "warning", icon: "fa-trophy" }
+                ]
+            },
+            {
+                title: "Phân loại cảm xúc bình luận tiếng Việt trên mạng xã hội bằng mô hình PhoBERT kết hợp Bi-LSTM",
+                year: 2023,
+                desc: "Phát triển bộ tiền xử lý ngôn ngữ tiếng Việt đặc thù mạng xã hội và đánh giá độ chính xác phân loại đa nhãn.",
+                badges: [
+                    { text: "01 Bài báo IEEE", bg: "primary", icon: "fa-newspaper" }
+                ]
+            }
+        ]
+    },
+    "PGS. TS. Trần Thị B": {
+        name: "PGS. TS. Trần Thị B",
+        dept: "Khoa Công nghệ Thông tin",
+        tag: "Ứng dụng Di động & IoT",
+        icon: "fa-mobile-screen-button",
+        avatar: "TB",
+        load: "5/5 nhóm",
+        status: "Đã đủ chỉ tiêu",
+        bio: "Nhóm NCKH năm nay của cô tập trung vào phát triển ứng dụng di động đa nền tảng (Flutter / React Native) kết hợp cảm biến IoT phục vụ cộng đồng, người yếu thế và môi trường đô thị.",
+        projects: [
+            {
+                title: "Ứng dụng di động kết nối cứu trợ thiên tai bão lũ theo định vị GPS thời gian thực",
+                year: 2025,
+                desc: "Phát triển app di động kết nối trực tiếp tình nguyện viên và nạn nhân vùng ngập lụt, tích hợp bản đồ ngoại tuyến khi mất sóng điện thoại.",
+                badges: [
+                    { text: "Giải Nhì NCKH cấp Bộ", bg: "danger", icon: "fa-medal" },
+                    { text: "Giải Nhất Sáng tạo Trẻ", bg: "warning", icon: "fa-trophy" }
+                ]
+            },
+            {
+                title: "Hệ thống cảnh báo ngập lụt đô thị thông minh qua ứng dụng di động và trạm cảm biến IoT",
+                year: 2024,
+                desc: "Thu thập dữ liệu mực nước từ các trạm đo siêu âm đặt tại các điểm trũng và gửi cảnh báo tức thì (Push Notification) đến tài xế.",
+                badges: [
+                    { text: "Giải Nhất NCKH cấp Trường", bg: "warning", icon: "fa-trophy" }
+                ]
+            },
+            {
+                title: "Nền tảng hỗ trợ sinh hoạt cho người cao tuổi tích hợp thiết bị đeo thông minh",
+                year: 2023,
+                desc: "Ứng dụng nhắc lịch uống thuốc, theo dõi nhịp tim và tự động gọi khẩn cấp cho người thân khi phát hiện té ngã.",
+                badges: [
+                    { text: "01 Bài báo Scopus Q3", bg: "primary", icon: "fa-newspaper" }
+                ]
+            }
+        ]
+    },
+    "TS. Lê Văn C": {
+        name: "TS. Lê Văn C",
+        dept: "Khoa Công nghệ Thông tin",
+        tag: "An toàn thông tin & Blockchain",
+        icon: "fa-shield-halved",
+        avatar: "LC",
+        load: "3/5 nhóm",
+        status: "Đang nhận thêm",
+        bio: "Chào đón các nhóm sinh viên đam mê An ninh mạng, mật mã học ứng dụng, kiểm thử thâm nhập (Penetration Testing) và ứng dụng công nghệ chuỗi khối (Blockchain) trong xác thực dữ liệu số và chống giả mạo.",
+        projects: [
+            {
+                title: "Hệ thống quản lý văn bằng chứng chỉ đại học chống giả mạo trên nền tảng Hyperledger Fabric",
+                year: 2025,
+                desc: "Ứng dụng công nghệ Blockchain mạng riêng (Permissioned) giúp các doanh nghiệp tuyển dụng tra cứu và xác thực tính toàn vẹn của bằng cấp.",
+                badges: [
+                    { text: "Giải Nhất NCKH cấp Trường", bg: "warning", icon: "fa-trophy" },
+                    { text: "01 Bài báo IEEE", bg: "primary", icon: "fa-newspaper" }
+                ]
+            },
+            {
+                title: "Hệ thống phát hiện sớm tấn công từ chối dịch vụ phân tán (DDoS) vào hạ tầng đám mây",
+                year: 2024,
+                desc: "Ứng dụng thuật toán phân tích lưu lượng gói tin mạng theo thời gian thực và tự động cập nhật quy tắc Firewall.",
+                badges: [
+                    { text: "Giải Nhì NCKH Sinh viên", bg: "warning", icon: "fa-medal" }
+                ]
+            },
+            {
+                title: "Đánh giá lỗ hổng bảo mật hợp đồng thông minh Smart Contract trên nền tảng Ethereum",
+                year: 2023,
+                desc: "Xây dựng công cụ phân tích mã nguồn tĩnh phát hiện các lỗi Reentrancy và Integer Overflow trong smart contracts.",
+                badges: [
+                    { text: "01 Báo cáo Hội nghị Quốc gia", bg: "primary", icon: "fa-file-lines" }
+                ]
+            }
+        ]
+    },
+    "ThS. Hoàng Thị D": {
+        name: "ThS. Hoàng Thị D",
+        dept: "Khoa Công nghệ Thông tin",
+        tag: "Khoa học Dữ liệu & AI",
+        icon: "fa-chart-pie",
+        avatar: "HD",
+        load: "1/5 nhóm",
+        status: "Đang nhận thêm",
+        bio: "Hướng dẫn các đề tài phân tích dữ liệu lớn, khai phá xu hướng mạng xã hội, trực quan hóa thông tin quản trị và xây dựng các hệ thống gợi ý thông minh (Recommendation Systems).",
+        projects: [
+            {
+                title: "Hệ thống khuyến nghị lộ trình học tập cá nhân hóa cho sinh viên đại học dựa trên khai phá dữ liệu học tập",
+                year: 2025,
+                desc: "Áp dụng thuật toán Collaborative Filtering kết hợp đồ thị tri thức môn học nhằm gợi ý học phần bổ trợ tối ưu.",
+                badges: [
+                    { text: "Giải Nhất NCKH cấp Khoa", bg: "warning", icon: "fa-trophy" },
+                    { text: "Ứng dụng thực tế tại trường", bg: "success", icon: "fa-check" }
+                ]
+            },
+            {
+                title: "Phân tích xu hướng thảo luận và tâm lý dư luận trên mạng xã hội bằng Big Data",
+                year: 2024,
+                desc: "Xây dựng pipeline thu thập và tiền xử lý hàng triệu bình luận, trực quan hóa biểu đồ phân bố cảm xúc theo chuỗi thời gian.",
+                badges: [
+                    { text: "Giải Ba cấp Trường", bg: "warning", icon: "fa-medal" }
+                ]
+            },
+            {
+                title: "Bảng điều khiển (Dashboard) thông minh dự báo sớm nguy cơ sinh viên thôi học",
+                year: 2023,
+                desc: "Sử dụng mô hình Random Forest và XGBoost phân tích dữ liệu điểm rèn luyện, chuyên cần để cảnh báo sớm.",
+                badges: [
+                    { text: "01 Bài báo Scopus", bg: "primary", icon: "fa-newspaper" }
+                ]
+            }
+        ]
+    },
+    "TS. Đinh Công Thắng": {
+        name: "TS. Đinh Công Thắng",
+        dept: "Khoa Công nghệ Thông tin",
+        tag: "Thị giác máy tính & AI",
+        icon: "fa-eye",
+        avatar: "CT",
+        load: "1/5 nhóm",
+        status: "Đang nhận thêm",
+        bio: "Nghiên cứu ứng dụng Computer Vision và Deep Learning trong nhận dạng hành vi, xe tự hành và kiểm tra sản phẩm công nghiệp tự động. Nhóm có trang bị hệ thống máy tính GPU chuyên dụng phục vụ huấn luyện các mô hình học sâu hiện đại.",
+        projects: [
+            {
+                title: "Hệ thống giám sát và cảnh báo trạng thái buồn ngủ của tài xế xe tải đường dài bằng Edge AI",
+                year: 2025,
+                desc: "Triển khai mô hình phát hiện cử động mắt và góc nghiêng đầu chạy trực tiếp trên thiết bị nhúng Jetson Nano.",
+                badges: [
+                    { text: "Giải Nhì NCKH cấp Bộ", bg: "danger", icon: "fa-medal" },
+                    { text: "01 Bài báo IEEE", bg: "primary", icon: "fa-newspaper" }
+                ]
+            },
+            {
+                title: "Hệ thống nhận dạng biển số xe và phân loại phương tiện giao thông tự động theo thời gian thực",
+                year: 2024,
+                desc: "Tối ưu hóa kiến trúc YOLOv8 và OCR nhận diện biển số xe máy, ô tô tại các bãi đỗ thông minh trường đại học.",
+                badges: [
+                    { text: "Giải Nhất NCKH cấp Trường", bg: "warning", icon: "fa-trophy" }
+                ]
+            },
+            {
+                title: "Phát hiện lỗi vi mô trên bề mặt linh kiện bo mạch điện tử (PCB) bằng mạng tích chập",
+                year: 2023,
+                desc: "Ứng dụng phương pháp học ít mẫu (Few-shot learning) để phát hiện mối hàn lỗi trong dây chuyền sản xuất tự động.",
+                badges: [
+                    { text: "Hợp tác Doanh nghiệp", bg: "success", icon: "fa-handshake" }
+                ]
+            }
+        ]
+    },
+    "ThS. Phạm Quang Huy": {
+        name: "ThS. Phạm Quang Huy",
+        dept: "Khoa Công nghệ Thông tin",
+        tag: "Điện toán đám mây & DevOps",
+        icon: "fa-cloud",
+        avatar: "QH",
+        load: "2/5 nhóm",
+        status: "Đang nhận thêm",
+        bio: "Định hướng các đề tài thiết kế kiến trúc vi dịch vụ (Microservices), tự động hóa triển khai CI/CD, DevSecOps và tối ưu hóa hạ tầng đám mây trên nền tảng Docker, Kubernetes, AWS và Google Cloud.",
+        projects: [
+            {
+                title: "Hệ thống tự động điều chỉnh co giãn (Auto-scaling) tải cao phục vụ đăng ký tín chỉ trực tuyến",
+                year: 2025,
+                desc: "Triển khai Kubernetes cluster với Horizontal Pod Autoscaler, chịu tải đồng thời hơn 15.000 sinh viên truy cập.",
+                badges: [
+                    { text: "Giải Nhất NCKH cấp Khoa", bg: "warning", icon: "fa-trophy" },
+                    { text: "Áp dụng thử nghiệm thành công", bg: "success", icon: "fa-check" }
+                ]
+            },
+            {
+                title: "Pipeline CI/CD tự động quét mã độc và kiểm thử bảo mật mã nguồn cho dự án phần mềm",
+                year: 2024,
+                desc: "Tích hợp SonarQube, Trivy và OWASP ZAP vào quy trình GitHub Actions tự động kiểm duyệt trước khi deploy.",
+                badges: [
+                    { text: "Giải Ba cấp Trường", bg: "warning", icon: "fa-medal" }
+                ]
+            },
+            {
+                title: "Kiến trúc Serverless xử lý đa phương tiện dung lượng lớn chi phí tối ưu",
+                year: 2023,
+                desc: "Xây dựng hệ thống tự động nén video bài giảng trực tuyến sử dụng AWS Lambda và S3 Event Triggers.",
+                badges: [
+                    { text: "01 Báo cáo Hội thảo CNTT", bg: "primary", icon: "fa-file-lines" }
+                ]
+            }
+        ]
+    },
+    "TS. Ngô Thị Bích Loan": {
+        name: "TS. Ngô Thị Bích Loan",
+        dept: "Khoa Công nghệ Thông tin",
+        tag: "Hệ thống thông tin & Web GIS",
+        icon: "fa-map-location-dot",
+        avatar: "BL",
+        load: "2/5 nhóm",
+        status: "Đang nhận thêm",
+        bio: "Nghiên cứu tích hợp hệ thông tin địa lý (GIS), bản đồ số tương tác và cơ sở dữ liệu không gian hỗ trợ quy hoạch đô thị, theo dõi môi trường và chuyển đổi số cho cơ quan quản lý nhà nước.",
+        projects: [
+            {
+                title: "Cổng thông tin Web GIS theo dõi chất lượng không khí và phân bố mảng xanh đô thị Hà Nội",
+                year: 2025,
+                desc: "Kết hợp dữ liệu quan trắc viễn thám vệ tinh Sentinel-5P với bản đồ Leaflet hiển thị trực quan các điểm ô nhiễm PM2.5.",
+                badges: [
+                    { text: "Giải Nhì NCKH cấp Bộ", bg: "danger", icon: "fa-medal" },
+                    { text: "01 Bài báo Scopus", bg: "primary", icon: "fa-newspaper" }
+                ]
+            },
+            {
+                title: "Bản đồ số du lịch văn hóa tương tác 3D tích hợp định vị và thuyết minh giọng nói tự động",
+                year: 2024,
+                desc: "Xây dựng ứng dụng web tương tác cho các di tích lịch sử phố cổ Hà Nội, hỗ trợ sinh viên du lịch học tập trải nghiệm.",
+                badges: [
+                    { text: "Giải Nhất NCKH cấp Trường", bg: "warning", icon: "fa-trophy" }
+                ]
+            },
+            {
+                title: "Hệ thống quản lý cơ sở dữ liệu phân tán tài nguyên đất đai cấp xã/phường",
+                year: 2023,
+                desc: "Áp dụng PostGIS và GeoServer chuẩn hóa quy trình lưu trữ, trích xuất và cấp trích lục thông tin thửa đất trực tuyến.",
+                badges: [
+                    { text: "Khen thưởng NCKH", bg: "primary", icon: "fa-award" }
+                ]
+            }
+        ]
+    },
+    "ThS. Vũ Hải Nam": {
+        name: "ThS. Vũ Hải Nam",
+        dept: "Khoa Công nghệ Thông tin",
+        tag: "Hệ thống nhúng & IoT",
+        icon: "fa-microchip",
+        avatar: "HN",
+        load: "1/5 nhóm",
+        status: "Đang nhận thêm",
+        bio: "Thiết kế phần cứng mạch nhúng, thu thập dữ liệu cảm biến thời gian thực, lập trình vi điều khiển STM32/ESP32 và tự động hóa trong nông nghiệp công nghệ cao và nhà máy thông minh.",
+        projects: [
+            {
+                title: "Trạm quan trắc nông nghiệp thông minh tầm xa tiết kiệm năng lượng sử dụng mạng LoRaWAN",
+                year: 2025,
+                desc: "Thiết kế bo mạch phần cứng hoạt động liên tục 2 năm bằng pin năng lượng mặt trời, truyền dữ liệu độ ẩm đất xa 5km.",
+                badges: [
+                    { text: "Giải Nhất NCKH cấp Trường", bg: "warning", icon: "fa-trophy" },
+                    { text: "01 Bằng Sáng chế Giải pháp", bg: "success", icon: "fa-certificate" }
+                ]
+            },
+            {
+                title: "Hệ thống điều khiển vi khí hậu nhà kính tự động tích hợp thuật toán PID trên vi điều khiển STM32",
+                year: 2024,
+                desc: "Tự động điều tiết ánh sáng, quạt thông gió và phun sương dựa trên ngưỡng cảm biến nhiệt ẩm độ.",
+                badges: [
+                    { text: "Giải Nhì NCKH Sinh viên", bg: "warning", icon: "fa-medal" }
+                ]
+            },
+            {
+                title: "Robot AGV dò line tự hành vận chuyển kiện hàng nhỏ trong kho vận thông minh",
+                year: 2023,
+                desc: "Tích hợp cảm biến quang điện và thuật toán tránh vật cản siêu âm phục vụ chuyển hàng linh kiện điện tử.",
+                badges: [
+                    { text: "Triển lãm Công nghệ Trẻ", bg: "primary", icon: "fa-robot" }
+                ]
+            }
+        ]
+    },
+
+    // KHOA KINH TẾ & QTKD
+    "PGS. TS. Vũ Đình E": {
+        name: "PGS. TS. Vũ Đình E",
+        dept: "Khoa Kinh tế & QTKD",
+        tag: "Kinh tế số & Chuỗi cung ứng",
+        icon: "fa-chart-line",
+        avatar: "VE",
+        load: "1/5 nhóm",
+        status: "Đang nhận thêm",
+        bio: "Chào các bạn sinh viên Khoa Kinh tế & QTKD, nhóm nghiên cứu tập trung vào các mô hình kinh tế tuần hoàn, quản trị chuỗi cung ứng thông minh và tài chính xanh. Ưu tiên sinh viên có kỹ năng phân tích dữ liệu SPSS, STATA hoặc Python.",
+        projects: [
+            {
+                title: "Tác động của chuyển đổi số đến hiệu quả chuỗi cung ứng của các doanh nghiệp bán lẻ tại Việt Nam",
+                year: 2025,
+                desc: "Nghiên cứu khảo sát trên 200 doanh nghiệp bán lẻ, ứng dụng mô hình cấu trúc tuyến tính SEM đánh giá chỉ số tối ưu tồn kho.",
+                badges: [
+                    { text: "Giải Nhất NCKH cấp Trường", bg: "warning", icon: "fa-trophy" },
+                    { text: "01 Bài báo Scopus Q2", bg: "primary", icon: "fa-newspaper" }
+                ]
+            },
+            {
+                title: "Mô hình kinh tế tuần hoàn trong ngành chế biến thực phẩm: Cơ hội và rào cản tài chính",
+                year: 2024,
+                desc: "Đề xuất bộ tiêu chí ESG và các giải pháp tiếp cận vốn tín dụng xanh cho các hợp tác xã nông sản.",
+                badges: [
+                    { text: "Giải Ba cấp Bộ", bg: "danger", icon: "fa-medal" }
+                ]
+            }
+        ]
+    },
+    "TS. Phạm Thu Trang": {
+        name: "TS. Phạm Thu Trang",
+        dept: "Khoa Kinh tế & QTKD",
+        tag: "Thương mại điện tử & Marketing",
+        icon: "fa-bullhorn",
+        avatar: "PT",
+        load: "3/5 nhóm",
+        status: "Đang nhận thêm",
+        bio: "Hướng dẫn các đề tài nghiên cứu về hành vi tiêu dùng thế hệ Gen Z, chuyển đổi số trong marketing bán lẻ và chiến lược kinh doanh đa kênh (Omnichannel). Yêu cầu sinh viên năng động, chủ động khảo sát thị trường.",
+        projects: [
+            {
+                title: "Yếu tố ảnh hưởng đến quyết định mua sắm bốc đồng (Impulse Buying) trên nền tảng TikTok Shop của Gen Z",
+                year: 2025,
+                desc: "Phân tích tác động tâm lý từ livestream bán hàng, nội dung video ngắn và ưu đãi giới hạn thời gian đến hành vi thanh toán.",
+                badges: [
+                    { text: "Giải Nhất NCKH cấp Khoa", bg: "warning", icon: "fa-trophy" }
+                ]
+            },
+            {
+                title: "Chiến lược Omnichannel nâng cao lòng trung thành khách hàng ngành mỹ phẩm Việt",
+                year: 2024,
+                desc: "Xây dựng mô hình trải nghiệm khách hàng liền mạch giữa kênh trực tiếp (In-store) và kênh trực tuyến (Online).",
+                badges: [
+                    { text: "01 Bài báo Kinh tế & Phát triển", bg: "primary", icon: "fa-file-lines" }
+                ]
+            }
+        ]
+    },
+    "TS. Nguyễn Mạnh Cường": {
+        name: "TS. Nguyễn Mạnh Cường",
+        dept: "Khoa Kinh tế & QTKD",
+        tag: "Tài chính xanh & Ngân hàng số",
+        icon: "fa-sack-dollar",
+        avatar: "MC",
+        load: "2/5 nhóm",
+        status: "Đang nhận thêm",
+        bio: "Hướng dẫn các đề tài chuyên sâu về dịch vụ ngân hàng số (Neo-bank), công nghệ tài chính (FinTech) và tiêu chuẩn phát hành trái phiếu xanh tại thị trường Việt Nam.",
+        projects: [
+            {
+                title: "Nghiên cứu mức độ chấp nhận các ứng dụng thanh toán Buy Now Pay Later (BNPL) của sinh viên đại học",
+                year: 2025,
+                desc: "Sử dụng mô hình UTAUT2 đánh giá các yếu tố nhận thức rủi ro và thói quen chi tiêu của người dùng trẻ.",
+                badges: [
+                    { text: "Giải Nhất NCKH cấp Trường", bg: "warning", icon: "fa-trophy" }
+                ]
+            }
+        ]
+    },
+
+    // KHOA NGOẠI NGỮ
+    "TS. Đỗ Quỳnh Anh": {
+        name: "TS. Đỗ Quỳnh Anh",
+        dept: "Khoa Ngoại ngữ",
+        tag: "Ngôn ngữ học & EdTech",
+        icon: "fa-language",
+        avatar: "QA",
+        load: "2/5 nhóm",
+        status: "Đang nhận thêm",
+        bio: "Chào đón sinh viên đam mê phương pháp giảng dạy tiếng Anh hiện đại kết hợp công nghệ AI, phân tích diễn ngôn và đánh giá năng lực ngoại ngữ theo khung tham chiếu châu Âu (CEFR).",
+        projects: [
+            {
+                title: "Hiệu quả của việc ứng dụng trợ lý ảo AI trong rèn luyện kỹ năng phát âm và nói tiếng Anh của sinh viên năm nhất",
+                year: 2025,
+                desc: "Thực nghiệm sư phạm đánh giá mức độ tự tin và độ chuẩn xác ngữ điệu khi học tiếng Anh giao tiếp qua ứng dụng AI.",
+                badges: [
+                    { text: "Giải Nhất NCKH cấp Trường", bg: "warning", icon: "fa-trophy" },
+                    { text: "01 Bài báo Quốc tế", bg: "primary", icon: "fa-newspaper" }
+                ]
+            },
+            {
+                title: "Khảo sát lỗi giao thoa ngôn ngữ Việt - Anh trong biên dịch văn bản tài chính doanh nghiệp",
+                year: 2024,
+                desc: "Phân tích 500 bài dịch chuyên ngành của sinh viên nhằm xây dựng sổ tay thuật ngữ và mẫu câu dịch chuẩn hóa.",
+                badges: [
+                    { text: "Giải Nhì NCKH Sinh viên", bg: "warning", icon: "fa-medal" }
+                ]
+            }
+        ]
+    },
+
+    // KHOA LUẬT
+    "TS. Trần Văn Hùng": {
+        name: "TS. Trần Văn Hùng",
+        dept: "Khoa Luật",
+        tag: "Luật Dân sự & Sở hữu trí tuệ",
+        icon: "fa-scale-balanced",
+        avatar: "VH",
+        load: "1/5 nhóm",
+        status: "Đang nhận thêm",
+        bio: "Hướng dẫn các đề tài chuyên sâu về Pháp luật Dân sự, Bảo hộ bản quyền tác phẩm sáng tạo do AI tạo ra và Pháp luật về quyền riêng tư dữ liệu cá nhân trong kỷ nguyên số.",
+        projects: [
+            {
+                title: "Khung pháp lý về bảo hộ quyền tác giả đối với các tác phẩm hội họa và văn học do trí tuệ nhân tạo (AI) tạo ra",
+                year: 2025,
+                desc: "Nghiên cứu so sánh pháp luật Việt Nam, Hoa Kỳ và Liên minh Châu Âu (EU) về xác định chủ thể quyền sở hữu trí tuệ của AI.",
+                badges: [
+                    { text: "Giải Nhất NCKH cấp Trường", bg: "warning", icon: "fa-trophy" },
+                    { text: "01 Bài báo Tạp chí Luật học", bg: "primary", icon: "fa-newspaper" }
+                ]
+            },
+            {
+                title: "Bảo vệ dữ liệu cá nhân người tiêu dùng trên các nền tảng số: Thực trạng và kiến nghị hoàn thiện pháp luật",
+                year: 2024,
+                desc: "Đánh giá mức độ tuân thủ Nghị định 13/2023/NĐ-CP của các sàn thương mại điện tử tại Việt Nam.",
+                badges: [
+                    { text: "Giải Ba cấp Bộ", bg: "danger", icon: "fa-medal" }
+                ]
+            }
+        ]
+    },
+    "ThS. Lê Minh Đức": {
+        name: "ThS. Lê Minh Đức",
+        dept: "Khoa Luật",
+        tag: "Luật Kinh tế & Trọng tài",
+        icon: "fa-gavel",
+        avatar: "MĐ",
+        load: "2/5 nhóm",
+        status: "Đang nhận thêm",
+        bio: "Tập trung nghiên cứu hoàn thiện khung pháp lý về giao dịch điện tử, hợp đồng thông minh (Smart Contract) và các phương thức giải quyết tranh chấp trực tuyến (ODR).",
+        projects: [
+            {
+                title: "Giá trị pháp lý của hợp đồng thông minh (Smart Contract) trong giao dịch thương mại quốc tế",
+                year: 2025,
+                desc: "Làm rõ tính pháp lý của chữ ký số, điều khoản tự động thực thi và thẩm quyền giải quyết khi xảy ra tranh chấp mã lỗi.",
+                badges: [
+                    { text: "Giải Nhì NCKH cấp Khoa", bg: "warning", icon: "fa-medal" }
+                ]
+            }
+        ]
+    }
+};
+
+function showStudentMentorDetail(name, dept, load, status, avatar, bio, tag, icon) {
+    const list = document.getElementById('s-mentors-list');
+    const detail = document.getElementById('s-mentors-detail');
+    if (list) list.classList.add('d-none');
+    if (detail) detail.classList.remove('d-none');
+
+    const profile = MENTOR_PROFILES[name] || {};
+
+    const finalName = name || profile.name || 'Giảng viên Hướng dẫn';
+    const finalDept = dept || profile.dept || 'Khoa Công nghệ Thông tin';
+    const finalLoad = load || profile.load || '2/5 nhóm';
+    const finalStatus = status || profile.status || 'Đang nhận thêm';
+    const finalAvatar = avatar || profile.avatar || 'GV';
+    const finalBio = bio || profile.bio || 'Giảng viên tận tâm, nhiều năm kinh nghiệm nghiên cứu khoa học và hướng dẫn sinh viên đạt giải thưởng các cấp.';
+    const finalTag = tag || profile.tag || 'Lĩnh vực nghiên cứu';
+    const finalIcon = icon || profile.icon || 'fa-graduation-cap';
+    const projects = profile.projects || [
+        {
+            title: `Nghiên cứu ứng dụng công nghệ trong lĩnh vực ${finalTag}`,
+            year: 2025,
+            desc: "Đề tài định hướng nghiên cứu ứng dụng thực tiễn, hỗ trợ công bố khoa học và giải thưởng NCKH sinh viên.",
+            badges: [{ text: "Đề tài tiêu biểu", bg: "primary", icon: "fa-award" }]
+        }
+    ];
+
+    document.getElementById('detailMentorName').textContent = finalName;
+    document.getElementById('detailMentorDept').textContent = finalDept;
+    document.getElementById('detailMentorLoad').textContent = finalLoad;
+    document.getElementById('detailMentorStatus').textContent = finalStatus;
+    document.getElementById('detailMentorAvatar').textContent = finalAvatar;
+    document.getElementById('detailMentorBio').textContent = finalBio;
+    document.getElementById('detailMentorTag').innerHTML = `<i class="fa-solid ${finalIcon} me-1"></i> ${finalTag}`;
+
+    // Render portfolio projects
+    const projCountEl = document.getElementById('detailMentorProjectsCount');
+    if (projCountEl) projCountEl.textContent = `${projects.length} đề tài tiêu biểu`;
+
+    const projContainer = document.getElementById('detailMentorProjectsContainer');
+    if (projContainer) {
+        projContainer.innerHTML = projects.map(p => {
+            const badgesHtml = (p.badges || []).map(b => {
+                const bgClass = b.bg === 'warning' ? 'bg-warning-subtle text-warning-emphasis border-warning-subtle' :
+                               b.bg === 'danger' ? 'bg-danger-subtle text-danger border-danger-subtle' :
+                               b.bg === 'success' ? 'bg-success-subtle text-success border-success-subtle' :
+                               'bg-primary-subtle text-primary border-primary-subtle';
+                return `<span class="badge ${bgClass} border rounded-pill px-3 py-1">
+                    <i class="fa-solid ${b.icon || 'fa-award'} me-1"></i> ${b.text}
+                </span>`;
+            }).join('');
+
+            return `
+                <div class="p-4 bg-white border rounded-4 hover-shadow transition">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="fw-bold text-primary mb-1">
+                            ${p.title}
+                        </h6>
+                        <span class="badge bg-light text-secondary rounded px-2 py-1">${p.year}</span>
+                    </div>
+                    <p class="text-muted small mb-3">
+                        ${p.desc}
+                    </p>
+                    <div class="d-flex flex-wrap gap-2">
+                        ${badgesHtml}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function hideStudentMentorDetail() {
+    const list = document.getElementById('s-mentors-list');
+    const detail = document.getElementById('s-mentors-detail');
+    if (detail) detail.classList.add('d-none');
+    if (list) list.classList.remove('d-none');
+}
+
+const FACULTY_MENTORS_DATA = {
+    "Khoa Công nghệ Thông tin": [
+        "TS. Nguyễn Văn A",
+        "PGS. TS. Trần Thị B",
+        "TS. Lê Văn C",
+        "ThS. Hoàng Thị D",
+        "TS. Đinh Công Thắng",
+        "ThS. Phạm Quang Huy",
+        "TS. Ngô Thị Bích Loan",
+        "ThS. Vũ Hải Nam"
+    ],
+    "Khoa Kinh tế & QTKD": [
+        "PGS. TS. Vũ Đình E",
+        "TS. Phạm Thu Trang",
+        "TS. Nguyễn Mạnh Cường",
+        "ThS. Lê Thị Thảo",
+        "TS. Đặng Quốc Bảo"
+    ],
+    "Khoa Ngoại ngữ": [
+        "TS. Đỗ Quỳnh Anh",
+        "ThS. Nguyễn Hoàng Long",
+        "ThS. Vũ Phương Mai",
+        "TS. Hoàng Minh Trí",
+        "ThS. Bùi Thị Thanh Hà"
+    ],
+    "Khoa Luật": [
+        "TS. Trần Văn Hùng",
+        "ThS. Lê Minh Đức"
+    ]
+};
+
+function onRegisterFacultyChange(selectedMentor = '') {
+    const facultySelect = document.getElementById('registerFacultySelect');
+    const mentorSelect = document.getElementById('registerMentorSelect');
+    if (!facultySelect || !mentorSelect) return;
+
+    const faculty = facultySelect.value;
+    mentorSelect.innerHTML = '';
+
+    if (!faculty) {
+        const defaultOpt = new Option('-- Vui lòng chọn Khoa trước --', '');
+        mentorSelect.add(defaultOpt);
+        mentorSelect.disabled = true;
+        return;
+    }
+
+    mentorSelect.disabled = false;
+    const defaultOpt = new Option(`-- Chọn Giảng viên (${faculty}) --`, '');
+    mentorSelect.add(defaultOpt);
+
+    const mentors = FACULTY_MENTORS_DATA[faculty] || [];
+    let matched = false;
+
+    mentors.forEach(m => {
+        const opt = new Option(m, m);
+        if (selectedMentor && (m === selectedMentor || m.includes(selectedMentor) || selectedMentor.includes(m))) {
+            opt.selected = true;
+            matched = true;
+        }
+        mentorSelect.add(opt);
+    });
+
+    if (selectedMentor && !matched) {
+        const customOpt = new Option(selectedMentor, selectedMentor, true, true);
+        mentorSelect.add(customOpt);
+    }
+
+    // Tự động điều chỉnh radio Lĩnh vực nghiên cứu theo Khoa
+    if (faculty.includes('Kinh tế') || faculty.includes('Ngoại ngữ') || faculty.includes('Luật')) {
+        const ecoRadio = document.getElementById('eco');
+        if (ecoRadio) ecoRadio.checked = true;
+    } else if (faculty.includes('Thông tin') || faculty.includes('Kỹ thuật')) {
+        const techRadio = document.getElementById('tech');
+        if (techRadio) techRadio.checked = true;
+    }
+}
+
+function applyForMentor(mentorName, dept = '') {
+    // 1. Chuyển tab sang mục 'Đăng ký NCKH'
+    const registerNav = document.querySelector('a[href*="s-register"]') || document.querySelector('[onclick*="s-register"]');
+    if (typeof switchTab === 'function') {
+        switchTab('s-register', registerNav);
+    }
+
+    // 2. Tìm khoa tương ứng nếu chưa truyền dept
+    if (!dept && mentorName) {
+        for (const [fac, list] of Object.entries(FACULTY_MENTORS_DATA)) {
+            if (list.some(m => m === mentorName || m.includes(mentorName) || mentorName.includes(m))) {
+                dept = fac;
+                break;
+            }
+        }
+    }
+
+    // 3. Chọn Khoa trong registerFacultySelect
+    const facultySelect = document.getElementById('registerFacultySelect');
+    if (facultySelect && dept) {
+        facultySelect.value = dept;
+    }
+
+    // 4. Lọc và chọn đúng Giảng viên trong registerMentorSelect
+    onRegisterFacultyChange(mentorName);
+
+    // 5. Hiệu ứng viền phát sáng báo hiệu đã điền tự động thành công
+    const mentorSelect = document.getElementById('registerMentorSelect');
+    if (mentorSelect) {
+        mentorSelect.classList.remove('bg-light');
+        mentorSelect.classList.add('bg-white');
+        mentorSelect.style.transition = 'all 0.3s ease';
+        mentorSelect.style.boxShadow = '0 0 0 4px rgba(59, 94, 230, 0.25)';
+        mentorSelect.style.borderColor = '#3b5ee6';
+
+        if (facultySelect) {
+            facultySelect.classList.remove('bg-light');
+            facultySelect.classList.add('bg-white');
+            facultySelect.style.transition = 'all 0.3s ease';
+            facultySelect.style.boxShadow = '0 0 0 4px rgba(59, 94, 230, 0.25)';
+            facultySelect.style.borderColor = '#3b5ee6';
+        }
+
+        setTimeout(() => {
+            mentorSelect.style.boxShadow = '';
+            mentorSelect.style.borderColor = '';
+            if (facultySelect) {
+                facultySelect.style.boxShadow = '';
+                facultySelect.style.borderColor = '';
+            }
+        }, 2500);
+    }
+
+    // 6. Cuộn mượt lên đầu biểu mẫu đăng ký
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // 7. Hiển thị thông báo Toast
+    if (typeof showToast === 'function') {
+        showToast(`Đã chọn ${mentorName} (${dept || 'Khoa'}) vào mục Giảng viên hướng dẫn!`);
+    }
+}
+
+function syncAndOpenRegisterModal() {
+    const topicVi = (document.getElementById('registerTopicNameVi')?.value || '').trim();
+    const mentor = document.getElementById('registerMentorSelect')?.value || '';
+
+    if (!topicVi) {
+        if (typeof showToast === 'function') {
+            showToast('Vui lòng nhập Tên đề tài (Tiếng Việt) trước khi gửi!');
+        }
+        document.getElementById('registerTopicNameVi')?.focus();
+        return;
+    }
+
+    if (!mentor) {
+        if (typeof showToast === 'function') {
+            showToast('Vui lòng chọn Giảng viên hướng dẫn!');
+        }
+        document.getElementById('registerMentorSelect')?.focus();
+        return;
+    }
+
+    syncRegisterDataToModal();
+
+    const modalEl = document.getElementById('modalConfirmRegister');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
+}
+
+function syncRegisterDataToModal() {
+    const topicVi = (document.getElementById('registerTopicNameVi')?.value || '').trim();
+    const topicEn = (document.getElementById('registerTopicNameEn')?.value || '').trim();
+    const faculty = document.getElementById('registerFacultySelect')?.value || '';
+    const mentor = document.getElementById('registerMentorSelect')?.value || '';
+
+    // 1. Tự động đồng bộ Tên đề tài vào modal
+    const modalTopicName = document.getElementById('topicName');
+    if (modalTopicName && topicVi) {
+        modalTopicName.value = topicVi;
+    }
+
+    // 2. Tự động đồng bộ Mô tả tóm tắt nếu có
+    const modalTopicDesc = document.getElementById('topicDesc');
+    if (modalTopicDesc) {
+        let descParts = [];
+        if (topicEn) descParts.push(`Tên tiếng Anh: ${topicEn}`);
+        if (faculty) descParts.push(`Khoa: ${faculty}`);
+        const domain = document.querySelector('input[name="domain"]:checked');
+        if (domain) descParts.push(`Lĩnh vực: ${domain.id === 'tech' ? 'Kỹ thuật' : 'Kinh tế'}`);
+        modalTopicDesc.value = descParts.join(' • ');
+    }
+
+    // 3. Tự động đồng bộ Giảng viên HD đã chọn vào modal
+    const modalMentorSelect = document.getElementById('mentorId');
+    if (modalMentorSelect && mentor) {
+        modalMentorSelect.innerHTML = '';
+        const opt = new Option(`${mentor} (${faculty || 'Khoa'})`, "2", true, true);
+        modalMentorSelect.add(opt);
+        modalMentorSelect.value = "2";
+    }
+}
+
+// Khởi tạo ban đầu cho select giảng viên & lắng nghe modal mở
+document.addEventListener('DOMContentLoaded', function() {
+    const facultySelect = document.getElementById('registerFacultySelect');
+    if (facultySelect && !facultySelect.value) {
+        onRegisterFacultyChange();
+    }
+
+    const modalEl = document.getElementById('modalConfirmRegister');
+    if (modalEl) {
+        modalEl.addEventListener('show.bs.modal', function() {
+            syncRegisterDataToModal();
+        });
+    }
+});
+</script>
+{% endblock %}
