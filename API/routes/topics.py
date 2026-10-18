@@ -195,8 +195,10 @@ def register_topic():
         
         if group_id == 0:
             # Auto-create group
+            topic_title = data.get('name', '').strip()
+            group_name = f"Nhóm {topic_title}" if topic_title else f"Nhóm ID: {user_id}"
             new_group = Group(
-                name=f"Nhóm ID: {user_id}",
+                name=group_name,
                 batch_id=data['batch_id'],
                 leader_id=user_id
             )
@@ -258,6 +260,12 @@ def register_topic():
             existing_topic = Topic.query.filter_by(group_id=group_id, batch_id=data['batch_id']).first()
             if existing_topic:
                 return jsonify({'error': 'Group already registered a topic for this batch'}), 400
+            
+            # Update group name to "Nhóm " + topic title if default or ID
+            target_group = Group.query.get(group_id)
+            topic_title = data.get('name', '').strip()
+            if target_group and topic_title and (not target_group.name or target_group.name.startswith("Nhóm ID:") or target_group.name.startswith("Nhóm NCKH")):
+                target_group.name = f"Nhóm {topic_title}"
             
         # Determine topic status based on pending members
         topic_status = 'pending'
