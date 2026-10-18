@@ -114,9 +114,6 @@
     <a href="{{ url_for('web.student_page') }}#s-profile" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-profile', this){% endif %}" class="nav-link">
         <i class="fa-regular fa-id-badge"></i> Hồ sơ năng lực
     </a>
-    <a href="{{ url_for('web.student_page') }}#s-group-registration" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-group-registration', this){% endif %}" class="nav-link">
-        <i class="fa-solid fa-users"></i> Đăng ký Nhóm NCKH
-    </a>
     <a href="{{ url_for('web.student_page') }}#s-register" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-register', this){% endif %}" class="nav-link">
         <i class="fa-solid fa-pen-to-square"></i> Đăng ký Đề tài
     </a>

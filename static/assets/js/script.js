@@ -181,8 +181,12 @@ function switchTab(tabName, element) {
         'approvals': 'approval',
         'approval': 'approval',
         'councils': 'council',
-        'council': 'council'
+        'council': 'council',
+        's-group-registration': 's-register'
     };
+    if (tabName === 's-group-registration') {
+        tabName = 's-register';
+    }
     const resolvedTab = tabAliases[tabName] || tabName;
     let selectedView = document.getElementById('view-' + resolvedTab) || document.getElementById('view-' + tabName);
     
@@ -194,9 +198,6 @@ function switchTab(tabName, element) {
         void selectedView.offsetWidth; // Force reflow
         selectedView.classList.add('fade-in');
 
-        if (tabName === 's-group-registration' && typeof fetchSpaMyGroup === 'function') {
-            fetchSpaMyGroup();
-        }
         if (tabName === 's-register' && typeof checkAndLoadMyTopic === 'function') {
             checkAndLoadMyTopic();
         }

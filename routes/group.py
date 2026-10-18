@@ -13,14 +13,14 @@ def get_current_user():
     return None
 
 # ==========================================
-# 1. VIEW ROUTE: Chuyển hướng sang SPA Cổng Sinh Viên (#s-group-registration)
+# 1. VIEW ROUTE: Chuyển hướng sang SPA Cổng Sinh Viên (#s-register)
 # ==========================================
 @group_bp.route('/student/group-registration')
 @group_bp.route('/group/register')
 def group_registration_page():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
-    return redirect(url_for('web.student_page') + '#s-group-registration')
+    return redirect(url_for('web.student_page') + '#s-register')
 
 @group_bp.route('/api/groups/my_group', methods=['GET'])
 def get_my_group():
