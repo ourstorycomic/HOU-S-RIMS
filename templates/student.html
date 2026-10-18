@@ -187,8 +187,17 @@
         </div>
     </div>
 
+<style>
+    /* Khi đã đăng ký đề tài NCKH: chỉ hiển thị xem chi tiết Mentor, ẩn nút Chọn Mentor */
+    #view-s-mentors.has-registered-topic .mentor-item .d-flex.gap-2 > button:not([onclick*="showStudentMentorDetail"]),
+    #view-s-mentors.has-registered-topic .btn-select-mentor,
+    .has-registered-topic .btn-select-mentor {
+        display: none !important;
+    }
+</style>
+
 <!-- VIEW: TÌM KIẾM MENTOR (DANH SÁCH GIẢNG VIÊN HƯỚNG DẪN) -->
-<div id="view-s-mentors" class="fade-in hidden">
+<div id="view-s-mentors" class="fade-in hidden {% if my_topics %}has-registered-topic{% endif %}">
     <!-- 1. SUBVIEW: DANH SÁCH MENTORS -->
     <div id="s-mentors-list">
         <!-- Blue Header Banner -->
@@ -197,6 +206,19 @@
             <div class="position-relative z-1">
                 <h4 class="fw-bold mb-1 text-uppercase tracking-wide">DANH SÁCH GIẢNG VIÊN HƯỚNG DẪN</h4>
                 <p class="mb-0 text-white-50 small font-medium">NĂM HỌC 2025 - 2026 • ĐỢT 1</p>
+            </div>
+        </div>
+
+        <!-- Thông báo khi nhóm đã đăng ký đề tài -->
+        <div id="mentorRegisteredTopicNotice" class="alert border-0 rounded-4 shadow-xs mb-4 d-flex align-items-center gap-3 {% if not my_topics %}d-none{% endif %}"
+            style="background-color: #f8fafc; color: #334155; border-left: 4px solid #3b5ee6 !important;">
+            <div class="rounded-circle d-flex align-items-center justify-content-center text-white"
+                style="width: 40px; height: 40px; min-width: 40px; background-color: #3b5ee6;">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div>
+                <div class="fw-bold text-dark">Bạn đã hoàn tất đăng ký đề tài NCKH</div>
+                <div class="small text-muted">Nhóm của bạn đã có đề tài trong hệ thống, do đó tính năng chọn Mentor mới đã được khóa. Bạn có thể xem hồ sơ chi tiết của các Thầy/Cô.</div>
             </div>
         </div>
 
@@ -1254,11 +1276,14 @@
                                 onclick="showToast('Đã mở cuộc trò chuyện trao đổi!')">
                                 <i class="fa-regular fa-comment-dots text-primary me-2"></i> Nhắn tin trao đổi
                             </button>
-                            <button type="button" class="btn btn-primary w-100 fw-bold py-2 shadow-xs text-white"
+                            <button type="button" id="btnDetailSelectMentor" class="btn btn-primary w-100 fw-bold py-2 shadow-xs text-white btn-select-mentor {% if my_topics %}d-none{% endif %}"
                                 style="background-color: #3b5ee6; border-color: #3b5ee6;"
                                 onclick="applyForMentor(document.getElementById('detailMentorName').textContent, document.getElementById('detailMentorDept').textContent)">
                                 <i class="fa-solid fa-check me-2"></i> Chọn làm Giảng viên Hướng dẫn
                             </button>
+                            <div id="detailRegisteredTopicNote" class="alert alert-light border small text-muted mb-0 py-2 px-3 rounded-3 text-center {% if not my_topics %}d-none{% endif %}">
+                                <i class="fa-solid fa-circle-check text-success me-1"></i> Đã đăng ký đề tài NCKH
+                            </div>
                         </div>
                     </div>
 
@@ -3849,6 +3874,13 @@
         }
 
         function applyForMentor(mentorName, dept = '') {
+            if (window.hasRegisteredTopic) {
+                if (typeof showToast === 'function') {
+                    showToast('Bạn/nhóm của bạn đã đăng ký đề tài NCKH rồi nên không thể chọn thêm Mentor!', 'warning');
+                }
+                return;
+            }
+
             // 1. Chuyển tab sang mục 'Đăng ký NCKH'
             const registerNav = document.querySelector('a[href*="s-register"]') || document.querySelector('[onclick*="s-register"]');
             if (typeof switchTab === 'function') {
@@ -4261,6 +4293,9 @@
                     cancelBtn.classList.remove('d-none');
                 }
             }
+
+            // 7. Cập nhật trạng thái đã đăng ký đề tài cho phần Tìm kiếm Mentor
+            window.setTopicRegisteredState(true);
         };
 
         window.renderTopicFormView = function() {
@@ -4274,6 +4309,48 @@
             if (vi) vi.value = '';
             const en = document.getElementById('registerTopicNameEn');
             if (en) en.value = '';
+
+            // Mở lại tính năng chọn Mentor
+            window.setTopicRegisteredState(false);
+        };
+
+        // Quản lý trạng thái khóa chọn Mentor khi đã có đề tài
+        window.hasRegisteredTopic = {{ 'true' if my_topics else 'false' }};
+
+        window.setTopicRegisteredState = function(isRegistered) {
+            window.hasRegisteredTopic = !!isRegistered;
+            const mentorsView = document.getElementById('view-s-mentors');
+            if (mentorsView) {
+                if (isRegistered) {
+                    mentorsView.classList.add('has-registered-topic');
+                } else {
+                    mentorsView.classList.remove('has-registered-topic');
+                }
+            }
+            const notice = document.getElementById('mentorRegisteredTopicNotice');
+            if (notice) {
+                if (isRegistered) {
+                    notice.classList.remove('d-none');
+                } else {
+                    notice.classList.add('d-none');
+                }
+            }
+            const detailBtn = document.getElementById('btnDetailSelectMentor');
+            if (detailBtn) {
+                if (isRegistered) {
+                    detailBtn.classList.add('d-none');
+                } else {
+                    detailBtn.classList.remove('d-none');
+                }
+            }
+            const detailNote = document.getElementById('detailRegisteredTopicNote');
+            if (detailNote) {
+                if (isRegistered) {
+                    detailNote.classList.remove('d-none');
+                } else {
+                    detailNote.classList.add('d-none');
+                }
+            }
         };
 
         window.checkAndLoadMyTopic = async function() {
