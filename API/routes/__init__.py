@@ -16,6 +16,7 @@ from API.routes.calendar import calendar_bp
 from API.routes.notifications import notifications_bp
 from API.routes.chat import chat_bp
 from API.routes.slots import slots_bp
+from API.routes.assignment import assignment_bp
 
 def init_api_routes(app):
     app.register_blueprint(batches_bp)
@@ -33,3 +34,4 @@ def init_api_routes(app):
     app.register_blueprint(notifications_bp)
     app.register_blueprint(chat_bp)
     app.register_blueprint(slots_bp)
+    app.register_blueprint(assignment_bp)
