@@ -1,3 +1,4 @@
+
 # app.py
 import numpy as np
 np.long = np.int64
@@ -11,7 +12,6 @@ from routes import init_routes
 from dotenv import load_dotenv
 import os
 from models import db
-from flask_jwt_extended import JWTManager
 from flasgger import Swagger
 
 load_dotenv(override=True)
@@ -20,10 +20,12 @@ app = Flask(__name__)
 app.secret_key = 'secret_key'
 app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
 if not os.path.exists(app.config['UPLOAD_FOLDER']): os.makedirs(app.config['UPLOAD_FOLDER'])
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024 # 50MB
 
+# Swagger setup
 swagger = Swagger(app)
 
+# Database configuration
 db_url = (os.getenv('DATABASE_URL') or os.getenv('SUPABASE_DB_URL') or '').strip()
 if not db_url:
     db_url = 'sqlite:///database.db'
@@ -38,21 +40,16 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True,
     'pool_recycle': 300,
 }
-
-# Cấu hình JWT
-app.config['JWT_SECRET_KEY'] = 'super-secret-jwt-key'
-jwt = JWTManager(app)
 db.init_app(app)
 
 init_routes(app)
-try:
-    from API.routes import init_api_routes
-    init_api_routes(app)
-except Exception as e:
-    print(f"Warning loading API routes: {e}")
+from API.routes import init_api_routes
+init_api_routes(app)
 
 @app.route('/')
 def index(): return render_template('index.html')
+
+
 
 @app.route('/profile/<string:identifier>')
 def view_profile(identifier):
@@ -97,9 +94,11 @@ def view_profile(identifier):
     return render_template('profile.html', profile_user=user, skills=skills, achievements=achievements, experiences=experiences, **context)
 
 @app.route('/<path:filename>')
+
+
 def serve_static(filename): return send_from_directory('Models', filename)
 
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    app.run(debug=True, port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5000)
