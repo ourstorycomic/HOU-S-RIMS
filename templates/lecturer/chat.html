@@ -28,14 +28,16 @@
                                     <div class="list-group list-group-flush">
                                     {% if my_groups %}
                                         {% for g in my_groups %}
-                                        <a href="#" class="list-group-item list-group-item-action border-0 p-3 chat-group-item" data-group-id="{{ g.id }}" onclick="updateChatHeader('{{ g.name }}', {{ g.id }})">
+                                        {% set topic_title = g.topics[0].title if (g.topics and g.topics[0] and g.topics[0].title) else '' %}
+                                        {% set display_group_name = ('Nhóm ' ~ topic_title) if topic_title else (g.name if (g.name and not g.name.startswith('Nhóm ID:')) else ('Nhóm ID: ' ~ g.id)) %}
+                                        <a href="#" class="list-group-item list-group-item-action border-0 p-3 chat-group-item" data-group-id="{{ g.id }}" onclick="updateChatHeader('{{ display_group_name | escape }}', {{ g.id }})">
                                             <div class="d-flex align-items-center gap-3">
                                                 <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px; background-color: #6366f1 !important;"><i class="fa-solid fa-users"></i></div>
                                                 <div class="overflow-hidden">
                                                     <div class="d-flex justify-content-between">
-                                                        <span class="fw-bold text-dark text-truncate">{{ g.name }}</span>
+                                                        <span class="fw-bold text-dark text-truncate">{{ display_group_name }}</span>
                                                     </div>
-                                                    <small class="text-muted text-truncate d-block">Nhóm ID: {{ g.id }}</small>
+                                                    <small class="text-muted text-truncate d-block">{{ topic_title if topic_title else ('Nhóm ID: ' ~ g.id) }}</small>
                                                 </div>
                                             </div>
                                         </a>
@@ -59,7 +61,10 @@
                                     <div class="bg-primary text-white rounded-3 d-flex align-items-center justify-content-center fw-bold" id="chat-header-avatar" style="width: 40px; height: 40px; background-color: #6366f1 !important;">{{ my_groups[0].id if my_groups else '?' }}</div>
                                     <div><div class="fw-bold" id="chat-header-name">{{ my_groups[0].name if my_groups else 'Chưa có nhóm' }}</div><div class="small text-success"><i class="fa-solid fa-circle" style="font-size: 8px;"></i> Nhóm NCKH</div></div>
                                 </div>
-                                <div class="d-flex align-items-center gap-3 text-muted fs-5">
+                                <div class="d-flex align-items-center gap-3">
+                                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-bold shadow-xs" id="btnChatUpdateTopicTitle" onclick="openUpdateTopicTitleFromChat()" style="font-size: 12px;">
+                                        <i class="fa-solid fa-pen-to-square me-1"></i> Cập nhật tên đề tài
+                                    </button>
                                     <!-- Search Box -->
                                     <div class="input-group input-group-sm" id="chat-search-container" style="width: 0px; opacity: 0; overflow: hidden; transition: all 0.3s ease; border-radius: 20px;">
                                         <input type="text" id="chat-search-input" class="form-control rounded-pill" placeholder="Tìm kiếm tin nhắn...">
@@ -192,6 +197,127 @@
                     </div>
                 </div>
         </div>
+        
+        <!-- MODAL CẬP NHẬT TÊN ĐỀ TÀI TRONG CHAT -->
+        <div class="modal fade" id="modalUpdateTopicTitle" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                    <div class="modal-header border-bottom p-4 bg-light">
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-1">
+                                <i class="fa-solid fa-pen-to-square text-primary me-2"></i> Cập nhật Tên Đề tài NCKH
+                            </h5>
+                            <div class="small text-muted">Thống nhất tên đề tài chính thức sau khi thảo luận cùng nhóm sinh viên</div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <input type="hidden" id="chatModalTopicId" value="">
+                        <input type="hidden" id="chatModalGroupId" value="">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">TÊN ĐỀ TÀI (TIẾNG VIỆT) <span class="text-danger">*</span></label>
+                            <textarea id="chatModalTopicTitleInput" class="form-control" rows="3" placeholder="Nhập tên đề tài chính thức..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">MÔ TẢ / TÊN TIẾNG ANH (TÙY CHỌN)</label>
+                            <textarea id="chatModalTopicDescInput" class="form-control" rows="2" placeholder="Tên tiếng Anh hoặc tóm tắt hướng nghiên cứu..."></textarea>
+                        </div>
+                        <div class="alert alert-info border-0 rounded-3 small py-2 px-3 mb-0">
+                            <i class="fa-solid fa-circle-info me-1"></i> Sau khi lưu, tên đề tài sẽ được cập nhật trên toàn hệ thống và thông báo vào nhóm chat chung.
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 p-4 pt-0">
+                        <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Hủy</button>
+                        <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold" id="btnSubmitChatUpdateTitle" onclick="submitUpdateTopicTitleFromChat()">
+                            <i class="fa-solid fa-floppy-disk me-1"></i> Lưu thay đổi
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            function openUpdateTopicTitleFromChat() {
+                const groupId = window.activeChatId;
+                if (!groupId) {
+                    if (typeof Swal !== 'undefined') Swal.fire('Thông báo', 'Vui lòng chọn một nhóm chat trước!', 'info');
+                    return;
+                }
+                const currentName = (document.getElementById('chat-header-name')?.textContent || '').replace(/^Nhóm\s+/, '').trim();
+                document.getElementById('chatModalGroupId').value = groupId;
+                document.getElementById('chatModalTopicId').value = 0;
+                document.getElementById('chatModalTopicTitleInput').value = (currentName && !currentName.startsWith('ID:') && !currentName.startsWith('Chưa có')) ? currentName : '';
+                document.getElementById('chatModalTopicDescInput').value = '';
+
+                const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalUpdateTopicTitle'));
+                modal.show();
+            }
+
+            async function submitUpdateTopicTitleFromChat() {
+                const groupId = document.getElementById('chatModalGroupId').value || window.activeChatId;
+                const newTitle = (document.getElementById('chatModalTopicTitleInput').value || '').trim();
+                const newDesc = (document.getElementById('chatModalTopicDescInput').value || '').trim();
+
+                if (!newTitle) {
+                    if (typeof Swal !== 'undefined') Swal.fire('Lưu ý', 'Vui lòng nhập tên đề tài chính thức!', 'warning');
+                    return;
+                }
+
+                const btn = document.getElementById('btnSubmitChatUpdateTitle');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Đang lưu...';
+                }
+
+                try {
+                    const res = await fetch(`/api/topics/0/update-title`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            group_id: parseInt(groupId),
+                            title: newTitle,
+                            description: newDesc
+                        })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('modalUpdateTopicTitle'));
+                        if (modal) modal.hide();
+
+                        // Update chat header name
+                        const headerName = document.getElementById('chat-header-name');
+                        if (headerName) headerName.textContent = `Nhóm ${newTitle}`;
+
+                        // Update group item text in list
+                        const groupItem = document.querySelector(`.chat-group-item[data-group-id="${groupId}"] span`);
+                        if (groupItem) groupItem.textContent = `Nhóm ${newTitle}`;
+
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Thành công',
+                                text: 'Đã cập nhật tên đề tài nghiên cứu cho nhóm!',
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+                        }
+                        if (typeof fetchChatMessages === 'function') {
+                            fetchChatMessages();
+                        }
+                    } else {
+                        if (typeof Swal !== 'undefined') Swal.fire('Lỗi', data.error || 'Không thể cập nhật tên đề tài!', 'error');
+                    }
+                } catch(err) {
+                    console.error(err);
+                    if (typeof Swal !== 'undefined') Swal.fire('Lỗi', 'Lỗi kết nối máy chủ.', 'error');
+                } finally {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i> Lưu thay đổi';
+                    }
+                }
+            }
+        </script>
         
         {% if target_user %}
         <script>

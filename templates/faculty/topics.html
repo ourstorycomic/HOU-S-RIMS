@@ -91,16 +91,93 @@
 
         async function facultyApprove(topicId) {
             try {
+                // Check mentor quota info first
+                const qResp = await fetch(`/api/topics/${topicId}/quota-info`);
+                const qData = await qResp.json();
+                
+                let newMentorId = null;
+                let changeReason = null;
+
+                if (qData.is_exceeded) {
+                    // Mentor reached quota (>= 3 groups)
+                    let optionsHtml = (qData.available_mentors || []).map(m => 
+                        `<option value="${m.id}">${m.full_name} (${m.faculty || 'Cùng Khoa'} - Đang HD: ${m.group_count}/3 nhóm)</option>`
+                    ).join('');
+
+                    const { value: formValues, isConfirmed } = await Swal.fire({
+                        title: 'Cảnh báo Giới hạn Nhóm Hướng dẫn',
+                        html: `
+                            <div class="text-start">
+                                <div class="alert alert-warning py-2 px-3 small border-0 mb-3">
+                                    <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                                    Giảng viên <strong>${qData.mentor_name}</strong> hiện đã hướng dẫn <strong>${qData.group_count}/${qData.max_groups} nhóm</strong> (đã đủ chỉ tiêu tối đa).
+                                </div>
+                                <p class="small text-muted mb-2">Khoa có thể điều chỉnh sang Giảng viên khác cùng chuyên môn hoặc vẫn duyệt nếu có trường hợp đặc cách:</p>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold">Chọn Giảng viên thay thế (cùng Khoa/chuyên môn):</label>
+                                    <select id="swal-new-mentor" class="form-select form-select-sm">
+                                        <option value="">-- Giữ nguyên ${qData.mentor_name} (Đặc cách duyệt) --</option>
+                                        ${optionsHtml}
+                                    </select>
+                                </div>
+
+                                <div class="mb-2">
+                                    <label class="form-label small fw-bold">Lý do điều chỉnh (sẽ gửi email thông báo cho GV cũ, GV mới và SV):</label>
+                                    <textarea id="swal-change-reason" class="form-control form-control-sm" rows="2" placeholder="Ví dụ: Giảng viên đã đủ chỉ tiêu 3 nhóm theo quy định NCKH, điều phối giảng viên cùng chuyên môn..."></textarea>
+                                </div>
+                            </div>
+                        `,
+                        focusConfirm: false,
+                        showCancelButton: true,
+                        confirmButtonText: 'Xác nhận Phê duyệt',
+                        cancelButtonText: 'Đóng',
+                        confirmButtonColor: '#10b981',
+                        preConfirm: () => {
+                            const selectedId = document.getElementById('swal-new-mentor').value;
+                            const reason = document.getElementById('swal-change-reason').value.trim();
+                            if (selectedId && !reason) {
+                                Swal.showValidationMessage('Vui lòng nhập lý do điều chỉnh giảng viên để gửi thông báo!');
+                                return false;
+                            }
+                            return {
+                                new_mentor_id: selectedId ? parseInt(selectedId) : null,
+                                change_reason: reason
+                            };
+                        }
+                    });
+
+                    if (!isConfirmed) return;
+                    newMentorId = formValues.new_mentor_id;
+                    changeReason = formValues.change_reason;
+                } else {
+                    const confirmRes = await Swal.fire({
+                        title: 'Phê duyệt đề tài?',
+                        text: `Phê duyệt đề tài và gửi thông báo hoàn tất đến Sinh viên & Giảng viên ${qData.mentor_name}?`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Duyệt ngay',
+                        cancelButtonText: 'Hủy',
+                        confirmButtonColor: '#10b981'
+                    });
+                    if (!confirmRes.isConfirmed) return;
+                }
+
                 const resp = await fetch(`/api/topics/${topicId}/faculty-approve`, {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        new_mentor_id: newMentorId,
+                        change_reason: changeReason
+                    })
                 });
                 const data = await resp.json();
                 if (resp.ok) {
                     await Swal.fire({
                         icon: 'success',
                         title: 'Duyệt thành công',
-                        text: 'Đề tài đã được Khoa phê duyệt.',
-                        timer: 1800,
+                        text: data.message || 'Đề tài đã được Khoa phê duyệt.',
+                        timer: 2000,
                         showConfirmButton: false
                     });
                     location.reload();

@@ -18,6 +18,8 @@ function getCurrentUserId() {
 function startChatPolling(groupId) {
     if (!groupId) return; // Never poll without a valid group
     activeChatId = groupId;
+    window.activeChatId = groupId;
+    window.activeChatType = activeChatType;
     lastMessageCount = -1; // Reset so messages re-render on group switch
     if (document.getElementById('chat-sidebar')?.classList.contains('active')) {
         fetchChatMedia();
@@ -35,6 +37,7 @@ function stopChatPolling() {
         chatPollInterval = null;
     }
     activeChatId = null;
+    window.activeChatId = null;
 }
 
 let currentSearchQuery = '';
@@ -310,15 +313,19 @@ async function sendChatMessage(groupId) {
     cancelChatUpload();
 
     try {
+        const myUserId = getCurrentUserId();
+        const payload = { 
+            content: content,
+            message_type: messageType,
+            file_url: fileUrl,
+            file_name: fileName
+        };
+        if (myUserId) payload.sender_id = myUserId;
+
         const response = await fetch(activeChatType === "group" ? `/api/chat/${targetGroup}/messages` : `/api/chat/private/${targetGroup}/messages`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                content: content,
-                message_type: messageType,
-                file_url: fileUrl,
-                file_name: fileName
-            })
+            body: JSON.stringify(payload)
         });
 
         if (response.ok) {
@@ -332,9 +339,10 @@ async function sendChatMessage(groupId) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+function initChatUI() {
     var inputField = document.getElementById('chat-input-field');
-    if (inputField) {
+    if (inputField && !inputField.dataset.bound) {
+        inputField.dataset.bound = 'true';
         inputField.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -346,7 +354,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // File input handler
     const fileInput = document.getElementById('chat-file-input');
-    if (fileInput) {
+    if (fileInput && !fileInput.dataset.bound) {
+        fileInput.dataset.bound = 'true';
         fileInput.addEventListener('change', function(e) {
             if (e.target.files.length > 0) {
                 pendingUploadFile = e.target.files[0];
@@ -376,7 +385,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const emojiBtn = document.getElementById('emoji-picker-btn');
     const emojiContainer = document.getElementById('emoji-picker-container');
     
-    if (emojiBtn && emojiContainer) {
+    if (emojiBtn && emojiContainer && !emojiBtn.dataset.bound) {
+        emojiBtn.dataset.bound = 'true';
         emojiBtn.addEventListener('click', function(e) {
             e.stopPropagation();
             emojiContainer.classList.toggle('d-none');
@@ -407,9 +417,10 @@ document.addEventListener('DOMContentLoaded', function() {
             item.addEventListener('click', function(e) {
                 e.stopPropagation();
                 const emoji = this.textContent;
-                if (inputField) {
-                    inputField.value += emoji;
-                    inputField.focus();
+                const f = document.getElementById('chat-input-field');
+                if (f) {
+                    f.value += emoji;
+                    f.focus();
                 }
             });
         });
@@ -426,15 +437,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Send sticker directly
                 try {
+                    const myId = getCurrentUserId();
+                    const sPayload = { 
+                        content: 'Đã gửi một nhãn dán',
+                        message_type: 'sticker',
+                        file_url: stickerUrl,
+                        file_name: 'sticker.png'
+                    };
+                    if (myId) sPayload.sender_id = myId;
+
                     const response = await fetch(activeChatType === "group" ? `/api/chat/${activeChatId}/messages` : `/api/chat/private/${activeChatId}/messages`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            content: 'Đã gửi một nhãn dán',
-                            message_type: 'sticker',
-                            file_url: stickerUrl,
-                            file_name: 'sticker.png'
-                        })
+                        body: JSON.stringify(sPayload)
                     });
 
                     if (response.ok) {
@@ -454,9 +469,148 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Auto-start polling is disabled on page load — user must click a group
-    window.addEventListener('beforeunload', stopChatPolling);
-});
+    // Search toggle and debounce
+    const chatSearchBtn = document.getElementById('chat-search-btn');
+    const chatSearchContainer = document.getElementById('chat-search-container');
+    const chatSearchInput = document.getElementById('chat-search-input');
+
+    if (chatSearchBtn && chatSearchContainer && chatSearchInput && !chatSearchBtn.dataset.bound) {
+        chatSearchBtn.dataset.bound = 'true';
+        chatSearchBtn.addEventListener('click', () => {
+            const isClosed = chatSearchContainer.style.width === '0px' || chatSearchContainer.style.width === '';
+            if (isClosed) {
+                chatSearchContainer.style.width = '250px';
+                chatSearchContainer.style.opacity = '1';
+                setTimeout(() => chatSearchInput.focus(), 300);
+            } else {
+                chatSearchContainer.style.width = '0px';
+                chatSearchContainer.style.opacity = '0';
+                chatSearchInput.value = '';
+                
+                const bubbles = document.querySelectorAll('.chat-bubble-content');
+                bubbles.forEach(el => {
+                    if (el.dataset.originalBg) {
+                        el.style.backgroundColor = el.dataset.originalBg;
+                        el.style.color = el.dataset.originalColor;
+                        el.dataset.originalBg = '';
+                    }
+                });
+                const container = document.getElementById('chat-messages-container');
+                if (container) container.scrollTop = container.scrollHeight;
+            }
+        });
+
+        let searchTimeout = null;
+        chatSearchInput.addEventListener('input', (e) => {
+            if (searchTimeout) clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const query = e.target.value.trim().toLowerCase();
+                const bubbles = document.querySelectorAll('.chat-bubble-content');
+                let firstMatch = null;
+                
+                bubbles.forEach(el => {
+                    if (el.dataset.originalBg) {
+                        el.style.backgroundColor = el.dataset.originalBg;
+                        el.style.color = el.dataset.originalColor;
+                        el.dataset.originalBg = '';
+                    }
+                    
+                    if (query && el.textContent.toLowerCase().includes(query)) {
+                        if (!firstMatch) firstMatch = el;
+                        el.dataset.originalBg = el.style.backgroundColor || '';
+                        el.dataset.originalColor = el.style.color || '';
+                        el.style.backgroundColor = '#ffeb3b';
+                        el.style.color = '#000';
+                    }
+                });
+                
+                if (firstMatch) {
+                    firstMatch.scrollIntoView({behavior: 'smooth', block: 'center'});
+                }
+            }, 300);
+        });
+    }
+
+    // Sidebar toggle logic
+    const chatInfoBtn = document.getElementById('chat-info-btn');
+    const chatSidebar = document.getElementById('chat-sidebar');
+    const mainChatArea = document.getElementById('main-chat-area');
+
+    if (chatInfoBtn && chatSidebar && mainChatArea && !chatInfoBtn.dataset.bound) {
+        chatInfoBtn.dataset.bound = 'true';
+        chatInfoBtn.addEventListener('click', () => {
+            chatSidebar.classList.toggle('active');
+            if (chatSidebar.classList.contains('active')) {
+                if (mainChatArea.classList.contains('col-md-9')) {
+                    mainChatArea.classList.replace('col-md-9', 'col-md-6');
+                } else if (mainChatArea.classList.contains('col-md-8')) {
+                    mainChatArea.classList.replace('col-md-8', 'col-md-5');
+                }
+                if (activeChatId) fetchChatMedia();
+            } else {
+                if (mainChatArea.classList.contains('col-md-6')) {
+                    mainChatArea.classList.replace('col-md-6', 'col-md-9');
+                } else if (mainChatArea.classList.contains('col-md-5')) {
+                    mainChatArea.classList.replace('col-md-5', 'col-md-8');
+                }
+            }
+        });
+    }
+
+    // User Search Autocomplete
+    const userSearchInput = document.getElementById('user-search-input');
+    const userSearchDropdown = document.getElementById('user-search-dropdown');
+
+    if (userSearchInput && userSearchDropdown && !userSearchInput.dataset.bound) {
+        userSearchInput.dataset.bound = 'true';
+        let userSearchTimeout = null;
+        userSearchInput.addEventListener('input', (e) => {
+            const q = e.target.value.trim();
+            if (!q) {
+                userSearchDropdown.classList.remove('show');
+                return;
+            }
+            
+            if (userSearchTimeout) clearTimeout(userSearchTimeout);
+            userSearchTimeout = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/api/chat/users/search?q=${encodeURIComponent(q)}`);
+                    const users = await res.json();
+                    if (users.length === 0) {
+                        userSearchDropdown.innerHTML = '<div class="px-3 py-2 text-muted small">Không tìm thấy kết quả</div>';
+                    } else {
+                        userSearchDropdown.innerHTML = users.map(u => `
+                            <a href="javascript:void(0)" class="dropdown-item py-2 border-bottom" onclick="startPrivateChat(${u.id}, '${u.name}'); document.getElementById('user-search-input').value=''; document.getElementById('user-search-dropdown').classList.remove('show');">
+                                <div class="fw-bold">${u.name}</div>
+                                <small class="text-muted">${u.code} - ${u.role}</small>
+                            </a>
+                        `).join('');
+                    }
+                    userSearchDropdown.classList.add('show');
+                } catch (err) {
+                    console.error(err);
+                }
+            }, 300);
+        });
+        
+        document.addEventListener('click', (e) => {
+            if (!userSearchInput.contains(e.target) && !userSearchDropdown.contains(e.target)) {
+                userSearchDropdown.classList.remove('show');
+            }
+        });
+    }
+
+    // Fetch on load if tabs exist
+    const privateTabBtn = document.getElementById('private-tab');
+    if (privateTabBtn && !privateTabBtn.dataset.bound) {
+        privateTabBtn.dataset.bound = 'true';
+        privateTabBtn.addEventListener('shown.bs.tab', fetchPrivateConversations);
+    }
+}
+
+window.initChatUI = initChatUI;
+document.addEventListener('DOMContentLoaded', initChatUI);
+window.addEventListener('beforeunload', stopChatPolling);
 
 function updateChatHeader(chatName, chatId, chatType="group") {
     activeChatType = chatType;
@@ -543,95 +697,7 @@ function startPrivateChat(userId, userName) {
 }
 
 
-// Search toggle and debounce
-const chatSearchBtn = document.getElementById('chat-search-btn');
-const chatSearchContainer = document.getElementById('chat-search-container');
-const chatSearchInput = document.getElementById('chat-search-input');
-
-if (chatSearchBtn && chatSearchContainer && chatSearchInput) {
-    chatSearchBtn.addEventListener('click', () => {
-        const isClosed = chatSearchContainer.style.width === '0px' || chatSearchContainer.style.width === '';
-        if (isClosed) {
-            chatSearchContainer.style.width = '250px';
-            chatSearchContainer.style.opacity = '1';
-            setTimeout(() => chatSearchInput.focus(), 300);
-        } else {
-            chatSearchContainer.style.width = '0px';
-            chatSearchContainer.style.opacity = '0';
-            chatSearchInput.value = '';
-            
-            const bubbles = document.querySelectorAll('.chat-bubble-content');
-            bubbles.forEach(el => {
-                if (el.dataset.originalBg) {
-                    el.style.backgroundColor = el.dataset.originalBg;
-                    el.style.color = el.dataset.originalColor;
-                    el.dataset.originalBg = '';
-                }
-            });
-            const container = document.getElementById('chat-messages-container');
-            if (container) container.scrollTop = container.scrollHeight;
-        }
-    });
-
-
-    let searchTimeout = null;
-    chatSearchInput.addEventListener('input', (e) => {
-        if (searchTimeout) clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            const query = e.target.value.trim().toLowerCase();
-            const bubbles = document.querySelectorAll('.chat-bubble-content');
-            let firstMatch = null;
-            
-            bubbles.forEach(el => {
-                // Restore original if we modified it before
-                if (el.dataset.originalBg) {
-                    el.style.backgroundColor = el.dataset.originalBg;
-                    el.style.color = el.dataset.originalColor;
-                    el.dataset.originalBg = '';
-                }
-                
-                if (query && el.textContent.toLowerCase().includes(query)) {
-                    if (!firstMatch) firstMatch = el;
-                    el.dataset.originalBg = el.style.backgroundColor || '';
-                    el.dataset.originalColor = el.style.color || '';
-                    el.style.backgroundColor = '#ffeb3b';
-                    el.style.color = '#000';
-                }
-            });
-            
-            if (firstMatch) {
-                firstMatch.scrollIntoView({behavior: 'smooth', block: 'center'});
-            }
-        }, 300);
-    });
-
-}
-
-// Sidebar toggle logic
-const chatInfoBtn = document.getElementById('chat-info-btn');
-const chatSidebar = document.getElementById('chat-sidebar');
-const mainChatArea = document.getElementById('main-chat-area');
-
-if (chatInfoBtn && chatSidebar && mainChatArea) {
-    chatInfoBtn.addEventListener('click', () => {
-        chatSidebar.classList.toggle('active');
-        if (chatSidebar.classList.contains('active')) {
-            // Adjust columns if needed
-            if (mainChatArea.classList.contains('col-md-9')) {
-                mainChatArea.classList.replace('col-md-9', 'col-md-6');
-            } else if (mainChatArea.classList.contains('col-md-8')) {
-                mainChatArea.classList.replace('col-md-8', 'col-md-5');
-            }
-            if (activeChatId) fetchChatMedia();
-        } else {
-            if (mainChatArea.classList.contains('col-md-6')) {
-                mainChatArea.classList.replace('col-md-6', 'col-md-9');
-            } else if (mainChatArea.classList.contains('col-md-5')) {
-                mainChatArea.classList.replace('col-md-5', 'col-md-8');
-            }
-        }
-    });
-}
+// (Search and Sidebar handlers are integrated into initChatUI above)
 
 async function fetchChatMedia() {
     if (!activeChatId) return;
@@ -716,48 +782,7 @@ function startPrivateChat(userId, userName) {
     fetchPrivateConversations();
 }
 
-// User Search Autocomplete
-const userSearchInput = document.getElementById('user-search-input');
-const userSearchDropdown = document.getElementById('user-search-dropdown');
-let userSearchTimeout = null;
-
-if (userSearchInput && userSearchDropdown) {
-    userSearchInput.addEventListener('input', (e) => {
-        const q = e.target.value.trim();
-        if (!q) {
-            userSearchDropdown.classList.remove('show');
-            return;
-        }
-        
-        if (userSearchTimeout) clearTimeout(userSearchTimeout);
-        userSearchTimeout = setTimeout(async () => {
-            try {
-                const res = await fetch(`/api/chat/users/search?q=${encodeURIComponent(q)}`);
-                const users = await res.json();
-                if (users.length === 0) {
-                    userSearchDropdown.innerHTML = '<div class="px-3 py-2 text-muted small">Không tìm thấy kết quả</div>';
-                } else {
-                    userSearchDropdown.innerHTML = users.map(u => `
-                        <a href="javascript:void(0)" class="dropdown-item py-2 border-bottom" onclick="startPrivateChat(${u.id}, '${u.name}'); document.getElementById('user-search-input').value=''; document.getElementById('user-search-dropdown').classList.remove('show');">
-                            <div class="fw-bold">${u.name}</div>
-                            <small class="text-muted">${u.code} - ${u.role}</small>
-                        </a>
-                    `).join('');
-                }
-                userSearchDropdown.classList.add('show');
-            } catch (err) {
-                console.error(err);
-            }
-        }, 300);
-    });
-    
-    // Hide dropdown on click outside
-    document.addEventListener('click', (e) => {
-        if (!userSearchInput.contains(e.target) && !userSearchDropdown.contains(e.target)) {
-            userSearchDropdown.classList.remove('show');
-        }
-    });
-}
+// (User Search Autocomplete is integrated into initChatUI above)
 
 // pinnedPrivateTarget: { id, name } - set when opening chat from profile
 let pinnedPrivateTarget = null;
@@ -815,10 +840,6 @@ async function fetchPrivateConversations() {
     }
 }
 
-// Fetch on load if tabs exist
-const privateTabBtn = document.getElementById('private-tab');
-if (privateTabBtn) {
-    privateTabBtn.addEventListener('shown.bs.tab', fetchPrivateConversations);
-}
+// (Private tab shown handler is integrated into initChatUI above)
 
 

@@ -15,6 +15,11 @@ def init_routes(app):
     from .lecturer_bp import lecturer_bp
     from .faculty_bp import faculty_bp
 
+    from .student import student_bp as student_api_bp
+    from .calendar import calendar_bp
+    from .chat import chat_bp
+    from .group import group_bp
+
     app.register_blueprint(upload_bp)
     app.register_blueprint(plot_bp)
     app.register_blueprint(assistant_bp)
@@ -29,3 +34,8 @@ def init_routes(app):
     app.register_blueprint(student_bp)
     app.register_blueprint(lecturer_bp)
     app.register_blueprint(faculty_bp)
+
+    app.register_blueprint(student_api_bp)
+    app.register_blueprint(calendar_bp)
+    app.register_blueprint(chat_bp)
+    app.register_blueprint(group_bp)

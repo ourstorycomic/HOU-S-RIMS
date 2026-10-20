@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Danh sách Giảng viên Hướng dẫn - HOU S-RIMS</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome 6 CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#3b5ee6',
+                        sidebar: '#1e2532'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="flex h-screen overflow-hidden bg-gray-100 text-sm font-sans antialiased">
+
+    <!-- SIDEBAR -->
+    <aside class="w-64 bg-sidebar text-white flex flex-col shrink-0 transition-all duration-300 z-20 shadow-xl">
+        <!-- Sidebar Brand -->
+        <div class="h-16 flex items-center px-5 gap-3 border-b border-gray-800">
+            <div class="w-10 h-10 rounded-full bg-white text-primary flex items-center justify-center font-extrabold text-sm shadow-md shrink-0 ring-2 ring-blue-500/30">
+                HOU
+            </div>
+            <div class="flex flex-col overflow-hidden">
+                <span class="font-bold tracking-wider text-sm leading-tight text-white uppercase">HOU S-RIMS</span>
+                <span class="text-[9px] text-gray-400 font-semibold tracking-widest uppercase mt-0.5">RESEARCH MANAGEMENT</span>
+            </div>
+        </div>
+
+        <!-- Sidebar Category Header -->
+        <div class="px-5 pt-5 pb-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+            SINH VIÊN PORTAL
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="flex-1 px-3 space-y-1.5 overflow-y-auto">
+            <a href="{{ url_for('web.student_page') }}#s-explore" class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800/80 hover:text-white transition group">
+                <i class="fa-solid fa-lightbulb text-base w-5 text-center text-gray-400 group-hover:text-amber-400 transition"></i>
+                <span class="font-medium text-[13px]">Khám phá ý tưởng</span>
+            </a>
+
+            <!-- Active Item: Tìm kiếm Mentor -->
+            <a href="{{ url_for('web.mentors_page') }}" class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-white bg-primary font-medium shadow-md transition">
+                <i class="fa-solid fa-chalkboard-user text-base w-5 text-center"></i>
+                <span class="font-semibold text-[13px]">Tìm kiếm Mentor</span>
+            </a>
+
+            <a href="{{ url_for('web.student_page') }}#s-register" class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800/80 hover:text-white transition group">
+                <i class="fa-solid fa-pen-to-square text-base w-5 text-center text-gray-400 group-hover:text-white transition"></i>
+                <span class="font-medium text-[13px]">Đăng ký NCKH</span>
+            </a>
+
+            <a href="{{ url_for('web.student_page') }}#s-group" class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800/80 hover:text-white transition group">
+                <i class="fa-solid fa-users text-base w-5 text-center text-gray-400 group-hover:text-white transition"></i>
+                <span class="font-medium text-[13px]">Nhóm nghiên cứu</span>
+            </a>
+        </nav>
+
+        <!-- Sidebar Bottom: Back to General Portal -->
+        <div class="p-3 border-t border-gray-800">
+            <a href="{{ url_for('web.student_page') }}" class="flex items-center gap-2.5 px-3 py-2 text-xs text-gray-400 hover:text-white hover:bg-gray-800/60 rounded-lg transition">
+                <i class="fa-solid fa-arrow-left text-xs"></i>
+                <span>Quay lại Cổng Sinh Viên</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <!-- TOP HEADER -->
+        <header class="h-16 bg-white border-b border-gray-200 px-6 flex items-center justify-between shadow-sm shrink-0 z-10">
+            <!-- Left Header -->
+            <div class="flex items-center gap-2 text-gray-700">
+                <i class="fa-solid fa-building-columns text-gray-500 text-sm"></i>
+                <span class="font-bold tracking-wide text-xs md:text-sm text-gray-800 uppercase">HANOI OPEN UNIVERSITY</span>
+            </div>
+
+            <!-- Right Header: User Info -->
+            <div class="flex items-center gap-3">
+                <div class="flex flex-col text-right">
+                    <span class="font-bold text-gray-800 text-sm leading-tight">{{ session.get('user_name', 'Nguyễn Văn Học') }}</span>
+                    <span class="text-[11px] text-gray-500 font-medium">K21-CNTT / SV001</span>
+                </div>
+                <div class="w-9 h-9 rounded-full bg-blue-600 text-white font-bold text-sm flex items-center justify-center shadow-md shrink-0">
+                    N
+                </div>
+            </div>
+        </header>
+
+        <!-- BODY PAGE CONTENT -->
+        <section class="flex-1 p-6 md:p-8 overflow-y-auto">
+            <div class="max-w-7xl mx-auto space-y-6">
+
+                <!-- 1. BLUE HEADER BANNER -->
+                <div class="bg-primary text-white p-6 md:p-7 rounded-xl shadow-sm relative overflow-hidden">
+                    <div class="relative z-10 space-y-1">
+                        <h1 class="text-xl md:text-2xl font-extrabold tracking-wide uppercase">
+                            DANH SÁCH GIẢNG VIÊN HƯỚNG DẪN
+                        </h1>
+                        <p class="text-xs md:text-sm text-blue-100 font-medium tracking-wide">
+                            NĂM HỌC 2025 - 2026 • ĐỢT 1
+                        </p>
+                    </div>
+                    <!-- Decorative subtle blur in background -->
+                    <div class="absolute -right-8 -top-8 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+                </div>
+
+                <!-- 2. SEARCH & FILTER BAR -->
+                <div class="flex flex-col sm:flex-row gap-3 items-center justify-between">
+                    <!-- Search Input -->
+                    <div class="relative w-full sm:flex-1">
+                        <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                        <input 
+                            type="text" 
+                            id="mentorSearchInput" 
+                            onkeyup="filterMentors()"
+                            placeholder="Tìm tên giảng viên hoặc lĩnh vực..." 
+                            class="w-full bg-white border border-gray-200 rounded-xl pl-11 pr-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent shadow-sm transition"
+                        >
+                    </div>
+
+                    <!-- Department Dropdown -->
+                    <div class="w-full sm:w-auto shrink-0">
+                        <div class="relative">
+                            <select 
+                                id="departmentFilter" 
+                                onchange="filterMentors()"
+                                class="w-full sm:w-64 appearance-none bg-white border border-gray-200 rounded-xl px-4 py-3 pr-10 text-sm text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-primary shadow-sm cursor-pointer"
+                            >
+                                <option value="all" selected>Tất cả các Khoa</option>
+                                <option value="Khoa Công nghệ Thông tin">Khoa Công nghệ Thông tin</option>
+                                <option value="Khoa Kinh tế & QTKD">Khoa Kinh tế & QTKD</option>
+                                <option value="Khoa Ngoại ngữ">Khoa Ngoại ngữ</option>
+                                <option value="Khoa Luật">Khoa Luật</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-gray-400">
+                                <i class="fa-solid fa-chevron-down text-xs"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. MENTORS GRID (2 COLUMNS) -->
+                <div id="mentorsGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                    <!-- CARD 1: TS. Nguyễn Văn A (Đang nhận nhóm) -->
+                    <div class="mentor-card bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                         data-name="Nguyễn Văn A" 
+                         data-department="Khoa Công nghệ Thông tin"
+                         data-field="Trí tuệ nhân tạo AI Machine Learning Python"
+                         data-available="true">
+                        <div>
+                            <!-- Header: Avatar, Name, Status Badge -->
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex items-center gap-3.5">
+                                    <!-- Avatar: NA (peach/orange tone) -->
+                                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-amber-100 text-amber-700 font-bold text-base md:text-lg flex items-center justify-center shrink-0 shadow-inner">
+                                        NA
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-gray-900 text-base md:text-lg leading-snug">
+                                            TS. Nguyễn Văn A
+                                        </h3>
+                                        <p class="text-xs text-gray-500 font-medium mt-0.5">
+                                            Khoa Công nghệ Thông tin
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Status Badge: Đang nhận nhóm -->
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-xs shrink-0">
+                                    <i class="fa-solid fa-circle-check text-[11px]"></i>
+                                    <span>Đang nhận nhóm</span>
+                                </span>
+                            </div>
+
+                            <!-- Quote / Bio Statement -->
+                            <div class="mt-4">
+                                <p class="text-xs md:text-[13px] text-gray-600 leading-relaxed font-normal">
+                                    "Chào các bạn, tôi ưu tiên các nhóm có khả năng lập trình tốt và quan tâm đến việc ứng dụng AI vào thực tế..."
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Footer: Tải trọng & Actions -->
+                        <div class="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+                            <div class="text-xs text-gray-600 font-medium">
+                                Tải trọng: <strong class="text-gray-900 font-bold text-sm">2/5 nhóm</strong>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <a href="{{ url_for('web.mentor_detail_page', mentor_id=1) }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-gray-400 text-xs font-semibold shadow-xs transition">
+                                    <span>Chi tiết</span>
+                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </a>
+                                <button type="button" onclick="openSelectMentorModal('TS. Nguyễn Văn A', 'Khoa Công nghệ Thông tin')" class="px-4 py-2 rounded-lg bg-primary hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition">
+                                    Chọn Mentor
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 2: PGS. TS. Trần Thị B (Đã đủ chỉ tiêu) -->
+                    <div class="mentor-card bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                         data-name="Trần Thị B" 
+                         data-department="Khoa Công nghệ Thông tin"
+                         data-field="Ứng dụng di động Mobile app Cộng đồng"
+                         data-available="false">
+                        <div>
+                            <!-- Header: Avatar, Name, Status Badge -->
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex items-center gap-3.5">
+                                    <!-- Avatar: TB (gray tone) -->
+                                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-gray-200 text-gray-600 font-bold text-base md:text-lg flex items-center justify-center shrink-0 shadow-inner">
+                                        TB
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-gray-900 text-base md:text-lg leading-snug">
+                                            PGS. TS. Trần Thị B
+                                        </h3>
+                                        <p class="text-xs text-gray-500 font-medium mt-0.5">
+                                            Khoa Công nghệ Thông tin
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Status Badge: Đã đủ chỉ tiêu -->
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-600 border border-rose-200 shadow-xs shrink-0">
+                                    <i class="fa-solid fa-circle-xmark text-[11px]"></i>
+                                    <span>Đã đủ chỉ tiêu</span>
+                                </span>
+                            </div>
+
+                            <!-- Quote / Bio Statement -->
+                            <div class="mt-4">
+                                <p class="text-xs md:text-[13px] text-gray-600 leading-relaxed font-normal">
+                                    "Nhóm NCKH năm nay của cô tập trung vào phát triển ứng dụng di động cho cộng đồng."
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Footer: Tải trọng & Actions -->
+                        <div class="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+                            <div class="text-xs text-rose-500 font-medium">
+                                Tải trọng: <strong class="text-rose-600 font-bold text-sm">5/5 nhóm</strong>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <a href="{{ url_for('web.mentor_detail_page', mentor_id=2) }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-gray-400 text-xs font-semibold shadow-xs transition">
+                                    <span>Chi tiết</span>
+                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </a>
+                                <button type="button" disabled class="px-4 py-2 rounded-lg bg-gray-200 text-gray-400 text-xs font-semibold cursor-not-allowed shadow-none">
+                                    Đã chốt sổ
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 3: TS. Lê Văn C (Bổ sung để hệ thống phong phú) -->
+                    <div class="mentor-card bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                         data-name="Lê Văn C" 
+                         data-department="Khoa Công nghệ Thông tin"
+                         data-field="An toàn thông tin Cyber Security Blockchain Mạng máy tính"
+                         data-available="true">
+                        <div>
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex items-center gap-3.5">
+                                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-blue-100 text-blue-700 font-bold text-base md:text-lg flex items-center justify-center shrink-0 shadow-inner">
+                                        LC
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-gray-900 text-base md:text-lg leading-snug">
+                                            TS. Lê Văn C
+                                        </h3>
+                                        <p class="text-xs text-gray-500 font-medium mt-0.5">
+                                            Khoa Công nghệ Thông tin
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-xs shrink-0">
+                                    <i class="fa-solid fa-circle-check text-[11px]"></i>
+                                    <span>Đang nhận nhóm</span>
+                                </span>
+                            </div>
+
+                            <div class="mt-4">
+                                <p class="text-xs md:text-[13px] text-gray-600 leading-relaxed font-normal">
+                                    "Chào đón các nhóm sinh viên đam mê An ninh mạng, mật mã học ứng dụng và bảo mật hệ thống thông tin."
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+                            <div class="text-xs text-gray-600 font-medium">
+                                Tải trọng: <strong class="text-gray-900 font-bold text-sm">3/5 nhóm</strong>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <a href="{{ url_for('web.mentor_detail_page', mentor_id=3) }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-gray-400 text-xs font-semibold shadow-xs transition">
+                                    <span>Chi tiết</span>
+                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </a>
+                                <button type="button" onclick="openSelectMentorModal('TS. Lê Văn C', 'Khoa Công nghệ Thông tin')" class="px-4 py-2 rounded-lg bg-primary hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition">
+                                    Chọn Mentor
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 4: ThS. Hoàng Thị D (Bổ sung để hệ thống phong phú) -->
+                    <div class="mentor-card bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                         data-name="Hoàng Thị D" 
+                         data-department="Khoa Công nghệ Thông tin"
+                         data-field="Khoa học dữ liệu Data Science Trực quan hóa dữ liệu"
+                         data-available="true">
+                        <div>
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex items-center gap-3.5">
+                                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-purple-100 text-purple-700 font-bold text-base md:text-lg flex items-center justify-center shrink-0 shadow-inner">
+                                        HD
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-gray-900 text-base md:text-lg leading-snug">
+                                            ThS. Hoàng Thị D
+                                        </h3>
+                                        <p class="text-xs text-gray-500 font-medium mt-0.5">
+                                            Khoa Công nghệ Thông tin
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-xs shrink-0">
+                                    <i class="fa-solid fa-circle-check text-[11px]"></i>
+                                    <span>Đang nhận nhóm</span>
+                                </span>
+                            </div>
+
+                            <div class="mt-4">
+                                <p class="text-xs md:text-[13px] text-gray-600 leading-relaxed font-normal">
+                                    "Hướng dẫn các đề tài phân tích dữ liệu lớn, khai phá xu hướng mạng xã hội và hệ thống khuyến nghị thông minh."
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+                            <div class="text-xs text-gray-600 font-medium">
+                                Tải trọng: <strong class="text-gray-900 font-bold text-sm">1/5 nhóm</strong>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <a href="{{ url_for('web.mentor_detail_page', mentor_id=4) }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-gray-400 text-xs font-semibold shadow-xs transition">
+                                    <span>Chi tiết</span>
+                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </a>
+                                <button type="button" onclick="openSelectMentorModal('ThS. Hoàng Thị D', 'Khoa Công nghệ Thông tin')" class="px-4 py-2 rounded-lg bg-primary hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition">
+                                    Chọn Mentor
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 5: PGS. TS. Vũ Đình E (Khoa Kinh tế & QTKD) -->
+                    <div class="mentor-card bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                         data-name="Vũ Đình E" 
+                         data-department="Khoa Kinh tế & Quản trị Kinh doanh"
+                         data-field="Kinh tế số Kinh tế tuần hoàn Chuỗi cung ứng Tài chính xanh QTKD"
+                         data-available="true">
+                        <div>
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex items-center gap-3.5">
+                                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-emerald-100 text-emerald-700 font-bold text-base md:text-lg flex items-center justify-center shrink-0 shadow-inner">
+                                        VE
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-gray-900 text-base md:text-lg leading-snug">
+                                            PGS. TS. Vũ Đình E
+                                        </h3>
+                                        <p class="text-xs text-gray-500 font-medium mt-0.5">
+                                            Khoa Kinh tế & QTKD
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-xs shrink-0">
+                                    <i class="fa-solid fa-circle-check text-[11px]"></i>
+                                    <span>Đang nhận nhóm</span>
+                                </span>
+                            </div>
+
+                            <div class="mt-4">
+                                <p class="text-xs md:text-[13px] text-gray-600 leading-relaxed font-normal">
+                                    "Định hướng nghiên cứu Kinh tế số, Kinh tế tuần hoàn và Quản trị chuỗi cung ứng xanh cho các doanh nghiệp vừa và nhỏ."
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+                            <div class="text-xs text-gray-600 font-medium">
+                                Tải trọng: <strong class="text-gray-900 font-bold text-sm">1/5 nhóm</strong>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <a href="{{ url_for('web.mentor_detail_page', mentor_id=5) }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-gray-400 text-xs font-semibold shadow-xs transition">
+                                    <span>Chi tiết</span>
+                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </a>
+                                <button type="button" onclick="openSelectMentorModal('PGS. TS. Vũ Đình E', 'Khoa Kinh tế & QTKD')" class="px-4 py-2 rounded-lg bg-primary hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition">
+                                    Chọn Mentor
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 6: TS. Phạm Thu Trang (Khoa Kinh tế & QTKD) -->
+                    <div class="mentor-card bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                         data-name="Phạm Thu Trang" 
+                         data-department="Khoa Kinh tế & Quản trị Kinh doanh"
+                         data-field="Marketing Thương mại điện tử E-commerce Khởi nghiệp Hành vi tiêu dùng"
+                         data-available="true">
+                        <div>
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex items-center gap-3.5">
+                                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-rose-100 text-rose-700 font-bold text-base md:text-lg flex items-center justify-center shrink-0 shadow-inner">
+                                        PT
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-gray-900 text-base md:text-lg leading-snug">
+                                            TS. Phạm Thu Trang
+                                        </h3>
+                                        <p class="text-xs text-gray-500 font-medium mt-0.5">
+                                            Khoa Kinh tế & QTKD
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-xs shrink-0">
+                                    <i class="fa-solid fa-circle-check text-[11px]"></i>
+                                    <span>Đang nhận nhóm</span>
+                                </span>
+                            </div>
+
+                            <div class="mt-4">
+                                <p class="text-xs md:text-[13px] text-gray-600 leading-relaxed font-normal">
+                                    "Ưu tiên các đề tài về Hành vi người tiêu dùng trên sàn thương mại điện tử, Digital Marketing và Khởi nghiệp đổi mới sáng tạo."
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+                            <div class="text-xs text-gray-600 font-medium">
+                                Tải trọng: <strong class="text-gray-900 font-bold text-sm">3/5 nhóm</strong>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <a href="{{ url_for('web.mentor_detail_page', mentor_id=6) }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-gray-400 text-xs font-semibold shadow-xs transition">
+                                    <span>Chi tiết</span>
+                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </a>
+                                <button type="button" onclick="openSelectMentorModal('TS. Phạm Thu Trang', 'Khoa Kinh tế & QTKD')" class="px-4 py-2 rounded-lg bg-primary hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition">
+                                    Chọn Mentor
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 7: TS. Đỗ Quỳnh Anh (Khoa Ngoại ngữ) -->
+                    <div class="mentor-card bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                         data-name="Đỗ Quỳnh Anh" 
+                         data-department="Khoa Ngoại ngữ"
+                         data-field="Ngôn ngữ học Tiếng Anh EdTech Dịch thuật Giảng dạy ngoại ngữ CALL"
+                         data-available="true">
+                        <div>
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex items-center gap-3.5">
+                                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-purple-100 text-purple-700 font-bold text-base md:text-lg flex items-center justify-center shrink-0 shadow-inner">
+                                        QA
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-gray-900 text-base md:text-lg leading-snug">
+                                            TS. Đỗ Quỳnh Anh
+                                        </h3>
+                                        <p class="text-xs text-gray-500 font-medium mt-0.5">
+                                            Khoa Ngoại ngữ
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-xs shrink-0">
+                                    <i class="fa-solid fa-circle-check text-[11px]"></i>
+                                    <span>Đang nhận nhóm</span>
+                                </span>
+                            </div>
+
+                            <div class="mt-4">
+                                <p class="text-xs md:text-[13px] text-gray-600 leading-relaxed font-normal">
+                                    "Nghiên cứu ứng dụng công nghệ trong giảng dạy tiếng Anh (CALL/MALL), Ngôn ngữ học ứng dụng và Dịch thuật chuyên ngành."
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+                            <div class="text-xs text-gray-600 font-medium">
+                                Tải trọng: <strong class="text-gray-900 font-bold text-sm">2/5 nhóm</strong>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <a href="{{ url_for('web.mentor_detail_page', mentor_id=7) }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-gray-400 text-xs font-semibold shadow-xs transition">
+                                    <span>Chi tiết</span>
+                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </a>
+                                <button type="button" onclick="openSelectMentorModal('TS. Đỗ Quỳnh Anh', 'Khoa Ngoại ngữ')" class="px-4 py-2 rounded-lg bg-primary hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition">
+                                    Chọn Mentor
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 8: ThS. Nguyễn Hoàng Long (Khoa Ngoại ngữ) -->
+                    <div class="mentor-card bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                         data-name="Nguyễn Hoàng Long" 
+                         data-department="Khoa Ngoại ngữ"
+                         data-field="Giao tiếp liên văn hóa Ngôn ngữ học đối chiếu AI học ngoại ngữ Biên phiên dịch"
+                         data-available="true">
+                        <div>
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex items-center gap-3.5">
+                                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-cyan-100 text-cyan-700 font-bold text-base md:text-lg flex items-center justify-center shrink-0 shadow-inner">
+                                        NL
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-gray-900 text-base md:text-lg leading-snug">
+                                            ThS. Nguyễn Hoàng Long
+                                        </h3>
+                                        <p class="text-xs text-gray-500 font-medium mt-0.5">
+                                            Khoa Ngoại ngữ
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-xs shrink-0">
+                                    <i class="fa-solid fa-circle-check text-[11px]"></i>
+                                    <span>Đang nhận nhóm</span>
+                                </span>
+                            </div>
+
+                            <div class="mt-4">
+                                <p class="text-xs md:text-[13px] text-gray-600 leading-relaxed font-normal">
+                                    "Hướng dẫn sinh viên nghiên cứu Giao tiếp liên văn hóa, Ngôn ngữ học đối chiếu Anh - Việt và ứng dụng AI hỗ trợ học ngoại ngữ."
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+                            <div class="text-xs text-gray-600 font-medium">
+                                Tải trọng: <strong class="text-gray-900 font-bold text-sm">2/5 nhóm</strong>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <a href="{{ url_for('web.mentor_detail_page', mentor_id=8) }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-gray-400 text-xs font-semibold shadow-xs transition">
+                                    <span>Chi tiết</span>
+                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </a>
+                                <button type="button" onclick="openSelectMentorModal('ThS. Nguyễn Hoàng Long', 'Khoa Ngoại ngữ')" class="px-4 py-2 rounded-lg bg-primary hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition">
+                                    Chọn Mentor
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 9: TS. Trần Văn Hùng (Khoa Luật) -->
+                    <div class="mentor-card bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                         data-name="Trần Văn Hùng" 
+                         data-department="Khoa Luật"
+                         data-field="Pháp luật AI Sở hữu trí tuệ Dữ liệu cá nhân Luật kinh tế Luật số"
+                         data-available="true">
+                        <div>
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex items-center gap-3.5">
+                                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-indigo-100 text-indigo-700 font-bold text-base md:text-lg flex items-center justify-center shrink-0 shadow-inner">
+                                        TH
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-gray-900 text-base md:text-lg leading-snug">
+                                            TS. Trần Văn Hùng
+                                        </h3>
+                                        <p class="text-xs text-gray-500 font-medium mt-0.5">
+                                            Khoa Luật
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-xs shrink-0">
+                                    <i class="fa-solid fa-circle-check text-[11px]"></i>
+                                    <span>Đang nhận nhóm</span>
+                                </span>
+                            </div>
+
+                            <div class="mt-4">
+                                <p class="text-xs md:text-[13px] text-gray-600 leading-relaxed font-normal">
+                                    "Nghiên cứu Pháp luật về bảo vệ dữ liệu cá nhân, Sở hữu trí tuệ trong kỷ nguyên số và Khung pháp lý cho Trí tuệ nhân tạo (AI Law)."
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+                            <div class="text-xs text-gray-600 font-medium">
+                                Tải trọng: <strong class="text-gray-900 font-bold text-sm">1/5 nhóm</strong>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <a href="{{ url_for('web.mentor_detail_page', mentor_id=9) }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-gray-400 text-xs font-semibold shadow-xs transition">
+                                    <span>Chi tiết</span>
+                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </a>
+                                <button type="button" onclick="openSelectMentorModal('TS. Trần Văn Hùng', 'Khoa Luật')" class="px-4 py-2 rounded-lg bg-primary hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition">
+                                    Chọn Mentor
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 10: TS. Nguyễn Mạnh Cường (Khoa Kinh tế & QTKD) -->
+                    <div class="mentor-card bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                         data-name="Nguyễn Mạnh Cường" 
+                         data-department="Khoa Kinh tế & QTKD"
+                         data-field="Tài chính Doanh nghiệp Fintech Ngân hàng số Đầu tư ESG Thị trường chứng khoán"
+                         data-available="true">
+                        <div>
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex items-center gap-3.5">
+                                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-amber-100 text-amber-800 font-bold text-base md:text-lg flex items-center justify-center shrink-0 shadow-inner">
+                                        NC
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-gray-900 text-base md:text-lg leading-snug">
+                                            TS. Nguyễn Mạnh Cường
+                                        </h3>
+                                        <p class="text-xs text-gray-500 font-medium mt-0.5">
+                                            Khoa Kinh tế & QTKD
+                                        </p>
+                                    </div>
+                                </div>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-xs shrink-0">
+                                    <i class="fa-solid fa-circle-check text-[11px]"></i>
+                                    <span>Đang nhận nhóm</span>
+                                </span>
+                            </div>
+                            <div class="mt-4">
+                                <p class="text-xs md:text-[13px] text-gray-600 leading-relaxed font-normal">
+                                    "Hướng dẫn các đề tài phân tích Tài chính doanh nghiệp, ứng dụng Fintech, Ngân hàng số và xu hướng đầu tư theo tiêu chuẩn ESG."
+                                </p>
+                            </div>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+                            <div class="text-xs text-gray-600 font-medium">
+                                Tải trọng: <strong class="text-gray-900 font-bold text-sm">2/5 nhóm</strong>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <a href="{{ url_for('web.mentor_detail_page', mentor_id=10) }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-gray-400 text-xs font-semibold shadow-xs transition">
+                                    <span>Chi tiết</span>
+                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </a>
+                                <button type="button" onclick="openSelectMentorModal('TS. Nguyễn Mạnh Cường', 'Khoa Kinh tế & QTKD')" class="px-4 py-2 rounded-lg bg-primary hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition">
+                                    Chọn Mentor
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 11: ThS. Lê Thị Thảo (Khoa Kinh tế & QTKD) -->
+                    <div class="mentor-card bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                         data-name="Lê Thị Thảo" 
+                         data-department="Khoa Kinh tế & QTKD"
+                         data-field="Kế toán quản trị ERP IFRS Kiểm toán Phân tích báo cáo tài chính Thuế"
+                         data-available="true">
+                        <div>
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex items-center gap-3.5">
+                                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-pink-100 text-pink-700 font-bold text-base md:text-lg flex items-center justify-center shrink-0 shadow-inner">
+                                        LT
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-gray-900 text-base md:text-lg leading-snug">
+                                            ThS. Lê Thị Thảo
+                                        </h3>
+                                        <p class="text-xs text-gray-500 font-medium mt-0.5">
+                                            Khoa Kinh tế & QTKD
+                                        </p>
+                                    </div>
+                                </div>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-xs shrink-0">
+                                    <i class="fa-solid fa-circle-check text-[11px]"></i>
+                                    <span>Đang nhận nhóm</span>
+                                </span>
+                            </div>
+                            <div class="mt-4">
+                                <p class="text-xs md:text-[13px] text-gray-600 leading-relaxed font-normal">
+                                    "Nghiên cứu ứng dụng hệ thống ERP trong quản trị kế toán, chuẩn mực IFRS và phân tích chuyên sâu báo cáo tài chính doanh nghiệp niêm yết."
+                                </p>
+                            </div>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+                            <div class="text-xs text-gray-600 font-medium">
+                                Tải trọng: <strong class="text-gray-900 font-bold text-sm">3/5 nhóm</strong>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <a href="{{ url_for('web.mentor_detail_page', mentor_id=11) }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-gray-400 text-xs font-semibold shadow-xs transition">
+                                    <span>Chi tiết</span>
+                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </a>
+                                <button type="button" onclick="openSelectMentorModal('ThS. Lê Thị Thảo', 'Khoa Kinh tế & QTKD')" class="px-4 py-2 rounded-lg bg-primary hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition">
+                                    Chọn Mentor
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 12: TS. Đặng Quốc Bảo (Khoa Kinh tế & QTKD) -->
+                    <div class="mentor-card bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                         data-name="Đặng Quốc Bảo" 
+                         data-department="Khoa Kinh tế & QTKD"
+                         data-field="Kinh tế quốc tế Logistics Xuất nhập khẩu Chuỗi cung ứng EVFTA Hải quan điện tử"
+                         data-available="true">
+                        <div>
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex items-center gap-3.5">
+                                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-emerald-100 text-emerald-800 font-bold text-base md:text-lg flex items-center justify-center shrink-0 shadow-inner">
+                                        QB
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-gray-900 text-base md:text-lg leading-snug">
+                                            TS. Đặng Quốc Bảo
+                                        </h3>
+                                        <p class="text-xs text-gray-500 font-medium mt-0.5">
+                                            Khoa Kinh tế & QTKD
+                                        </p>
+                                    </div>
+                                </div>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-xs shrink-0">
+                                    <i class="fa-solid fa-circle-check text-[11px]"></i>
+                                    <span>Đang nhận nhóm</span>
+                                </span>
+                            </div>
+                            <div class="mt-4">
+                                <p class="text-xs md:text-[13px] text-gray-600 leading-relaxed font-normal">
+                                    "Định hướng nghiên cứu Logistics quốc tế, Tối ưu hóa chuỗi vận tải đa phương thức và tác động của các hiệp định FTA tới xuất nhập khẩu."
+                                </p>
+                            </div>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+                            <div class="text-xs text-gray-600 font-medium">
+                                Tải trọng: <strong class="text-gray-900 font-bold text-sm">1/5 nhóm</strong>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <a href="{{ url_for('web.mentor_detail_page', mentor_id=12) }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-gray-400 text-xs font-semibold shadow-xs transition">
+                                    <span>Chi tiết</span>
+                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </a>
+                                <button type="button" onclick="openSelectMentorModal('TS. Đặng Quốc Bảo', 'Khoa Kinh tế & QTKD')" class="px-4 py-2 rounded-lg bg-primary hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition">
+                                    Chọn Mentor
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 13: ThS. Vũ Phương Mai (Khoa Ngoại ngữ) -->
+                    <div class="mentor-card bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                         data-name="Vũ Phương Mai" 
+                         data-department="Khoa Ngoại ngữ"
+                         data-field="TESOL Phương pháp giảng dạy tiếng Anh Tâm lý học ngôn ngữ SLA EdTech Khung CEFR"
+                         data-available="true">
+                        <div>
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex items-center gap-3.5">
+                                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-fuchsia-100 text-fuchsia-700 font-bold text-base md:text-lg flex items-center justify-center shrink-0 shadow-inner">
+                                        PM
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-gray-900 text-base md:text-lg leading-snug">
+                                            ThS. Vũ Phương Mai
+                                        </h3>
+                                        <p class="text-xs text-gray-500 font-medium mt-0.5">
+                                            Khoa Ngoại ngữ
+                                        </p>
+                                    </div>
+                                </div>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-xs shrink-0">
+                                    <i class="fa-solid fa-circle-check text-[11px]"></i>
+                                    <span>Đang nhận nhóm</span>
+                                </span>
+                            </div>
+                            <div class="mt-4">
+                                <p class="text-xs md:text-[13px] text-gray-600 leading-relaxed font-normal">
+                                    "Nghiên cứu ứng dụng phương pháp Task-based learning, tâm lý học tiếp nhận ngôn ngữ (SLA) và công nghệ trong kiểm tra đánh giá năng lực ngoại ngữ."
+                                </p>
+                            </div>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+                            <div class="text-xs text-gray-600 font-medium">
+                                Tải trọng: <strong class="text-gray-900 font-bold text-sm">3/5 nhóm</strong>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <a href="{{ url_for('web.mentor_detail_page', mentor_id=13) }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-gray-400 text-xs font-semibold shadow-xs transition">
+                                    <span>Chi tiết</span>
+                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </a>
+                                <button type="button" onclick="openSelectMentorModal('ThS. Vũ Phương Mai', 'Khoa Ngoại ngữ')" class="px-4 py-2 rounded-lg bg-primary hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition">
+                                    Chọn Mentor
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 14: TS. Hoàng Minh Trí (Khoa Ngoại ngữ) -->
+                    <div class="mentor-card bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                         data-name="Hoàng Minh Trí" 
+                         data-department="Khoa Ngoại ngữ"
+                         data-field="Ngôn ngữ học tri nhận Dịch thuật chuyên ngành Đối chiếu ngôn ngữ NLP CAT Tools"
+                         data-available="true">
+                        <div>
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex items-center gap-3.5">
+                                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-indigo-100 text-indigo-700 font-bold text-base md:text-lg flex items-center justify-center shrink-0 shadow-inner">
+                                        MT
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-gray-900 text-base md:text-lg leading-snug">
+                                            TS. Hoàng Minh Trí
+                                        </h3>
+                                        <p class="text-xs text-gray-500 font-medium mt-0.5">
+                                            Khoa Ngoại ngữ
+                                        </p>
+                                    </div>
+                                </div>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-xs shrink-0">
+                                    <i class="fa-solid fa-circle-check text-[11px]"></i>
+                                    <span>Đang nhận nhóm</span>
+                                </span>
+                            </div>
+                            <div class="mt-4">
+                                <p class="text-xs md:text-[13px] text-gray-600 leading-relaxed font-normal">
+                                    "Chào đón sinh viên có đam mê nghiên cứu Ngôn ngữ học tri nhận, Dịch thuật song ngữ Anh - Việt và các mô hình xử lý ngôn ngữ tự nhiên ứng dụng."
+                                </p>
+                            </div>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+                            <div class="text-xs text-gray-600 font-medium">
+                                Tải trọng: <strong class="text-gray-900 font-bold text-sm">2/5 nhóm</strong>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <a href="{{ url_for('web.mentor_detail_page', mentor_id=14) }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-gray-400 text-xs font-semibold shadow-xs transition">
+                                    <span>Chi tiết</span>
+                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </a>
+                                <button type="button" onclick="openSelectMentorModal('TS. Hoàng Minh Trí', 'Khoa Ngoại ngữ')" class="px-4 py-2 rounded-lg bg-primary hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition">
+                                    Chọn Mentor
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 15: ThS. Bùi Thị Thanh Hà (Khoa Ngoại ngữ) -->
+                    <div class="mentor-card bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                         data-name="Bùi Thị Thanh Hà" 
+                         data-department="Khoa Ngoại ngữ"
+                         data-field="Tiếng Anh thương mại ESP Đàm phán quốc tế Văn hóa kinh doanh Giao tiếp liên văn hóa"
+                         data-available="true">
+                        <div>
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex items-center gap-3.5">
+                                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-orange-100 text-orange-700 font-bold text-base md:text-lg flex items-center justify-center shrink-0 shadow-inner">
+                                        BH
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-gray-900 text-base md:text-lg leading-snug">
+                                            ThS. Bùi Thị Thanh Hà
+                                        </h3>
+                                        <p class="text-xs text-gray-500 font-medium mt-0.5">
+                                            Khoa Ngoại ngữ
+                                        </p>
+                                    </div>
+                                </div>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-xs shrink-0">
+                                    <i class="fa-solid fa-circle-check text-[11px]"></i>
+                                    <span>Đang nhận nhóm</span>
+                                </span>
+                            </div>
+                            <div class="mt-4">
+                                <p class="text-xs md:text-[13px] text-gray-600 leading-relaxed font-normal">
+                                    "Tập trung vào Tiếng Anh chuyên ngành Kinh tế - Ngoại thương (ESP), kỹ năng đàm phán hợp đồng thương mại quốc tế và nghi thức giao tiếp liên văn hóa."
+                                </p>
+                            </div>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+                            <div class="text-xs text-gray-600 font-medium">
+                                Tải trọng: <strong class="text-gray-900 font-bold text-sm">1/5 nhóm</strong>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <a href="{{ url_for('web.mentor_detail_page', mentor_id=15) }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-gray-400 text-xs font-semibold shadow-xs transition">
+                                    <span>Chi tiết</span>
+                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </a>
+                                <button type="button" onclick="openSelectMentorModal('ThS. Bùi Thị Thanh Hà', 'Khoa Ngoại ngữ')" class="px-4 py-2 rounded-lg bg-primary hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition">
+                                    Chọn Mentor
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 16: ThS. Lê Minh Đức (Khoa Luật) -->
+                    <div class="mentor-card bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                         data-name="Lê Minh Đức" 
+                         data-department="Khoa Luật"
+                         data-field="Luật kinh tế Hợp đồng thương mại Tranh chấp thương mại Trọng tài thương mại Pháp luật số"
+                         data-available="true">
+                        <div>
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex items-center gap-3.5">
+                                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-slate-100 text-slate-700 font-bold text-base md:text-lg flex items-center justify-center shrink-0 shadow-inner">
+                                        MĐ
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-gray-900 text-base md:text-lg leading-snug">
+                                            ThS. Lê Minh Đức
+                                        </h3>
+                                        <p class="text-xs text-gray-500 font-medium mt-0.5">
+                                            Khoa Luật
+                                        </p>
+                                    </div>
+                                </div>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-xs shrink-0">
+                                    <i class="fa-solid fa-circle-check text-[11px]"></i>
+                                    <span>Đang nhận nhóm</span>
+                                </span>
+                            </div>
+                            <div class="mt-4">
+                                <p class="text-xs md:text-[13px] text-gray-600 leading-relaxed font-normal">
+                                    "Hướng dẫn các đề tài về Pháp luật Hợp đồng thương mại điện tử, Giải quyết tranh chấp thương mại quốc tế qua Trọng tài và Tố tụng kinh tế số."
+                                </p>
+                            </div>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+                            <div class="text-xs text-gray-600 font-medium">
+                                Tải trọng: <strong class="text-gray-900 font-bold text-sm">2/5 nhóm</strong>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <a href="{{ url_for('web.mentor_detail_page', mentor_id=16) }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-primary hover:border-gray-400 text-xs font-semibold shadow-xs transition">
+                                    <span>Chi tiết</span>
+                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </a>
+                                <button type="button" onclick="openSelectMentorModal('ThS. Lê Minh Đức', 'Khoa Luật')" class="px-4 py-2 rounded-lg bg-primary hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition">
+                                    Chọn Mentor
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Empty Search Result State -->
+                <div id="noResultsState" class="hidden bg-white border border-gray-200 rounded-2xl p-12 text-center">
+                    <div class="w-16 h-16 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center mx-auto mb-3 text-2xl">
+                        <i class="fa-solid fa-user-slash"></i>
+                    </div>
+                    <h4 class="font-bold text-gray-700 text-base">Không tìm thấy giảng viên phù hợp</h4>
+                    <p class="text-xs text-gray-500 mt-1">Vui lòng thử từ khóa tìm kiếm hoặc chọn khoa khác.</p>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <!-- MODAL: ĐĂNG KÝ NGUYỆN VỌNG CHỌN MENTOR -->
+    <div id="mentorModal" class="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl transform scale-95 transition-transform duration-200 space-y-5" id="mentorModalContent">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div class="flex items-center gap-2 text-primary">
+                    <i class="fa-solid fa-paper-plane text-base"></i>
+                    <h3 class="font-bold text-gray-900 text-base">Đăng ký nguyện vọng Mentor</h3>
+                </div>
+                <button type="button" onclick="closeSelectMentorModal()" class="text-gray-400 hover:text-gray-600 transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4 text-xs md:text-sm">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Giảng viên hướng dẫn</label>
+                    <input type="text" id="modalMentorName" readonly class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3.5 py-2 font-bold text-gray-800">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Tên đề tài / Hướng nghiên cứu dự kiến</label>
+                    <textarea rows="3" id="modalTopicTitle" placeholder="Ví dụ: Nghiên cứu ứng dụng trí tuệ nhân tạo trong..." class="w-full border border-gray-200 rounded-lg p-3 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Lời nhắn gửi tới Giảng viên</label>
+                    <textarea rows="2" id="modalMentorNote" placeholder="Tóm tắt ngắn gọn năng lực của nhóm và nguyện vọng..." class="w-full border border-gray-200 rounded-lg p-3 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-gray-100">
+                <button type="button" onclick="closeSelectMentorModal()" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 text-xs font-semibold hover:bg-gray-50 transition">
+                    Hủy bỏ
+                </button>
+                <button type="button" onclick="submitSelectMentor()" class="px-5 py-2 rounded-lg bg-primary hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition">
+                    Gửi yêu cầu
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT FOR SEARCH, FILTER, AND MODAL -->
+    <script>
+        function filterMentors() {
+            const query = document.getElementById('mentorSearchInput').value.toLowerCase().trim();
+            const dept = document.getElementById('departmentFilter').value;
+            const cards = document.querySelectorAll('.mentor-card');
+            let visibleCount = 0;
+
+            cards.forEach(card => {
+                const name = (card.getAttribute('data-name') || '').toLowerCase();
+                const cardDept = card.getAttribute('data-department') || '';
+                const field = (card.getAttribute('data-field') || '').toLowerCase();
+
+                const matchesQuery = !query || name.includes(query) || field.includes(query);
+                const matchesDept = (dept === 'all') || (cardDept === dept);
+
+                if (matchesQuery && matchesDept) {
+                    card.style.display = 'flex';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            const noResults = document.getElementById('noResultsState');
+            if (visibleCount === 0) {
+                noResults.classList.remove('hidden');
+            } else {
+                noResults.classList.add('hidden');
+            }
+        }
+
+        function openSelectMentorModal(name, dept) {
+            document.getElementById('modalMentorName').value = `${name} (${dept})`;
+            const modal = document.getElementById('mentorModal');
+            const content = document.getElementById('mentorModalContent');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeSelectMentorModal() {
+            const modal = document.getElementById('mentorModal');
+            const content = document.getElementById('mentorModalContent');
+            modal.classList.add('opacity-0');
+            content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        }
+
+        function submitSelectMentor() {
+            const topic = document.getElementById('modalTopicTitle').value.trim();
+            if (!topic) {
+                alert('Vui lòng nhập tên đề tài hoặc hướng nghiên cứu dự kiến của nhóm!');
+                return;
+            }
+            closeSelectMentorModal();
+            alert('Đã gửi yêu cầu đăng ký nguyện vọng chọn giảng viên hướng dẫn thành công! Giảng viên sẽ nhận được thông báo để xem xét.');
+        }
+    </script>
+</body>
+</html>

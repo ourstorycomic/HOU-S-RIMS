@@ -30,7 +30,10 @@ def dashboard():
     user_id = session.get('user_id')
     pending_invitations = []
     if user_id:
-        pending_invitations = GroupMember.query.filter_by(student_id=user_id, status='pending').all()
+        pending_invitations = GroupMember.query.filter(
+            GroupMember.student_id == user_id,
+            GroupMember.status.in_(['pending', 'invited'])
+        ).all()
     return render_template('student/dashboard.html', pending_invitations=pending_invitations)
 
 @student_bp.route('/portfolio')

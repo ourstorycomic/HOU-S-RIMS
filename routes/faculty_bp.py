@@ -7,7 +7,7 @@ faculty_bp = Blueprint('faculty', __name__, url_prefix='/faculty')
 
 @faculty_bp.before_request
 def require_faculty():
-    if session.get('role') != 'faculty':
+    if session.get('role') not in ['faculty', 'admin']:
         return redirect(url_for('auth.login'))
 
 @faculty_bp.context_processor

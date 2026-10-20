@@ -216,7 +216,7 @@ a { text-decoration: none !important; }
    5. COMPONENT: CARDS & WIDGETS
    ========================================================================== */
 .content-area { 
-    padding: 5px;
+    padding: 20px 30px;
     position: relative;
     flex: 1;
     display: flex;
@@ -226,6 +226,10 @@ a { text-decoration: none !important; }
 /* Các view trong content-area */
 .content-area > div[id^="view-"] {
     width: 100%;
+}
+
+.hidden {
+    display: none !important;
 }
 
 .content-body {

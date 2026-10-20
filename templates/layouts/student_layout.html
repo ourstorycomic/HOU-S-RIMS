@@ -35,7 +35,7 @@
                         <div style="max-height: 360px; overflow-y: auto;">
                             {% set pending_invitations = [] %}
                             {% if current_user %}
-                                {% set pending_invitations = current_user.group_memberships | selectattr('status', 'equalto', 'pending') | list %}
+                                {% set pending_invitations = current_user.group_memberships | selectattr('status', 'in', ['pending', 'invited']) | list %}
                             {% endif %}
                             
                             {% for inv in pending_invitations %}

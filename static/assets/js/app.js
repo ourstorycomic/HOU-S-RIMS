@@ -210,14 +210,24 @@ document.addEventListener('DOMContentLoaded', function () {
                 const data = await resp.json();
                 if (resp.ok || resp.status === 201) {
                     // Close modal if open
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalRegisterTopic'));
-                    if (modal) modal.hide();
+                    const modalConfirm = (typeof bootstrap !== 'undefined') ? (
+                        bootstrap.Modal.getInstance(document.getElementById('modalConfirmRegister')) ||
+                        bootstrap.Modal.getInstance(document.getElementById('modalRegisterTopic'))
+                    ) : null;
+                    if (modalConfirm) modalConfirm.hide();
+
                     await Swal.fire({
                         icon: 'success', title: 'Đăng ký thành công!',
                         text: 'Đề tài đã được gửi và đang chờ giảng viên duyệt.',
                         timer: 2000, showConfirmButton: false
                     });
-                    location.reload();
+
+                    if (typeof checkAndLoadMyTopic === 'function') {
+                        await checkAndLoadMyTopic();
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    } else {
+                        location.reload();
+                    }
                 } else {
                     Swal.fire('Lỗi', data.error || 'Đăng ký thất bại.', 'error');
                 }
@@ -237,8 +247,13 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             const data = await resp.json();
             if (resp.ok) {
-                Swal.fire({icon: 'success', title: 'Đã hủy', text: 'Đã hủy đăng ký đề tài thành công.', timer: 2000, showConfirmButton: false})
-                .then(() => location.reload());
+                Swal.fire({icon: 'success', title: 'Đã hủy', text: 'Đã hủy đăng ký đề tài thành công.', timer: 2000, showConfirmButton: false});
+                if (typeof renderTopicFormView === 'function') {
+                    renderTopicFormView();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    location.reload();
+                }
             } else {
                 Swal.fire('Lỗi', data.error || 'Không thể hủy đề tài.', 'error');
             }
@@ -307,6 +322,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
                 const data = await resp.json();
                 if (resp.ok || resp.status === 201) {
+                    sessionStorage.setItem('active_admin_tab', 'batches');
+                    window.location.hash = '#batches';
                     await Swal.fire({ icon: 'success', title: 'Tạo đợt thành công!', timer: 1600, showConfirmButton: false });
                     location.reload();
                 } else {
@@ -337,6 +354,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 try {
                     const res = await fetch(`/api/batches/${id}`, { method: 'DELETE' });
                     if (res.ok) {
+                        sessionStorage.setItem('active_admin_tab', 'batches');
+                        window.location.hash = '#batches';
                         Swal.fire('Đã xóa!', 'Đợt NCKH đã bị xóa.', 'success').then(() => location.reload());
                     } else {
                         const data = await res.json();
@@ -414,14 +433,30 @@ document.addEventListener('DOMContentLoaded', function () {
 // ===================== SAVE BATCH (standalone, called by onclick) =====================
 async function saveBatch() {
     const name = document.getElementById('batch-name')?.value?.trim();
+    const year = document.getElementById('batch-year')?.value?.trim() || '2025-2026';
     const startDate = document.getElementById('batch-start-date')?.value;
     const endDate = document.getElementById('batch-end-date')?.value;
     const type = document.getElementById('batch-type')?.value;
     const description = document.getElementById('batch-description')?.value;
+    const fileInput = document.getElementById('batch-file');
 
     if (!name) {
         Swal.fire('Thiếu thông tin', 'Vui lòng nhập tên đợt triển khai.', 'warning');
         return;
+    }
+
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('academic_year', year);
+    formData.append('type', type || 'NCKH Standard');
+    if (startDate) formData.append('start_date', startDate);
+    if (endDate) {
+        formData.append('end_date', endDate);
+        formData.append('submission_deadline', endDate);
+    }
+    if (description) formData.append('description', description);
+    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+        formData.append('guidance_doc', fileInput.files[0]);
     }
 
     // Close the modal
@@ -431,19 +466,13 @@ async function saveBatch() {
     try {
         const resp = await fetch('/api/batches', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                name,
-                type: type || 'NCKH Standard',
-                start_date: startDate || null,
-                end_date: endDate || null,
-                submission_deadline: endDate || null,
-                description: description || ''
-            })
+            body: formData
         });
         const data = await resp.json();
         if (resp.ok || resp.status === 201) {
-            await Swal.fire({ icon: 'success', title: 'Đã tạo đợt mới!', text: `"${name}" đã được ban hành.`, timer: 2000, showConfirmButton: false });
+            sessionStorage.setItem('active_admin_tab', 'batches');
+            window.location.hash = '#batches';
+            await Swal.fire({ icon: 'success', title: 'Đã tạo đợt mới!', text: `"${name}" đã được ban hành.`, timer: 1800, showConfirmButton: false });
             location.reload();
         } else {
             Swal.fire('Lỗi', data.error || 'Tạo đợt thất bại.', 'error');
@@ -1043,23 +1072,32 @@ async function submitEditBatch() {
 
 async function deleteBatch(id, name) {
     const result = await Swal.fire({
-        title: 'Bạn có chắc chắn muốn xóa?',
-        text: `Hành động này sẽ xóa/ẩn đợt NCKH "${name}".`,
+        title: 'Xác nhận xóa đợt?',
+        text: `Bạn có chắc chắn muốn xóa đợt NCKH "${name}" không? Thao tác này sẽ xóa đợt khỏi hệ thống.`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Có, xóa nó!',
-        cancelButtonText: 'Hủy'
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fa-solid fa-trash-can me-1"></i> Xóa vĩnh viễn',
+        cancelButtonText: 'Hủy bỏ'
     });
 
     if (result.isConfirmed) {
         try {
             const res = await fetch(`/api/batches/${id}`, { method: 'DELETE' });
+            const data = await res.json();
             if (res.ok) {
-                Swal.fire('Đã xóa!', 'Đợt NCKH đã được ẩn.', 'success').then(() => location.reload());
+                sessionStorage.setItem('active_admin_tab', 'batches');
+                window.location.hash = '#batches';
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Đã xóa!',
+                    text: data.message || 'Đợt NCKH đã được xóa thành công.',
+                    timer: 1800,
+                    showConfirmButton: false
+                });
+                location.reload();
             } else {
-                const data = await res.json();
                 Swal.fire('Lỗi', data.error || 'Có lỗi xảy ra', 'error');
             }
         } catch(e) {
@@ -1067,6 +1105,7 @@ async function deleteBatch(id, name) {
         }
     }
 }
+window.deleteBatch = deleteBatch;
 
 document.addEventListener('DOMContentLoaded', () => {
     const today = new Date().toISOString().split('T')[0];
