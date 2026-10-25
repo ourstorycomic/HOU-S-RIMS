@@ -17,10 +17,13 @@ def get_progress_dashboard():
     """
     from flask import session
     from models import Batch
-    current_year = session.get('academic_year', '2025-2026')
+    current_year = session.get('academic_year')
+    if not current_year or not Batch.query.filter(Batch.academic_year == current_year, Batch.status != 'hidden').first():
+        active_b = Batch.query.filter_by(status='active').first()
+        current_year = active_b.academic_year if active_b else '2025-2026'
     total = Topic.query.join(Batch).filter(Batch.academic_year == current_year).count()
     approved = Topic.query.join(Batch).filter(Topic.status=='approved', Batch.academic_year == current_year).count()
-    pending = Topic.query.join(Batch).filter(Topic.status=='pending', Batch.academic_year == current_year).count()
+    pending = Topic.query.join(Batch).filter(Topic.status.in_(['pending', 'faculty_pending']), Batch.academic_year == current_year).count()
     rejected = Topic.query.join(Batch).filter(Topic.status=='rejected', Batch.academic_year == current_year).count()
 
     progress_pct = int((approved / total * 100) if total > 0 else 0)
@@ -44,7 +47,10 @@ def get_stats():
     """
     from flask import session
     from models import Batch
-    current_year = session.get('academic_year', '2025-2026')
+    current_year = session.get('academic_year')
+    if not current_year or not Batch.query.filter(Batch.academic_year == current_year, Batch.status != 'hidden').first():
+        active_b = Batch.query.filter_by(status='active').first()
+        current_year = active_b.academic_year if active_b else '2025-2026'
     
     total_topics = Topic.query.join(Batch).filter(Batch.academic_year == current_year).count()
     total_groups = Group.query.join(Batch).filter(Batch.academic_year == current_year).count()

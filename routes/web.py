@@ -58,6 +58,7 @@ def student_page():
     # Lấy danh sách nhóm & đề tài của sinh viên
     my_groups = []
     my_topics = []
+    approved_chat_groups = []
     if current_user:
         member_group_ids = [m.group_id for m in GroupMember.query.filter_by(student_id=current_user.id).all()]
         my_groups = Group.query.filter(
@@ -66,6 +67,11 @@ def student_page():
         if my_groups:
             group_ids = [g.id for g in my_groups]
             my_topics = Topic.query.filter(Topic.group_id.in_(group_ids)).order_by(Topic.id.desc()).all()
+            for g in my_groups:
+                # Chỉ những nhóm có đề tài đã được Khoa/Viện phê duyệt mới có nhóm thảo luận chung chính thức
+                is_approved = (g.status == 'approved') or any(t.status == 'approved' for t in g.topics)
+                if is_approved:
+                    approved_chat_groups.append(g)
         else:
             my_topics = Topic.query.join(Group).filter(Group.leader_id == current_user.id).order_by(Topic.id.desc()).all()
 
@@ -83,14 +89,18 @@ def student_page():
             faculties[fac] = []
         faculties[fac].append(m)
 
+    notifications = Notification.query.filter_by(user_id=user_id).order_by(Notification.is_read.asc(), Notification.created_at.desc()).all() if user_id else []
+
     return render_template('student.html', 
                            current_user=current_user,
                            current_group=active_group,
                            my_groups=my_groups,
+                           approved_chat_groups=approved_chat_groups,
                            my_topics=my_topics,
                            batches=batches,
                            mentors=mentors,
-                           faculties=faculties)
+                           faculties=faculties,
+                           notifications=notifications)
 # Danh sách giảng viên hướng dẫn (Mentor List)
 @web_bp.route('/mentors')
 def mentors_page():

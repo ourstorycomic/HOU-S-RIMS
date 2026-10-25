@@ -15,16 +15,20 @@
                                 </div>
                                 <ul class="nav nav-pills nav-fill nav-sm" id="chat-tabs" role="tablist">
                                     <li class="nav-item" role="presentation">
-                                        <button class="nav-link active py-1" id="groups-tab" data-bs-toggle="tab" data-bs-target="#groups-pane" type="button" role="tab">Nhóm</button>
+                                        <button class="nav-link {% if my_groups and my_groups|length > 0 %}active{% endif %} py-1" id="groups-tab" data-bs-toggle="tab" data-bs-target="#groups-pane" type="button" role="tab">
+                                            <i class="fa-solid fa-users me-1"></i> Nhóm
+                                        </button>
                                     </li>
                                     <li class="nav-item" role="presentation">
-                                        <button class="nav-link py-1" id="private-tab" data-bs-toggle="tab" data-bs-target="#private-pane" type="button" role="tab">Cá nhân</button>
+                                        <button class="nav-link {% if not my_groups or my_groups|length == 0 %}active{% endif %} py-1" id="private-tab" data-bs-toggle="tab" data-bs-target="#private-pane" type="button" role="tab">
+                                            <i class="fa-solid fa-user me-1"></i> Cá nhân
+                                        </button>
                                     </li>
                                 </ul>
                             </div>
                             
                             <div class="tab-content flex-grow-1 overflow-hidden d-flex flex-column">
-                                <div class="tab-pane fade show active flex-grow-1 overflow-auto" id="groups-pane" role="tabpanel">
+                                <div class="tab-pane fade {% if my_groups and my_groups|length > 0 %}show active{% endif %} flex-grow-1 overflow-auto" id="groups-pane" role="tabpanel">
                                     <div class="list-group list-group-flush">
                                     {% if my_groups %}
                                         {% for g in my_groups %}
@@ -43,7 +47,20 @@
                                         </a>
                                         {% endfor %}
                                     {% else %}
-                                        <div class="text-muted small text-center p-4">Bạn chưa tham gia nhóm nào.</div>
+                                        <div class="p-4 text-center text-muted">
+                                            <div class="mb-3">
+                                                <span class="badge bg-light text-secondary border p-3 rounded-circle shadow-xs">
+                                                    <i class="fa-solid fa-users-slash fs-4 text-muted"></i>
+                                                </span>
+                                            </div>
+                                            <h6 class="fw-bold text-dark mb-1">Chưa có Nhóm thảo luận chung</h6>
+                                            <p class="small text-muted mb-3" style="line-height: 1.5; font-size: 12px;">
+                                                Đề tài hiện đang trong quá trình xét duyệt. Nhóm trao đổi chung chỉ được kích hoạt sau khi Đề tài được <strong>Khoa / Viện phê duyệt chính thức</strong>.
+                                            </p>
+                                            <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 fw-bold shadow-xs" onclick="document.getElementById('private-tab')?.click()" style="background-color: #6366f1;">
+                                                <i class="fa-solid fa-chalkboard-user me-1"></i> Trao đổi cá nhân với Giảng viên
+                                            </button>
+                                        </div>
                                     {% endif %}
                                     </div>
                                 </div>

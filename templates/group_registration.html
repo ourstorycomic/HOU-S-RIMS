@@ -305,8 +305,9 @@
                                             <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                                                 <i class="fa-solid fa-id-card text-xs"></i>
                                             </div>
-                                            <input type="text" id="inputStudentCode" 
-                                                   placeholder="Nhập Mã Sinh Viên (ví dụ: 24A1001D0342...)" 
+                                            <input type="text" id="inputStudentCode"
+                                                   placeholder="Nhập Mã Sinh Viên (ví dụ: 24A1001D0342...)"
+                                                   onkeydown="if(event.key === 'Enter') { event.preventDefault(); handleInviteMember(); }"
                                                    class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition font-medium">
                                         </div>
                                         <button onclick="handleInviteMember()" id="btnInviteMember" 

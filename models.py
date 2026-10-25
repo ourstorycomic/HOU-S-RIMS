@@ -92,6 +92,9 @@ class Group(db.Model):
             'mentor_faculty': self.mentor.faculty if self.mentor else None,
             'status': self.status,
             'created_at': self.created_at.strftime('%d/%m/%Y %H:%M') if self.created_at else None,
+            'topic_id': self.topics[0].id if self.topics else None,
+            'topic_title': self.topics[0].title if self.topics else None,
+            'topic_status': self.topics[0].status if self.topics else None,
             'members': [m.to_dict() for m in self.members] if self.members else []
         }
 

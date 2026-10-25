@@ -395,6 +395,114 @@ def handle_invitation():
         else:
             member.status = 'accepted'
             
+        # Update any chat messages of type invitation for this group and user
+        try:
+            from models import Message as Msg
+            invite_msgs = Msg.query.filter_by(receiver_id=user_id, message_type='invitation').all()
+            for im in invite_msgs:
+                if im.meta_data:
+                    m_meta = json.loads(im.meta_data)
+                    if m_meta.get('invite_group_id') == group_id:
+                        m_meta['invite_status'] = action
+                        im.meta_data = json.dumps(m_meta)
+        except Exception:
+            pass
+
+        # Mark any previous invitation notifications for this user as read
+        try:
+            user_notifs = Notification.query.filter_by(user_id=user_id, is_read=False).all()
+            for un in user_notifs:
+                if 'lời mời tham gia nhóm' in (un.content or '').lower():
+                    un.is_read = True
+        except Exception:
+            pass
+
+        # Gửi thông báo phản hồi tới trưởng nhóm (người gửi lời mời)
+        from models import Group
+        group = member.group or Group.query.get(group_id)
+        topic = Topic.query.filter_by(group_id=group_id).first()
+        topic_title = topic.title if topic and topic.title else "NCKH"
+        responder = User.query.get(user_id)
+        responder_name = responder.full_name if responder else f"Sinh viên {user_id}"
+        group_name = group.name if group else f"Nhóm #{group_id}"
+
+        if group and group.leader_id and group.leader_id != user_id:
+            leader_id = group.leader_id
+            leader_user = User.query.get(leader_id)
+            
+            if action == 'accepted':
+                notif_html = (
+                    f"<p>Sinh viên <strong>{responder_name}</strong> đã <span class='text-success fw-bold'>đồng ý</span> "
+                    f"tham gia nhóm <strong>{group_name}</strong> (Đề tài: <em>{topic_title}</em>).</p>"
+                    f"<button type='button' onclick='event.stopPropagation(); showGroupMembersModal({group_id})' class='btn btn-success btn-sm rounded-pill mt-2 px-3 fw-bold shadow-sm'>"
+                    f"<i class='fa-solid fa-users me-1'></i> Xem thành viên nhóm</button>"
+                )
+            else:
+                notif_html = (
+                    f"<p>Sinh viên <strong>{responder_name}</strong> đã <span class='text-danger fw-bold'>từ chối</span> "
+                    f"lời mời tham gia nhóm <strong>{group_name}</strong>.</p>"
+                    f"<button type='button' onclick='event.stopPropagation(); showGroupMembersModal({group_id})' class='btn btn-outline-secondary btn-sm rounded-pill mt-2 px-3 fw-bold'>"
+                    f"<i class='fa-solid fa-users-gear me-1'></i> Quản lý nhóm</button>"
+                )
+            leader_notif = Notification(user_id=leader_id, content=notif_html)
+            db.session.add(leader_notif)
+
+            # Gửi tin nhắn chat phản hồi vào hộp thoại riêng với trưởng nhóm
+            try:
+                from models import Message as Msg
+                chat_text = f"✅ Tôi đã đồng ý tham gia nhóm **{group_name}**." if action == 'accepted' else f"❌ Tôi xin phép từ chối tham gia nhóm **{group_name}**."
+                fb_msg = Msg(
+                    sender_id=user_id,
+                    receiver_id=leader_id,
+                    group_id=None,
+                    content=chat_text,
+                    message_type='text'
+                )
+                db.session.add(fb_msg)
+            except Exception:
+                pass
+
+            # Gửi email phản hồi cho trưởng nhóm
+            if leader_user and leader_user.email:
+                try:
+                    from email_utils import send_email_async
+                    if action == 'accepted':
+                        email_html = (
+                            f"<div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>"
+                            f"<h2 style='color: #10b981;'>Phản hồi lời mời tham gia nhóm NCKH</h2>"
+                            f"<p>Xin chào <strong>{leader_user.full_name}</strong>,</p>"
+                            f"<p>Sinh viên <strong>{responder_name}</strong> đã <strong style='color: #10b981;'>đồng ý</strong> tham gia nhóm <strong>{group_name}</strong> (Đề tài: {topic_title}).</p>"
+                            f"<p>Bạn có thể vào hệ thống để kiểm tra danh sách thành viên nhóm và tiến độ đề tài.</p>"
+                            f"<a href='http://127.0.0.1:5000/student#s-group' style='display: inline-block; padding: 10px 20px; background-color: #10b981; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Xem nhóm NCKH</a>"
+                            f"<br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>"
+                            f"</div>"
+                        )
+                        send_email_async(
+                            leader_user.email,
+                            f"[HOU S-RIMS] {responder_name} đã chấp nhận tham gia nhóm {group_name}",
+                            f"{responder_name} đã chấp nhận tham gia nhóm {group_name}",
+                            email_html
+                        )
+                    else:
+                        email_html = (
+                            f"<div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>"
+                            f"<h2 style='color: #ef4444;'>Phản hồi lời mời tham gia nhóm NCKH</h2>"
+                            f"<p>Xin chào <strong>{leader_user.full_name}</strong>,</p>"
+                            f"<p>Sinh viên <strong>{responder_name}</strong> đã <strong style='color: #ef4444;'>từ chối</strong> lời mời tham gia nhóm <strong>{group_name}</strong>.</p>"
+                            f"<p>Bạn có thể vào hệ thống để mời thành viên khác vào nhóm.</p>"
+                            f"<a href='http://127.0.0.1:5000/student#s-group' style='display: inline-block; padding: 10px 20px; background-color: #ef4444; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Quản lý nhóm NCKH</a>"
+                            f"<br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>"
+                            f"</div>"
+                        )
+                        send_email_async(
+                            leader_user.email,
+                            f"[HOU S-RIMS] {responder_name} đã từ chối tham gia nhóm {group_name}",
+                            f"{responder_name} đã từ chối tham gia nhóm {group_name}",
+                            email_html
+                        )
+                except Exception:
+                    pass
+
         # Check if all members accepted
         db.session.flush()
         pending_count = GroupMember.query.filter(
@@ -405,7 +513,6 @@ def handle_invitation():
             GroupMember.group_id == group_id,
             GroupMember.status.in_(['rejected', 'declined'])
         ).count()
-        topic = Topic.query.filter_by(group_id=group_id).first()
         
         if topic and topic.status == 'waiting_for_members':
             if rejected_count > 0:
@@ -623,6 +730,8 @@ def faculty_approve_topic(topic_id):
             if group:
                 group.status = 'approved'
                 group.mentor_id = topic.mentor_id
+                # Đưa tất cả thành viên vào nhóm chính thức
+                GroupMember.query.filter_by(group_id=group.id).update({'status': 'accepted'})
                 
         db.session.commit()
         
@@ -919,12 +1028,14 @@ def approve_topic(topic_id):
             
         topic.status = data['status']
         if topic.status == 'approved' and topic.group_id:
-            from models import Group
+            from models import Group, GroupMember
             group = Group.query.get(topic.group_id)
             if group:
                 group.status = 'approved'
                 if topic.mentor_id:
                     group.mentor_id = topic.mentor_id
+                # Đưa tất cả thành viên vào nhóm chính thức
+                GroupMember.query.filter_by(group_id=group.id).update({'status': 'accepted'})
         db.session.commit()
         
         from email_utils import send_email_async
@@ -959,6 +1070,17 @@ def approve_topic(topic_id):
                         </div>
                         """
                         send_email_async(student.email, f"[HOU S-RIMS] Giảng viên đồng ý hướng dẫn", f"Giảng viên đồng ý hướng dẫn đề tài {topic.title}", html_content_student)
+            
+            # Thông báo cho Ban Chủ nhiệm Khoa (role: faculty)
+            faculty_users = User.query.filter_by(role='faculty').all()
+            for fac in faculty_users:
+                notif_fac_content = f"""
+                <p><strong>Đề tài mới chờ Khoa phê duyệt</strong></p>
+                <p>Đề tài <strong>{topic.title}</strong> do Giảng viên hướng dẫn vừa đồng ý phê duyệt và đang chờ Hội đồng Khoa thẩm định.</p>
+                <a href='/faculty/topics' class='btn btn-warning rounded-pill btn-sm mt-2'>Xem & Phê duyệt</a>
+                """
+                db.session.add(Notification(user_id=fac.id, content=notif_fac_content))
+            db.session.commit()
                     
         elif topic.status == 'approved':
             # Faculty approved it, send email to mentor and students

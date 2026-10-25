@@ -108,7 +108,8 @@ def create_batch():
         
         from models import User, Notification
         from email_utils import send_notification_email
-        users = User.query.filter(User.role.in_(['student', 'lecturer'])).all()
+        from sqlalchemy import func
+        users = User.query.filter(func.lower(User.role).in_(['student', 'lecturer'])).all()
         
         b_start_str = start_date.strftime('%d/%m/%Y') if start_date else 'Chưa công bố'
         b_submit_str = submission_deadline.strftime('%d/%m/%Y') if submission_deadline else 'Chưa công bố'

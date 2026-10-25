@@ -15,6 +15,29 @@ function getCurrentUserId() {
     return meta ? parseInt(meta.getAttribute('content')) : null;
 }
 
+const CHAT_POLL_ACTIVE_MS = 500; // 0.5 giây: cực nhanh, phản hồi tin nhắn gần như tức thì
+const CHAT_POLL_HIDDEN_MS = 3000; // 3 giây: tiết kiệm tài nguyên khi người dùng rời khỏi tab
+
+function restartChatPolling(intervalMs) {
+    if (chatPollInterval) clearInterval(chatPollInterval);
+    if (activeChatId) {
+        chatPollInterval = setInterval(fetchChatMessages, intervalMs);
+    }
+}
+
+// Tự động điều chỉnh chu kỳ polling theo trạng thái tab trình duyệt
+if (typeof document !== 'undefined' && !window.__chatVisibilityBound) {
+    window.__chatVisibilityBound = true;
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            restartChatPolling(CHAT_POLL_HIDDEN_MS);
+        } else if (activeChatId) {
+            fetchChatMessages();
+            restartChatPolling(CHAT_POLL_ACTIVE_MS);
+        }
+    });
+}
+
 function startChatPolling(groupId) {
     if (!groupId) return; // Never poll without a valid group
     activeChatId = groupId;
@@ -28,7 +51,7 @@ function startChatPolling(groupId) {
     if (chatPollInterval) clearInterval(chatPollInterval);
 
     fetchChatMessages();
-    chatPollInterval = setInterval(fetchChatMessages, 3000);
+    chatPollInterval = setInterval(fetchChatMessages, CHAT_POLL_ACTIVE_MS);
 }
 
 function stopChatPolling() {
@@ -41,17 +64,20 @@ function stopChatPolling() {
 }
 
 let currentSearchQuery = '';
-async function fetchChatMessages() {
+let isFetchingChat = false;
+async function fetchChatMessages(forceRender = false) {
     if (!activeChatId) return;
+    if (isFetchingChat && !forceRender) return;
 
+    isFetchingChat = true;
     try {
-        const endpoint = activeChatType === "group" ? activeChatType === "group" ? `/api/chat/${activeChatId}/messages` : `/api/chat/private/${activeChatId}/messages` : `/api/chat/private/${activeChatId}/messages`;
+        const endpoint = activeChatType === "group" ? `/api/chat/${activeChatId}/messages` : `/api/chat/private/${activeChatId}/messages`;
         const response = await fetch(endpoint);
         if (!response.ok) return;
 
         const messages = await response.json();
 
-        if (messages.length !== lastMessageCount) {
+        if (messages.length !== lastMessageCount || forceRender) {
             renderChatMessages(messages);
             lastMessageCount = messages.length;
             if (activeChatType === 'private') {
@@ -60,6 +86,8 @@ async function fetchChatMessages() {
         }
     } catch (error) {
         console.error('Error fetching chat messages:', error);
+    } finally {
+        isFetchingChat = false;
     }
 }
 
@@ -266,15 +294,65 @@ async function sendChatMessage(groupId) {
     
     if (!content && !pendingUploadFile) return;
 
-    // Determine message type
+    const messageContent = content;
+    const fileToUpload = pendingUploadFile;
+
+    // 1. Xóa nội dung ô nhập ngay lập tức để người dùng có thể gõ tiếp (không phải chờ)
+    if (inputField) inputField.value = '';
+    cancelChatUpload();
+
+    // 2. Optimistic UI: Hiển thị bong bóng tin nhắn lên khung chat ngay tức thì (0ms)
+    const container = document.getElementById('chat-messages-container');
+    const myUserId = getCurrentUserId();
+    const now = new Date();
+    const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+
+    if (container) {
+        const placeholder = container.querySelector('.text-center.py-5');
+        if (placeholder) placeholder.remove();
+    }
+
+    let optimisticContent = messageContent;
+    let tempBlobUrl = null;
+
+    if (fileToUpload) {
+        const ext = fileToUpload.name.split('.').pop().toLowerCase();
+        if (['jpg','jpeg','png','gif','webp'].includes(ext)) {
+            tempBlobUrl = URL.createObjectURL(fileToUpload);
+            optimisticContent = `${messageContent ? `<div>${messageContent}</div>` : ''}<img src="${tempBlobUrl}" class="img-fluid rounded mt-2" style="max-height: 200px;">`;
+        } else if (['mp4','webm','ogg'].includes(ext)) {
+            tempBlobUrl = URL.createObjectURL(fileToUpload);
+            optimisticContent = `${messageContent ? `<div>${messageContent}</div>` : ''}<video src="${tempBlobUrl}" controls class="w-100 rounded mt-2" style="max-height: 250px;"></video>`;
+        } else {
+            optimisticContent = `${messageContent ? `<div>${messageContent}</div>` : ''}<div class="mt-2 p-2 bg-light rounded text-dark d-flex align-items-center"><i class="fa-solid fa-file me-2 fs-3 text-primary"></i> <span class="text-truncate" style="max-width:150px;">${fileToUpload.name}</span></div>`;
+        }
+    }
+
+    let tempBubble = null;
+    if (container) {
+        tempBubble = document.createElement('div');
+        tempBubble.className = 'd-flex gap-3 mb-4 flex-row-reverse';
+        tempBubble.innerHTML = `
+            <div style="max-width: 70%;">
+                <div class="text-end"><small class="text-muted fw-bold me-1">Bạn - ${timeStr}</small></div>
+                <div class="mt-1 text-start p-3 rounded-3 chat-bubble-content bg-primary text-white shadow-sm" style="background-color:#6366f1!important; word-break: break-word;">
+                    ${optimisticContent}
+                </div>
+                <div class="text-end mt-1"><small class="text-muted" style="font-size:10px;"><i class="fa-regular fa-clock me-1"></i>Đang gửi...</small></div>
+            </div>
+        `;
+        container.appendChild(tempBubble);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    // 3. Xử lý upload file (nếu có đính kèm)
     let messageType = 'text';
     let fileUrl = null;
     let fileName = null;
 
-    if (pendingUploadFile) {
-        // Upload the file first
+    if (fileToUpload) {
         const formData = new FormData();
-        formData.append('file', pendingUploadFile);
+        formData.append('file', fileToUpload);
 
         try {
             const uploadRes = await fetch(activeChatType === "group" ? `/api/chat/${targetGroup}/upload` : `/api/chat/private/${targetGroup}/upload`, {
@@ -283,6 +361,7 @@ async function sendChatMessage(groupId) {
             });
 
             if (!uploadRes.ok) {
+                if (tempBubble) tempBubble.remove();
                 const err = await uploadRes.json();
                 Swal.fire('Lỗi upload', err.error || 'Lỗi khi tải file lên', 'error');
                 return;
@@ -292,7 +371,6 @@ async function sendChatMessage(groupId) {
             fileUrl = uploadData.file_url;
             fileName = uploadData.file_name;
 
-            // detect type
             const ext = fileName.split('.').pop().toLowerCase();
             if (['jpg','jpeg','png','gif','webp'].includes(ext)) {
                 messageType = 'image';
@@ -303,19 +381,20 @@ async function sendChatMessage(groupId) {
             }
         } catch (error) {
             console.error('Error uploading file:', error);
+            if (tempBubble) tempBubble.remove();
             Swal.fire('Lỗi upload', 'Lỗi kết nối khi tải file lên', 'error');
             return;
+        } finally {
+            if (tempBlobUrl) {
+                URL.revokeObjectURL(tempBlobUrl);
+            }
         }
     }
 
-    // Clear UI early for better UX
-    if (inputField) inputField.value = '';
-    cancelChatUpload();
-
+    // 4. Gửi tin nhắn ngầm tới server
     try {
-        const myUserId = getCurrentUserId();
         const payload = { 
-            content: content,
+            content: messageContent,
             message_type: messageType,
             file_url: fileUrl,
             file_name: fileName
@@ -329,12 +408,24 @@ async function sendChatMessage(groupId) {
         });
 
         if (response.ok) {
-            fetchChatMessages();
+            if (tempBubble) {
+                const statusEl = tempBubble.querySelector('.text-end.mt-1');
+                if (statusEl) {
+                    statusEl.innerHTML = '<small class="text-muted" style="font-size:10px;"><i class="fa-solid fa-check text-muted me-1"></i>Đã gửi</small>';
+                }
+            }
+            // Đồng bộ dữ liệu chính thức từ server
+            await fetchChatMessages(true);
+            if (activeChatType === 'private') {
+                fetchPrivateConversations();
+            }
         } else {
+            if (tempBubble) tempBubble.remove();
             const err = await response.json();
             Swal.fire('Lỗi', err.error || 'Không gửi được tin nhắn', 'error');
         }
     } catch (error) {
+        if (tempBubble) tempBubble.remove();
         console.error('Error sending message:', error);
     }
 }
@@ -435,7 +526,29 @@ function initChatUI() {
                 const stickerUrl = this.getAttribute('data-url');
                 if (!stickerUrl || !activeChatId) return;
                 
-                // Send sticker directly
+                // Send sticker directly with optimistic display
+                const container = document.getElementById('chat-messages-container');
+                const now = new Date();
+                const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+                let tempSticker = null;
+                if (container) {
+                    const placeholder = container.querySelector('.text-center.py-5');
+                    if (placeholder) placeholder.remove();
+                    tempSticker = document.createElement('div');
+                    tempSticker.className = 'd-flex gap-3 mb-4 flex-row-reverse';
+                    tempSticker.innerHTML = `
+                        <div style="max-width: 70%;">
+                            <div class="text-end"><small class="text-muted fw-bold me-1">Bạn - ${timeStr}</small></div>
+                            <div class="mt-1 text-start p-3 rounded-3 chat-bubble-content bg-transparent">
+                                <img src="${stickerUrl}" class="img-fluid" style="width: 120px; height: 120px; object-fit: contain;">
+                            </div>
+                            <div class="text-end mt-1"><small class="text-muted" style="font-size:10px;"><i class="fa-regular fa-clock me-1"></i>Đang gửi...</small></div>
+                        </div>
+                    `;
+                    container.appendChild(tempSticker);
+                    container.scrollTop = container.scrollHeight;
+                }
+
                 try {
                     const myId = getCurrentUserId();
                     const sPayload = { 
@@ -453,9 +566,15 @@ function initChatUI() {
                     });
 
                     if (response.ok) {
-                        fetchChatMessages();
+                        await fetchChatMessages(true);
+                        if (activeChatType === 'private') {
+                            fetchPrivateConversations();
+                        }
+                    } else if (tempSticker) {
+                        tempSticker.remove();
                     }
                 } catch (error) {
+                    if (tempSticker) tempSticker.remove();
                     console.error('Error sending sticker:', error);
                 }
             });
@@ -656,8 +775,15 @@ function startPrivateChat(userId, userName) {
     // Switch to private tab first
     const privateTabBtn = document.getElementById('private-tab');
     if (privateTabBtn) {
-        const bsTab = new bootstrap.Tab(privateTabBtn);
-        bsTab.show();
+        try {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+                bootstrap.Tab.getOrCreateInstance(privateTabBtn).show();
+            } else {
+                privateTabBtn.click();
+            }
+        } catch (e) {
+            privateTabBtn.click();
+        }
     }
     
     // Inject target user into private list if not already there
@@ -696,8 +822,18 @@ function startPrivateChat(userId, userName) {
     updateChatHeader(userName, userId, "private");
 }
 
-
-// (Search and Sidebar handlers are integrated into initChatUI above)
+window.openPrivateChatWithUser = function(userId, userName) {
+    if (!userId) return;
+    if (typeof switchTab === 'function') {
+        const chatNav = document.querySelector('a[href*="s-chat"]');
+        switchTab('s-chat', chatNav);
+    } else {
+        window.location.hash = '#s-chat';
+    }
+    setTimeout(() => {
+        startPrivateChat(userId, userName);
+    }, 120);
+};
 
 async function fetchChatMedia() {
     if (!activeChatId) return;
@@ -819,7 +955,7 @@ async function fetchPrivateConversations() {
         const activeId = activeChatType === 'private' ? activeChatId : null;
         
         list.innerHTML = items.map(c => `
-            <a href="javascript:void(0)" class="list-group-item list-group-item-action py-3 border-0 border-bottom ${activeId == c.id ? 'active' : ''}" data-user-id="${c.id}" onclick="startPrivateChat(${c.id}, '${c.name}')">
+            <a href="javascript:void(0)" class="list-group-item list-group-item-action py-3 border-0 border-bottom ${activeId == c.id ? 'active' : ''}" data-user-id="${c.id}" onclick="startPrivateChat(${c.id}, '${(c.name || '').replace(/'/g, "\\'")}')">
                 <div class="d-flex w-100 justify-content-between align-items-center">
                     <div class="d-flex align-items-center gap-3">
                         <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 45px; height: 45px;">
@@ -841,5 +977,7 @@ async function fetchPrivateConversations() {
 }
 
 // (Private tab shown handler is integrated into initChatUI above)
-
+window.fetchPrivateConversations = fetchPrivateConversations;
+window.loadPrivateConversations = fetchPrivateConversations;
+window.startPrivateChat = startPrivateChat;
 

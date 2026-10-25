@@ -128,7 +128,7 @@
     </a>
     <a href="{{ url_for('web.student_page') }}#s-chat" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-chat', this){% endif %}" class="nav-link">
         <i class="fa-regular fa-comments"></i> Chatgroups
-        {% set sg_count = global_my_groups_count if global_my_groups_count is defined else (my_groups | length if my_groups is defined else 0) %}
+        {% set sg_count = approved_chat_groups | length if approved_chat_groups is defined else 0 %}
         {% if sg_count > 0 %}<span class="badge bg-primary rounded-pill ms-1" style="font-size: 9px;">{{ sg_count }}</span>{% endif %}
     </a>
     <a href="{{ url_for('web.student_page') }}#s-calendar" onclick="{% if request.endpoint == 'web.student_page' %}event.preventDefault(); switchTab('s-calendar', this){% endif %}" class="nav-link">

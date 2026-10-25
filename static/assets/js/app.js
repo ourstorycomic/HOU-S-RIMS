@@ -3,24 +3,75 @@
 // HOU S-RIMS - Application Logic (No hardcoded data)
 // ============================================================
 
-// Group invitation handler (called from notification dropdown)
+// Real-time synchronization state
+window._seenNotifIds = new Set();
+window._notifInitDone = false;
+window._liveSyncTimer = null;
+
+// Group invitation handler (instant DOM update + real-time sync, NO page reload!)
 async function handleGroupInvitation(groupId, action) {
+    const isAcc = action === 'accepted';
+    
+    // 1. Optimistic UI update: immediately change button to status badge in dropdown
+    const itemEl = document.querySelector(`[data-inv-group-id="${groupId}"]`) || 
+                   document.querySelector(`button[onclick*="handleGroupInvitation(${groupId}"]`)?.closest('li, .dropdown-item');
+    if (itemEl) {
+        const actionsDiv = itemEl.querySelector('.d-flex.gap-2:has(button)') || itemEl.querySelector('.d-flex.gap-2');
+        if (actionsDiv) {
+            actionsDiv.outerHTML = isAcc ? 
+                `<div class="text-success small fw-semibold mt-1" style="font-size: 11px;"><i class="fa-solid fa-circle-check me-1"></i> Đã chấp nhận lời mời tham gia nhóm.</div>` :
+                `<div class="text-muted small fst-italic mt-1" style="font-size: 11px;"><i class="fa-solid fa-ban me-1"></i> Đã từ chối lời mời này.</div>`;
+        }
+        const badgeEl = itemEl.querySelector('.badge');
+        if (badgeEl) {
+            badgeEl.className = isAcc ? 'badge bg-success-subtle text-success border border-success-subtle rounded-pill' : 'badge bg-secondary-subtle text-secondary rounded-pill';
+            badgeEl.innerHTML = isAcc ? '<i class="fa-solid fa-check me-1"></i>Đã chấp nhận' : 'Đã từ chối';
+        }
+        itemEl.classList.remove('bg-warning-subtle');
+        itemEl.classList.add('bg-white');
+    }
+
+    // Hide any pending dashboard banner smoothly
+    document.querySelectorAll('.alert.bg-warning').forEach(alertBox => {
+        if (alertBox.textContent.includes('LỜI MỜI THAM GIA NHÓM')) {
+            alertBox.style.transition = 'all 0.35s ease';
+            alertBox.style.opacity = '0';
+            setTimeout(() => alertBox.remove(), 350);
+        }
+    });
+
     try {
         const resp = await fetch('/api/topics/invitation', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({group_id: groupId, action: action})
         });
+        const data = await resp.json().catch(() => ({}));
         if (resp.ok) {
-            const msg = action === 'accepted' ? 'Đã tham gia nhóm nghiên cứu!' : 'Đã từ chối lời mời.';
-            Swal.fire({ icon: 'success', title: 'Thành công', text: msg, timer: 2000, showConfirmButton: false })
-                .then(() => location.reload());
+            const msg = isAcc ? 'Đã tham gia nhóm nghiên cứu thành công!' : 'Đã từ chối lời mời tham gia nhóm.';
+            if (typeof Swal !== 'undefined') {
+                Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                }).fire({
+                    icon: isAcc ? 'success' : 'info',
+                    title: msg
+                });
+            }
+            // Trigger immediate sync across all badge counters and lists
+            if (typeof syncNotificationsLive === 'function') {
+                syncNotificationsLive(true);
+            }
         } else {
-            const data = await resp.json();
-            Swal.fire('Lỗi', data.error || 'Có lỗi xảy ra', 'error');
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Thông báo', data.error || 'Có lỗi xảy ra', 'warning');
+            }
         }
     } catch(e) {
-        Swal.fire('Lỗi', e.message, 'error');
+        console.error("handleGroupInvitation error:", e);
     }
 }
 
@@ -1165,12 +1216,18 @@ async function readNotification(id, content, fromAll = false) {
         htmlContent += `</div>`;
     }
 
+    window._lastNotifModal = { id, content, fromAll };
+
     Swal.fire({
         title: 'Chi tiết Thông báo',
         html: htmlContent,
         icon: 'info',
         confirmButtonText: 'Đóng'
     }).then(() => {
+        if (window._isOpeningMembersModal) {
+            // Đang chuyển sang modal thành viên nhóm, không tự mở lại danh sách thông báo
+            return;
+        }
         if (fromAll) {
             // Reopen the notification list without full page reload
             showAllNotifications();
@@ -1244,24 +1301,196 @@ async function showAllNotifications() {
     }
 }
 
-function _refreshNotifBadge() {
-    // Refresh just the notification badge counter without full page reload
-    fetch('/api/notifications')
-        .then(r => r.json())
-        .then(data => {
-            const unread = data.filter(n => !n.is_read).length;
-            // Update all badge elements on page
-            document.querySelectorAll('.notif-badge, [data-notif-count]').forEach(el => {
-                if (unread > 0) {
-                    el.textContent = unread;
-                    el.style.display = '';
-                } else {
-                    el.style.display = 'none';
+// Real-time Live Synchronization for Notifications & Invitee Actions
+async function syncNotificationsLive(immediate = false) {
+    try {
+        const res = await fetch('/api/notifications/sync');
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        // 1. Update bell badge counter
+        const totalBadge = data.total_badge_count || 0;
+        document.querySelectorAll('#notifBellBadge, .notif-badge, [data-notif-count]').forEach(el => {
+            el.textContent = totalBadge;
+            el.style.display = totalBadge > 0 ? '' : 'none';
+        });
+
+        // 2. Check for newly arrived notifications to show live popup toast
+        if (data.notifications && data.notifications.length > 0) {
+            const newNotifs = [];
+            data.notifications.forEach(n => {
+                if (!window._seenNotifIds.has(n.id)) {
+                    if (window._notifInitDone && !n.is_read) {
+                        newNotifs.push(n);
+                    }
+                    window._seenNotifIds.add(n.id);
                 }
             });
-        })
-        .catch(() => {});
+
+            // If new notifications arrived live, trigger toast
+            if (newNotifs.length > 0 && typeof Swal !== 'undefined') {
+                newNotifs.slice(0, 2).forEach(n => {
+                    const temp = document.createElement("div");
+                    temp.innerHTML = n.content.split('|||')[0];
+                    const cleanText = (temp.textContent || temp.innerText || "Bạn có thông báo mới").trim();
+                    Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 5000,
+                        timerProgressBar: true
+                    }).fire({
+                        icon: 'info',
+                        title: '🔔 Thông báo mới',
+                        text: cleanText.length > 120 ? cleanText.substring(0, 120) + '...' : cleanText
+                    });
+                });
+            }
+        }
+        window._notifInitDone = true;
+
+        // 3. Live update the dropdown list container (#notifDropdownList)
+        const listEl = document.getElementById('notifDropdownList');
+        if (listEl && (immediate || !listEl.closest('.dropdown-menu.show'))) {
+            let itemsHtml = '';
+            
+            // Render invitations
+            if (data.invitations && data.invitations.length > 0) {
+                data.invitations.forEach(inv => {
+                    const isPending = inv.status === 'pending' || inv.status === 'invited';
+                    const isAccepted = inv.status === 'accepted' || inv.status === 'joined';
+                    const iconClass = isAccepted ? 'fa-check' : (isPending ? 'fa-users' : 'fa-xmark');
+                    const iconBg = isAccepted ? 'bg-success text-white' : (isPending ? 'bg-warning text-dark' : 'bg-secondary-subtle text-secondary');
+                    const badgeHtml = isAccepted ? 
+                        '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill" style="font-size: 10px;"><i class="fa-solid fa-check me-1"></i>Đã chấp nhận</span>' :
+                        (isPending ? '<span class="badge bg-warning text-dark rounded-pill" style="font-size: 10px;">Chờ phản hồi</span>' :
+                                    '<span class="badge bg-secondary-subtle text-secondary rounded-pill" style="font-size: 10px;">Đã từ chối</span>');
+
+                    let actionHtml = '';
+                    if (isPending) {
+                        actionHtml = `
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-dark rounded-pill px-3 py-1" style="font-size: 11px;" onclick="handleGroupInvitation(${inv.group_id}, 'accepted')">
+                                    <i class="fa-solid fa-check me-1"></i> Đồng ý
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1" style="font-size: 11px;" onclick="handleGroupInvitation(${inv.group_id}, 'rejected')">
+                                    <i class="fa-solid fa-xmark me-1"></i> Từ chối
+                                </button>
+                            </div>
+                        `;
+                    } else if (isAccepted) {
+                        actionHtml = `<div class="text-success small fw-semibold" style="font-size: 11px;"><i class="fa-solid fa-circle-check me-1"></i> Đã chấp nhận lời mời tham gia nhóm.</div>`;
+                    } else {
+                        actionHtml = `<div class="text-muted small fst-italic" style="font-size: 11px;"><i class="fa-solid fa-ban me-1"></i> Đã từ chối lời mời này.</div>`;
+                    }
+
+                    itemsHtml += `
+                        <li>
+                            <div class="dropdown-item p-3 border-bottom ${isPending ? 'bg-warning-subtle' : 'bg-white'}" data-inv-group-id="${inv.group_id}">
+                                <div class="d-flex gap-3 align-items-start">
+                                    <div class="${iconBg} rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;">
+                                        <i class="fa-solid ${iconClass}"></i>
+                                    </div>
+                                    <div class="flex-grow-1" style="white-space: normal;">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="fw-bold small text-dark">Lời mời tham gia nhóm NCKH</span>
+                                            ${badgeHtml}
+                                        </div>
+                                        <div class="small text-muted mb-2" style="line-height: 1.4;">
+                                            Bạn được mời vào nhóm <strong>${inv.group_name}</strong>
+                                            ${inv.topic_title ? ` - Đề tài: <em>${inv.topic_title}</em>` : ''}
+                                        </div>
+                                        ${actionHtml}
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                    `;
+                });
+            }
+
+            // Render system notifications
+            if (data.notifications && data.notifications.length > 0) {
+                data.notifications.forEach(notif => {
+                    const temp = document.createElement("div");
+                    temp.innerHTML = notif.content.split('|||')[0];
+                    const cleanText = (temp.textContent || temp.innerText || "").trim();
+                    const snippet = cleanText.length > 80 ? cleanText.substring(0, 80) + '...' : cleanText;
+                    const encodedContent = encodeURIComponent(notif.content);
+
+                    itemsHtml += `
+                        <li>
+                            <a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start ${!notif.is_read ? 'bg-light' : ''}" href="#" onclick="readNotification(${notif.id}, decodeURIComponent('${encodedContent}'), false)">
+                                <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;"><i class="fa-regular fa-bell"></i></div>
+                                <div>
+                                    <div class="fw-bold small text-dark mb-1 d-flex align-items-center justify-content-between">
+                                        <span>Thông báo hệ thống</span>
+                                        ${!notif.is_read ? '<span class="badge bg-danger rounded-circle p-1" style="width:8px; height:8px;"></span>' : ''}
+                                    </div>
+                                    <div class="small text-muted mb-1" style="line-height: 1.4; white-space: normal;">${snippet}</div>
+                                    <div class="text-muted" style="font-size: 10px;">${notif.created_at}</div>
+                                </div>
+                            </a>
+                        </li>
+                    `;
+                });
+            }
+
+            if (!itemsHtml) {
+                itemsHtml = '<li class="p-4 text-center text-muted small">Không có thông báo nào</li>';
+            }
+
+            listEl.innerHTML = itemsHtml;
+        }
+
+        // 4. Live update group member statuses on the leader's screen
+        if (data.group_data && data.group_data.members) {
+            data.group_data.members.forEach(member => {
+                const row = document.getElementById(`reg-member-row-${member.student_id}`) ||
+                            Array.from(document.querySelectorAll('#regMembersTableBody tr')).find(r => 
+                                r.textContent.includes(member.code) || r.textContent.includes(member.name)
+                            );
+                if (row) {
+                    const statusTd = row.children[3] || row.querySelector('td:nth-child(4)');
+                    if (statusTd) {
+                        const isAccepted = member.status === 'accepted' || member.status === 'joined';
+                        if (isAccepted && !statusTd.innerHTML.includes('Đã tham gia')) {
+                            statusTd.innerHTML = '<span class="badge bg-success-subtle text-success rounded-pill px-2.5 py-1 small"><i class="fa-solid fa-check me-1"></i>Đã tham gia</span>';
+                        }
+                    }
+                }
+            });
+
+            // Update topic status if topic was promoted to pending
+            if (data.group_data.topic && data.group_data.topic.status) {
+                const topicBadge = document.querySelector('#view-s-register .badge.bg-warning-subtle, #view-s-register .badge.bg-primary-subtle');
+                if (topicBadge && data.group_data.topic.status_label && topicBadge.textContent !== data.group_data.topic.status_label) {
+                    topicBadge.textContent = data.group_data.topic.status_label;
+                }
+            }
+        }
+    } catch(err) {
+        // Silently catch background sync errors
+    }
 }
+
+function _refreshNotifBadge() {
+    syncNotificationsLive(true);
+}
+
+// Automatically start background live polling on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', () => {
+    if (!window._liveSyncTimer) {
+        syncNotificationsLive();
+        window._liveSyncTimer = setInterval(syncNotificationsLive, 4000);
+    }
+});
+
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+        syncNotificationsLive(true);
+    }
+});
 
 function _openNotifDetail(id) {
     const content = window._allNotifications[id];
@@ -1295,4 +1524,189 @@ async function deleteAllReadNotifications() {
         Swal.fire('Lỗi', 'Có lỗi kết nối', 'error');
     }
 }
+
+// ==========================================
+// HIỂN THỊ DANH SÁCH THÀNH VIÊN NHÓM (MODAL)
+// ==========================================
+window.showGroupMembersModal = async function(groupId) {
+    if (typeof Swal === 'undefined') return;
+    if (window._loadingGroupMembers) return; // Tránh bấm nhiều lần liên tiếp
+
+    window._loadingGroupMembers = true;
+    window._isOpeningMembersModal = true;
+
+    // Hiển thị trạng thái đang tải nhẹ nhàng trên nút nếu có
+    const targetBtn = document.activeElement && (document.activeElement.tagName === 'BUTTON' || document.activeElement.tagName === 'A')
+        ? document.activeElement
+        : null;
+    let oldBtnHtml = '';
+    if (targetBtn && targetBtn.textContent.includes('thành viên')) {
+        oldBtnHtml = targetBtn.innerHTML;
+        targetBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Đang mở...';
+        targetBtn.style.pointerEvents = 'none';
+    }
+
+    try {
+        let url = groupId ? `/api/groups/${groupId}` : '/api/groups/my_group';
+        let resp = await fetch(url);
+        let data = await resp.json();
+
+        // Fallback sang my_group nếu groupId không tìm thấy
+        if ((!data.success || !data.group) && groupId) {
+            resp = await fetch('/api/groups/my_group');
+            data = await resp.json();
+        }
+
+        if (!data.success || !data.group) {
+            window._isOpeningMembersModal = false;
+            Swal.fire('Thông báo', data.error || 'Chưa tìm thấy thông tin nhóm nghiên cứu.', 'info');
+            return;
+        }
+
+        const group = data.group;
+        const members = group.members || [];
+        
+        let membersRows = '';
+        if (members.length === 0) {
+            membersRows = `<tr><td colspan="5" class="text-center text-muted py-3">Chưa có thành viên nào khác.</td></tr>`;
+        } else {
+            members.forEach((m) => {
+                const isLeader = (m.user_id === group.leader_id);
+                const roleBadge = isLeader 
+                    ? `<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 small fw-bold">Trưởng nhóm</span>`
+                    : `<span class="badge bg-secondary-subtle text-secondary border rounded-pill px-2.5 py-1 small">Thành viên</span>`;
+
+                let statusBadge = '';
+                const st = (m.status || '').toLowerCase();
+                if (st === 'accepted' || st === 'joined' || isLeader) {
+                    statusBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 small fw-bold"><i class="fa-solid fa-circle-check me-1"></i>Đã tham gia</span>`;
+                } else if (st === 'pending' || st === 'invited') {
+                    statusBadge = `<span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-2.5 py-1 small fw-bold"><i class="fa-solid fa-clock me-1"></i>Đang chờ xác nhận</span>`;
+                } else if (st === 'rejected' || st === 'declined') {
+                    statusBadge = `<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1 small fw-bold"><i class="fa-solid fa-circle-xmark me-1"></i>Đã từ chối</span>`;
+                } else {
+                    statusBadge = `<span class="badge bg-light text-dark border rounded-pill px-2 py-1 small">${m.status || '-'}</span>`;
+                }
+
+                const initials = (m.full_name || 'SV').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+
+                membersRows += `
+                    <tr>
+                        <td class="text-start">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle ${isLeader ? 'bg-primary text-white' : 'bg-primary-subtle text-primary'} d-flex align-items-center justify-content-center fw-bold small" style="width: 32px; height: 32px; min-width: 32px; font-size: 11px;">
+                                    ${initials}
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-dark small mb-0">${m.full_name || 'Chưa cập nhật'}</div>
+                                    <div class="text-muted" style="font-size: 11px;">${m.email || ''}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="font-monospace small fw-semibold text-secondary">${m.student_id || '-'}</td>
+                        <td class="small text-muted">${m.faculty || '-'}</td>
+                        <td class="text-center">${roleBadge}</td>
+                        <td class="text-end">${statusBadge}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        const modalHtml = `
+            <div class="text-start mb-3 pb-2 border-bottom">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <span class="badge bg-primary text-white rounded-pill px-3 py-1 small mb-1">
+                            <i class="fa-solid fa-users me-1"></i> ${group.name}
+                        </span>
+                        <div class="fw-bold text-dark fs-6 mt-1">${group.topic_title || 'Đề tài NCKH (Chưa đặt tên)'}</div>
+                    </div>
+                    <span class="badge bg-light text-muted border px-2.5 py-1 small">
+                        ${members.length} thành viên
+                    </span>
+                </div>
+                ${group.mentor_name ? `
+                    <div class="small text-muted">
+                        <i class="fa-solid fa-chalkboard-user text-primary me-1"></i> GVHD: <strong>${group.mentor_name}</strong> 
+                        ${group.mentor_faculty ? `<span class="text-secondary">(${group.mentor_faculty})</span>` : ''}
+                    </div>
+                ` : ''}
+            </div>
+
+            <div class="table-responsive rounded-3 border bg-white" style="max-height: 320px; overflow-y: auto;">
+                <table class="table table-hover align-middle mb-0 text-start">
+                    <thead class="table-light text-muted small position-sticky top-0" style="z-index: 1;">
+                        <tr>
+                            <th>HỌ & TÊN</th>
+                            <th>MSSV</th>
+                            <th>KHOA</th>
+                            <th class="text-center">VAI TRÒ</th>
+                            <th class="text-end">TRẠNG THÁI</th>
+                        </tr>
+                    </thead>
+                    <tbody class="small">
+                        ${membersRows}
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        Swal.fire({
+            title: 'Danh sách Thành viên Nhóm',
+            html: modalHtml,
+            width: '680px',
+            showCancelButton: true,
+            showDenyButton: !!window._lastNotifModal,
+            confirmButtonText: '<i class="fa-solid fa-diagram-project me-1"></i> Đi đến Nhóm NCKH',
+            denyButtonText: '<i class="fa-solid fa-arrow-left me-1"></i> Quay lại',
+            cancelButtonText: 'Đóng',
+            confirmButtonColor: '#4f46e5',
+            denyButtonColor: '#4b5563',
+            cancelButtonColor: '#9ca3af'
+        }).then((result) => {
+            window._isOpeningMembersModal = false;
+            if (result.isConfirmed) {
+                if (typeof switchTab === 'function') {
+                    const groupNav = document.querySelector('a[href*="s-group"]');
+                    switchTab('s-group', groupNav);
+                } else {
+                    window.location.hash = '#s-group';
+                }
+            } else if (result.isDenied && window._lastNotifModal) {
+                readNotification(window._lastNotifModal.id, window._lastNotifModal.content, window._lastNotifModal.fromAll);
+            }
+        });
+
+    } catch (err) {
+        console.error('Error fetching group members:', err);
+        window._isOpeningMembersModal = false;
+        Swal.fire('Lỗi', 'Không thể lấy thông tin thành viên nhóm.', 'error');
+    } finally {
+        window._loadingGroupMembers = false;
+        if (targetBtn && oldBtnHtml) {
+            targetBtn.innerHTML = oldBtnHtml;
+            targetBtn.style.pointerEvents = '';
+        }
+    }
+};
+
+// Global click interceptor bắt sự kiện click nút "Xem thành viên nhóm"
+document.addEventListener('click', function (e) {
+    const el = e.target.closest('a, button');
+    if (!el) return;
+    const text = (el.textContent || '').trim();
+    if (text.includes('Xem thành viên nhóm') || text.includes('Quản lý nhóm')) {
+        const onclickAttr = el.getAttribute('onclick') || '';
+        if (onclickAttr.includes('showGroupMembersModal')) {
+            // Đã có inline onclick xử lý, không gọi trùng lặp
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        let m = onclickAttr.match(/showGroupMembersModal\((\d+)\)/);
+        let gid = m ? parseInt(m[1]) : null;
+        window.showGroupMembersModal(gid);
+    }
+});
+
 

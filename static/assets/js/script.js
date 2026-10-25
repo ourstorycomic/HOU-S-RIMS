@@ -88,31 +88,80 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (typeof initChatUI === 'function') initChatUI();
                 setTimeout(() => {
                     const firstGroup = document.querySelector('#groups-pane .chat-group-item');
-                    if (firstGroup && (!window.activeChatId || window.activeChatType !== 'group')) {
-                        firstGroup.click();
+                    if (firstGroup) {
+                        if (!window.activeChatId || window.activeChatType !== 'group') {
+                            firstGroup.click();
+                        }
+                    } else {
+                        // Chưa có nhóm đề tài được Khoa duyệt -> Chuyển sang tab Cá nhân trao đổi với Mentor
+                        const privateTab = document.getElementById('private-tab');
+                        if (privateTab) {
+                            if (typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+                                bootstrap.Tab.getOrCreateInstance(privateTab).show();
+                            } else {
+                                privateTab.click();
+                            }
+                        }
+                        if (typeof loadPrivateConversations === 'function') {
+                            loadPrivateConversations().then(() => {
+                                const firstPrivate = document.querySelector('#private-chat-list .list-group-item');
+                                if (firstPrivate && !window.activeChatId) {
+                                    firstPrivate.click();
+                                }
+                            });
+                        }
                     }
                 }, 100);
             }
         }
         
-        // Nếu không có hash hoặc hash không hợp lệ, hiển thị view đầu tiên
+        // Nếu không có hash hoặc hash không hợp lệ, chỉ xử lý ẩn/hiện nếu trang có nhiều view tabs
         if (!targetViewFound) {
-            allViews.forEach((view, index) => {
-                if (index === 0) {
-                    view.classList.remove('hidden');
-                    view.classList.add('fade-in');
-                    console.log('First view shown:', view.id);
-                } else {
-                    view.classList.add('hidden');
-                    console.log('Other view hidden:', view.id);
-                }
-            });
+            if (allViews.length > 1) {
+                allViews.forEach((view, index) => {
+                    if (index === 0) {
+                        view.classList.remove('hidden');
+                        view.classList.add('fade-in');
+                        console.log('First view shown:', view.id);
+                    } else {
+                        view.classList.add('hidden');
+                        console.log('Other view hidden:', view.id);
+                    }
+                });
+            }
+
             const sidebar = document.querySelector('.sidebar');
             if (sidebar) {
-                const firstLink = sidebar.querySelector('.nav-link');
-                if (firstLink) {
+                const currentPath = window.location.pathname;
+                const menuCategories = sidebar.querySelectorAll('.menu-category');
+                let isStudent = false;
+                let isLecturer = false;
+                menuCategories.forEach(cat => {
+                    const text = cat.textContent;
+                    if (text.includes('SINH VIÊN')) isStudent = true;
+                    if (text.includes('GIẢNG VIÊN')) isLecturer = true;
+                });
+                const roleActiveClass = isStudent ? 'active-student' : (isLecturer ? 'active-purple' : 'active-main');
+
+                // 1. Kiểm tra xem có mục nav-link nào có href trùng khớp với URL hiện tại không
+                let exactMatchingLink = null;
+                if (currentPath && currentPath !== '/' && currentPath !== '') {
+                    exactMatchingLink = sidebar.querySelector(`.nav-link[href="${currentPath}"]`);
+                }
+
+                if (exactMatchingLink) {
                     sidebar.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active-main', 'active-purple', 'active-student'));
-                    firstLink.classList.add('active-main');
+                    exactMatchingLink.classList.add(roleActiveClass);
+                } else {
+                    // 2. Nếu không có link khớp URL, kiểm tra xem server (Jinja request.endpoint) đã set active chưa
+                    const existingActive = sidebar.querySelector('.nav-link.active-main, .nav-link.active-purple, .nav-link.active-student');
+                    if (!existingActive && allViews.length > 1) {
+                        // Chỉ fallback về mục đầu tiên khi trang là single-page tab và chưa có mục nào active
+                        const firstLink = sidebar.querySelector('.nav-link');
+                        if (firstLink) {
+                            firstLink.classList.add(roleActiveClass);
+                        }
+                    }
                 }
             }
         }
@@ -205,10 +254,30 @@ function switchTab(tabName, element) {
             if (typeof initChatUI === 'function') initChatUI();
             setTimeout(() => {
                 const firstGroup = document.querySelector('#groups-pane .chat-group-item');
-                if (firstGroup && (!window.activeChatId || window.activeChatType !== 'group')) {
-                    firstGroup.click();
+                if (firstGroup) {
+                    if (!window.activeChatId || window.activeChatType !== 'group') {
+                        firstGroup.click();
+                    }
+                } else {
+                    // Chưa có nhóm đề tài được Khoa duyệt -> Chuyển sang tab Cá nhân trao đổi với Mentor
+                    const privateTab = document.getElementById('private-tab');
+                    if (privateTab) {
+                        if (typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+                            bootstrap.Tab.getOrCreateInstance(privateTab).show();
+                        } else {
+                            privateTab.click();
+                        }
+                    }
+                    if (typeof loadPrivateConversations === 'function') {
+                        loadPrivateConversations().then(() => {
+                            const firstPrivate = document.querySelector('#private-chat-list .list-group-item');
+                            if (firstPrivate && !window.activeChatId) {
+                                firstPrivate.click();
+                            }
+                        });
+                    }
                 }
-            }, 60);
+            }, 80);
         }
     }
 
