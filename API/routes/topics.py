@@ -70,10 +70,16 @@ def get_my_topic():
     if not user_id:
         return jsonify({'error': 'Unauthorized'}), 401
     
-    member_group_ids = [m.group_id for m in GroupMember.query.filter_by(student_id=user_id).all()]
+    # Chỉ lấy các nhóm mà sinh viên là Trưởng nhóm hoặc ĐÃ CHẤP NHẬN tham gia
+    member_group_ids = [m.group_id for m in GroupMember.query.filter(
+        GroupMember.student_id == user_id,
+        GroupMember.status.in_(['accepted', 'joined'])
+    ).all()]
+    
+    my_led_groups = Group.query.filter_by(leader_id=user_id).all()
     groups = Group.query.filter(
         (Group.leader_id == user_id) | (Group.id.in_(member_group_ids))
-    ).all()
+    ).all() if (member_group_ids or my_led_groups) else []
     
     topic = None
     if groups:

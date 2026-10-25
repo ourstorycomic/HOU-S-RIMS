@@ -113,6 +113,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }, 100);
             }
+            if (hash === 's-submit') {
+                if (typeof window.loadSubmissionsData === 'function') {
+                    window.loadSubmissionsData();
+                }
+            }
         }
         
         // Nếu không có hash hoặc hash không hợp lệ, chỉ xử lý ẩn/hiện nếu trang có nhiều view tabs
@@ -249,6 +254,9 @@ function switchTab(tabName, element) {
 
         if (tabName === 's-register' && typeof checkAndLoadMyTopic === 'function') {
             checkAndLoadMyTopic();
+        }
+        if (tabName === 's-submit' && typeof window.loadSubmissionsData === 'function') {
+            window.loadSubmissionsData();
         }
         if (tabName === 's-chat') {
             if (typeof initChatUI === 'function') initChatUI();

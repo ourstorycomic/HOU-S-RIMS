@@ -216,11 +216,29 @@ class Submission(db.Model):
     milestone_id = db.Column(db.Integer, db.ForeignKey('milestones.id'), nullable=True)
     uploader_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     file_url = db.Column(db.String(255), nullable=False)
-    type = db.Column(db.String(50), nullable=False)
+    file_name = db.Column(db.String(255), nullable=True)
+    type = db.Column(db.String(50), nullable=False) # 'outline', 'progress', 'final', 'slide'
+    external_link = db.Column(db.String(500), nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(30), default='submitted') # 'submitted', 'approved', 'revision_required'
+    version = db.Column(db.Integer, default=1)
+    reviewer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
     feedback = db.Column(db.Text, nullable=True)
     feedback_at = db.Column(db.DateTime, nullable=True)
+    
+    # Khoa (Faculty) Approval fields
+    faculty_status = db.Column(db.String(30), default='pending') # 'pending', 'approved', 'revision_required'
+    faculty_feedback = db.Column(db.Text, nullable=True)
+    faculty_reviewed_at = db.Column(db.DateTime, nullable=True)
+    faculty_reviewer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
+    # Relationships
     milestone = db.relationship('Milestone', backref='submissions')
+    uploader = db.relationship('User', foreign_keys=[uploader_id])
+    reviewer = db.relationship('User', foreign_keys=[reviewer_id])
+    faculty_reviewer = db.relationship('User', foreign_keys=[faculty_reviewer_id])
+    topic = db.relationship('Topic', backref='submissions')
 
     @property
     def feedback_list(self):
@@ -246,6 +264,34 @@ class Submission(db.Model):
                 time_part = self.feedback_at.strftime('%d/%m/%Y %H:%M') if self.feedback_at else ""
                 notes.append({'time': time_part, 'text': block.strip()})
         return notes
+
+    def to_dict(self):
+        import os
+        return {
+            'id': self.id,
+            'topic_id': self.topic_id,
+            'milestone_id': self.milestone_id,
+            'milestone_name': self.milestone.name if self.milestone else None,
+            'uploader_id': self.uploader_id,
+            'uploader_name': self.uploader.full_name if self.uploader else None,
+            'file_url': self.file_url,
+            'file_name': self.file_name or (os.path.basename(self.file_url) if self.file_url else 'Tài liệu'),
+            'type': self.type,
+            'external_link': self.external_link,
+            'notes': self.notes,
+            'status': self.status or 'submitted',
+            'version': self.version or 1,
+            'reviewer_id': self.reviewer_id,
+            'reviewer_name': self.reviewer.full_name if self.reviewer else None,
+            'feedback': self.feedback,
+            'feedback_list': self.feedback_list,
+            'feedback_at': self.feedback_at.strftime('%d/%m/%Y %H:%M') if self.feedback_at else None,
+            'submitted_at': self.submitted_at.strftime('%d/%m/%Y %H:%M') if self.submitted_at else None,
+            'faculty_status': self.faculty_status or 'pending',
+            'faculty_feedback': self.faculty_feedback,
+            'faculty_reviewed_at': self.faculty_reviewed_at.strftime('%d/%m/%Y %H:%M') if self.faculty_reviewed_at else None,
+            'faculty_reviewer_name': self.faculty_reviewer.full_name if self.faculty_reviewer else None
+        }
 
 class DocumentTemplate(db.Model):
     __tablename__ = 'documents'

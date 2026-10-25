@@ -46,24 +46,42 @@ def student_page():
     user_id = session.get('user_id')
     current_user = User.query.get(user_id) if user_id else None
     
-    # Tìm nhóm của sinh viên (nếu có)
+    # Tìm nhóm của sinh viên (chỉ nhóm làm Trưởng nhóm hoặc đã đồng ý tham gia)
     active_group = None
     if current_user:
         active_group = Group.query.filter_by(leader_id=current_user.id).order_by(Group.id.desc()).first()
         if not active_group:
-            membership = GroupMember.query.filter_by(student_id=current_user.id).order_by(GroupMember.id.desc()).first()
+            membership = GroupMember.query.filter(
+                GroupMember.student_id == current_user.id,
+                GroupMember.status.in_(['accepted', 'joined'])
+            ).order_by(GroupMember.id.desc()).first()
             if membership:
                 active_group = Group.query.get(membership.group_id)
                 
-    # Lấy danh sách nhóm & đề tài của sinh viên
+    # Lấy danh sách nhóm & đề tài của sinh viên (chỉ tính thành viên chính thức)
     my_groups = []
     my_topics = []
     approved_chat_groups = []
+    pending_invitations = []
+    sent_pending_invitations = []
+
     if current_user:
-        member_group_ids = [m.group_id for m in GroupMember.query.filter_by(student_id=current_user.id).all()]
+        # Lời mời tham gia nhóm gửi tới sinh viên hiện tại đang chờ phản hồi
+        pending_invitations = GroupMember.query.filter(
+            GroupMember.student_id == current_user.id,
+            GroupMember.status.in_(['pending', 'invited'])
+        ).all()
+
+        # Nhóm chính thức (Trưởng nhóm hoặc đã chấp nhận lời mời)
+        member_group_ids = [m.group_id for m in GroupMember.query.filter(
+            GroupMember.student_id == current_user.id,
+            GroupMember.status.in_(['accepted', 'joined'])
+        ).all()]
+
         my_groups = Group.query.filter(
             (Group.leader_id == current_user.id) | (Group.id.in_(member_group_ids))
-        ).all()
+        ).all() if (member_group_ids or Group.query.filter_by(leader_id=current_user.id).first()) else []
+
         if my_groups:
             group_ids = [g.id for g in my_groups]
             my_topics = Topic.query.filter(Topic.group_id.in_(group_ids)).order_by(Topic.id.desc()).all()
@@ -72,8 +90,16 @@ def student_page():
                 is_approved = (g.status == 'approved') or any(t.status == 'approved' for t in g.topics)
                 if is_approved:
                     approved_chat_groups.append(g)
-        else:
-            my_topics = Topic.query.join(Group).filter(Group.leader_id == current_user.id).order_by(Topic.id.desc()).all()
+
+        # Lời mời mà sinh viên (với vai trò Trưởng nhóm) đã gửi đi đang chờ các thành viên khác phản hồi
+        my_led_groups = Group.query.filter_by(leader_id=current_user.id).all()
+        if my_led_groups:
+            led_group_ids = [g.id for g in my_led_groups]
+            sent_pending_invitations = GroupMember.query.filter(
+                GroupMember.group_id.in_(led_group_ids),
+                GroupMember.student_id != current_user.id,
+                GroupMember.status.in_(['pending', 'invited'])
+            ).all()
 
     batches = Batch.query.filter_by(status='active').order_by(Batch.id.desc()).all()
     if not batches:
@@ -97,6 +123,8 @@ def student_page():
                            my_groups=my_groups,
                            approved_chat_groups=approved_chat_groups,
                            my_topics=my_topics,
+                           pending_invitations=pending_invitations,
+                           sent_pending_invitations=sent_pending_invitations,
                            batches=batches,
                            mentors=mentors,
                            faculties=faculties,

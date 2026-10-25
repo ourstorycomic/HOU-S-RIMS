@@ -66,57 +66,144 @@
                                 </div>
                             </div>
                             
-                            {% if t.status == 'approved' %}
-                            <div class="mt-4">
+                            <!-- SECTION 1: TÀI LIỆU & BÁO CÁO ĐÃ NỘP (Đề cương chi tiết, Báo cáo tiến độ, Slide...) -->
+                            <div class="mt-4 pt-3 border-top">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h6 class="fw-bold mb-0 small"><i class="fa-solid fa-list-check me-2"></i>Danh sách Cột mốc (Milestones)</h6>
-                                    <button class="btn btn-sm btn-outline-primary rounded-pill fw-bold" onclick="openAddMilestoneModal({{ t.id }})">+ Thêm Mốc</button>
+                                    <h6 class="fw-bold mb-0 text-dark">
+                                        <i class="fa-solid fa-file-signature me-2 text-primary"></i>Tài liệu & Đề cương / Báo cáo sinh viên đã nộp
+                                    </h6>
+                                    <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-1 fw-bold">
+                                        {{ t.submissions|length if t.submissions else 0 }} tệp
+                                    </span>
                                 </div>
                                 
-                                <div class="mt-4">
-                                    <h6 class="fw-bold mb-3 small"><i class="fa-solid fa-file-arrow-down me-2"></i>Báo cáo đã nộp</h6>
-                                    {% if t.submissions %}
-                                        <div class="list-group list-group-flush border rounded-3">
-                                        {% for sub in t.submissions %}
-                                            <div class="list-group-item p-3">
-                                                <div class="d-flex justify-content-between align-items-start">
-                                                    <div>
-                                                        <div class="fw-bold text-dark">Báo cáo {{ sub.submitted_at.strftime('%d/%m/%Y %H:%M') }}</div>
-                                                        <small class="text-muted">Sinh viên nộp (ID: {{ sub.uploader_id }})
-                                                        {% if sub.milestone %} | Cột mốc: <span class="fw-bold text-primary">{{ sub.milestone.name }}</span>{% endif %}
-                                                        </small>
-                                                        {% if sub.feedback_list %}
-                                                        <div class="mt-3">
-                                                            <div class="small fw-bold text-warning-emphasis mb-2"><i class="fa-solid fa-note-sticky text-warning me-1"></i>Lịch sử ghi chú:</div>
-                                                            <div class="d-flex flex-column gap-2">
-                                                                {% for fb in sub.feedback_list %}
-                                                                <div class="p-2 rounded-3 bg-warning-subtle border border-warning-subtle position-relative">
-                                                                    <div class="small text-dark" style="white-space: pre-wrap;">{{ fb.text }}</div>
-                                                                    {% if fb.time %}
-                                                                    <div class="text-muted mt-1" style="font-size:10px;"><i class="fa-regular fa-clock me-1"></i>{{ fb.time }}</div>
-                                                                    {% endif %}
-                                                                </div>
-                                                                {% endfor %}
-                                                            </div>
-                                                        </div>
+                                {% if t.submissions %}
+                                    <div class="list-group list-group-flush border rounded-3 overflow-hidden shadow-sm">
+                                    {% for sub in t.submissions %}
+                                        <div class="list-group-item p-3 border-bottom">
+                                            <div class="d-flex justify-content-between align-items-start gap-3">
+                                                <div class="flex-grow-1">
+                                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                                        <span class="badge bg-primary-subtle text-primary fw-bold px-2 py-1 rounded-pill" style="font-size: 11px;">
+                                                            <i class="fa-solid fa-code-branch me-1"></i>v{{ sub.version or 1 }}
+                                                        </span>
+                                                        <span class="badge bg-light text-dark border px-2 py-1 rounded-pill" style="font-size: 11px;">
+                                                            {% if sub.type == 'outline' %}Đề cương chi tiết
+                                                            {% elif sub.type == 'final' %}Báo cáo tổng kết
+                                                            {% elif sub.type == 'slide' %}Slide & Phụ lục
+                                                            {% else %}Báo cáo tiến độ{% endif %}
+                                                        </span>
+                                                        
+                                                        {% if sub.status == 'approved' %}
+                                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill fw-bold" style="font-size: 11px;">
+                                                            <i class="fa-solid fa-circle-check me-1"></i>GVHD: Đạt yêu cầu
+                                                        </span>
+                                                        {% elif sub.status == 'revision_required' %}
+                                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 rounded-pill fw-bold" style="font-size: 11px;">
+                                                            <i class="fa-solid fa-triangle-exclamation me-1"></i>GVHD: Cần chỉnh sửa
+                                                        </span>
+                                                        {% else %}
+                                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1 rounded-pill fw-bold" style="font-size: 11px;">
+                                                            <i class="fa-solid fa-clock me-1"></i>Chờ GVHD đánh giá
+                                                        </span>
                                                         {% endif %}
+
+                                                        {% if sub.faculty_status == 'approved' %}
+                                                        <span class="badge bg-primary text-white border border-primary px-2 py-1 rounded-pill fw-bold" style="font-size: 11px;">
+                                                            <i class="fa-solid fa-stamp me-1"></i>Khoa đã duyệt
+                                                        </span>
+                                                        {% elif sub.faculty_status == 'revision_required' %}
+                                                        <span class="badge bg-danger text-white border border-danger px-2 py-1 rounded-pill fw-bold" style="font-size: 11px;">
+                                                            <i class="fa-solid fa-triangle-exclamation me-1"></i>Khoa yêu cầu sửa
+                                                        </span>
+                                                        {% endif %}
+
+                                                        <span class="text-muted small ms-auto"><i class="fa-regular fa-clock me-1"></i>{{ sub.submitted_at.strftime('%d/%m/%Y %H:%M') if sub.submitted_at else '' }}</span>
                                                     </div>
-                                                    <div class="d-flex gap-2 flex-shrink-0 ms-3">
-                                                        <button class="btn btn-sm btn-outline-warning rounded-pill fw-bold" 
-                                                            onclick="openFeedbackModal({{ sub.id }}, '{{ sub.feedback_list|tojson|forceescape if sub.feedback_list else '[]' }}')">
-                                                            <i class="fa-solid fa-pen me-1"></i> Ghi chú
-                                                        </button>
-                                                        <a href="/api/submissions/download/{{ sub.id }}" class="btn btn-sm btn-outline-primary rounded-pill fw-bold">
-                                                            <i class="fa-solid fa-download me-1"></i> Tải về
+
+                                                    <div class="fw-bold text-dark mt-1">
+                                                        <i class="fa-solid fa-file-lines me-1 text-primary"></i>{{ sub.file_name or 'Tài liệu nộp' }}
+                                                    </div>
+
+                                                    <small class="text-muted d-block mt-1">
+                                                        Sinh viên nộp: <strong>{{ sub.uploader.full_name if sub.uploader else 'ID: ' ~ sub.uploader_id }}</strong>
+                                                        {% if sub.milestone %} | Cột mốc: <span class="fw-bold text-primary">{{ sub.milestone.name }}</span>{% endif %}
+                                                    </small>
+
+                                                    {% if sub.external_link %}
+                                                    <div class="mt-2">
+                                                        <a href="{{ sub.external_link }}" target="_blank" rel="noopener noreferrer" 
+                                                           class="badge bg-info-subtle text-info text-decoration-none border px-2 py-1 rounded-pill">
+                                                            <i class="fa-solid fa-arrow-up-right-from-square me-1"></i>Link bổ trợ: {{ sub.external_link[:40] }}...
                                                         </a>
                                                     </div>
+                                                    {% endif %}
+
+                                                    {% if sub.notes %}
+                                                    <div class="mt-2 p-2 rounded-2 bg-light border small text-muted">
+                                                        <strong class="text-dark"><i class="fa-regular fa-comment-dots me-1"></i>Ghi chú của SV:</strong> {{ sub.notes }}
+                                                    </div>
+                                                    {% endif %}
+
+                                                    {% if sub.feedback_list %}
+                                                    <div class="mt-3">
+                                                        <div class="small fw-bold text-warning-emphasis mb-2"><i class="fa-solid fa-note-sticky text-warning me-1"></i>Lịch sử nhận xét của bạn:</div>
+                                                        <div class="d-flex flex-column gap-2">
+                                                            {% for fb in sub.feedback_list %}
+                                                            <div class="p-2 rounded-3 bg-warning-subtle border border-warning-subtle position-relative">
+                                                                <div class="small text-dark" style="white-space: pre-wrap;">{{ fb.text }}</div>
+                                                                {% if fb.time %}
+                                                                <div class="text-muted mt-1" style="font-size:10px;"><i class="fa-regular fa-clock me-1"></i>{{ fb.time }}</div>
+                                                                {% endif %}
+                                                            </div>
+                                                            {% endfor %}
+                                                        </div>
+                                                    </div>
+                                                    {% endif %}
+                                                    {% if sub.faculty_feedback %}
+                                                    <div class="mt-3 p-3 rounded-3 {% if sub.faculty_status == 'approved' %}bg-primary-subtle border border-primary-subtle{% else %}bg-danger-subtle border border-danger-subtle{% endif %}">
+                                                        <div class="d-flex align-items-center justify-content-between mb-1">
+                                                            <div class="small fw-bold {% if sub.faculty_status == 'approved' %}text-primary{% else %}text-danger{% endif %}">
+                                                                <i class="fa-solid fa-stamp me-1"></i>Ý kiến chỉ đạo từ Cấp Khoa:
+                                                            </div>
+                                                            {% if sub.faculty_reviewed_at %}
+                                                            <div class="text-muted" style="font-size: 10px;"><i class="fa-regular fa-clock me-1"></i>{{ sub.faculty_reviewed_at.strftime('%d/%m/%Y %H:%M') }}</div>
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="text-dark small" style="white-space: pre-wrap; line-height: 1.5;">{{ sub.faculty_feedback }}</div>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+
+                                                <div class="d-flex flex-column gap-2 flex-shrink-0 ms-2">
+                                                    <button type="button" class="btn btn-sm btn-outline-warning rounded-pill fw-bold text-nowrap" 
+                                                        data-sub-id="{{ sub.id }}"
+                                                        data-feedbacks='{{ sub.feedback_list|tojson if sub.feedback_list else "[]" }}'
+                                                        data-status="{{ sub.status or 'submitted' }}"
+                                                        onclick="handleFeedbackClick(this)">
+                                                        <i class="fa-solid fa-star-half-stroke me-1"></i> Nhận xét & Đánh giá
+                                                    </button>
+                                                    <a href="/api/submissions/download/{{ sub.id }}" class="btn btn-sm btn-outline-primary rounded-pill fw-bold text-nowrap">
+                                                        <i class="fa-solid fa-download me-1"></i> Tải về xem
+                                                    </a>
                                                 </div>
                                             </div>
-                                        {% endfor %}
                                         </div>
-                                    {% else %}
-                                        <div class="text-center p-3 border rounded-3 bg-light text-muted small">Chưa có báo cáo nào được nộp.</div>
-                                    {% endif %}
+                                    {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="text-center p-3 border rounded-3 bg-light text-muted small">
+                                        <i class="fa-regular fa-folder-open me-1"></i> Chưa có tài liệu/báo cáo nào được sinh viên nộp cho đề tài này.
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- SECTION 2: CỘT MỐC TIẾN ĐỘ (MILESTONES) -->
+                            <div class="mt-4 pt-3 border-top">
+                                {% if t.status == 'approved' %}
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-list-check me-2 text-success"></i>Cột mốc tiến độ (Milestones)</h6>
+                                    <button class="btn btn-sm btn-outline-primary rounded-pill fw-bold" onclick="openAddMilestoneModal({{ t.id }})">+ Thêm Mốc</button>
                                 </div>
                                 {% if t.milestones_list %}
                                 <div class="list-group list-group-flush border rounded-3">
@@ -139,16 +226,20 @@
                                     {% endfor %}
                                 </div>
                                 {% else %}
-                                    <div class="text-center p-4 border rounded-3 bg-light text-muted small">
-                                        Đề tài này chưa thiết lập cột mốc nào.
+                                    <div class="text-center p-3 border rounded-3 bg-light text-muted small">
+                                        Đề tài này chưa thiết lập cột mốc nào. Nhấn "+ Thêm Mốc" để tạo các hạn nộp tiến độ.
                                     </div>
                                 {% endif %}
+                                {% else %}
+                                <div class="p-3 border rounded-3 bg-light text-muted small d-flex align-items-center gap-2">
+                                    <i class="fa-solid fa-circle-info text-primary fs-5"></i>
+                                    <div>
+                                        Đề tài đang ở trạng thái <strong>{{ 'Chờ GV duyệt' if t.status == 'pending' else 'GV đã duyệt - Chờ Khoa phê duyệt' }}</strong>.
+                                        Sau khi Khoa phê duyệt chính thức, bạn có thể thiết lập các Cột mốc tiến độ theo từng giai đoạn.
+                                    </div>
+                                </div>
+                                {% endif %}
                             </div>
-                            {% else %}
-                            <div class="mt-2 text-center p-4 border rounded-3 bg-light text-muted small">
-                                Đề tài đang chờ Khoa/Viện phê duyệt chính thức. Bạn chưa thể thiết lập Cột mốc tiến độ cho đề tài này.
-                            </div>
-                            {% endif %}
                         </div>
                         {% endfor %}
                     {% else %}
@@ -160,33 +251,75 @@
                     {% endif %}
                 </div>
         </div>
-{% endblock %}
 
-{% block modals %}
-<!-- Feedback Modal -->
+<!-- Feedback & Review Modal -->
 <div class="modal fade" id="modalFeedback" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold"><i class="fa-solid fa-note-sticky me-2 text-warning"></i>Thêm ghi chú cho bài nộp</h5>
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 pb-0 pt-4 px-4">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-warning-subtle text-warning p-2 rounded-3">
+                        <i class="fa-solid fa-star-half-stroke fs-6"></i>
+                    </span>
+                    <h5 class="modal-title fw-bold text-dark">Đánh giá & Nhận xét bài nộp</h5>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body px-4 pb-0">
+            
+            <div class="modal-body px-4 py-3">
+                <!-- Evaluation Status Radio Cards -->
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted mb-2">KẾT QUẢ ĐÁNH GIÁ <span class="text-danger">*</span></label>
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <label class="card h-100 p-3 border rounded-3 cursor-pointer text-center status-option" 
+                                   style="cursor: pointer; transition: all 0.2s;" id="label-status-approved">
+                                <input type="radio" name="reviewStatus" value="approved" class="d-none">
+                                <div class="text-success mb-1 fs-5"><i class="fa-solid fa-circle-check"></i></div>
+                                <div class="fw-bold small text-dark">Đạt yêu cầu</div>
+                                <div class="text-muted" style="font-size: 11px;">Đồng ý thông qua</div>
+                            </label>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="card h-100 p-3 border rounded-3 cursor-pointer text-center status-option" 
+                                   style="cursor: pointer; transition: all 0.2s;" id="label-status-revision_required">
+                                <input type="radio" name="reviewStatus" value="revision_required" class="d-none">
+                                <div class="text-danger mb-1 fs-5"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                                <div class="fw-bold small text-dark">Cần chỉnh sửa</div>
+                                <div class="text-muted" style="font-size: 11px;">Yêu cầu nộp lại bản mới</div>
+                            </label>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="card h-100 p-3 border rounded-3 cursor-pointer text-center status-option" 
+                                   style="cursor: pointer; transition: all 0.2s;" id="label-status-submitted">
+                                <input type="radio" name="reviewStatus" value="submitted" class="d-none" checked>
+                                <div class="text-warning mb-1 fs-5"><i class="fa-solid fa-clock"></i></div>
+                                <div class="fw-bold small text-dark">Chỉ ghi chú</div>
+                                <div class="text-muted" style="font-size: 11px;">Đang xem xét tiếp</div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Existing feedback history -->
                 <div id="feedbackHistory" class="mb-3" style="display:none;">
-                    <div class="small fw-bold text-muted mb-2"><i class="fa-solid fa-history me-1"></i>Ghi chú trước đó:</div>
+                    <div class="small fw-bold text-muted mb-2"><i class="fa-solid fa-history me-1"></i>Lịch sử nhận xét trước đó:</div>
                     <div id="feedbackHistoryContent" class="p-3 rounded-3 bg-light border" style="font-size:13px; white-space:pre-wrap; max-height:150px; overflow-y:auto;"></div>
                 </div>
+
                 <!-- New note input -->
-                <p class="text-muted small mb-2">Nhập ghi chú mới để thêm vào lịch sử nhận xét:</p>
-                <textarea id="feedbackText" class="form-control" rows="4" placeholder="Ví dụ: Cần bổ sung phần tổng quan, format tài liệu chưa đúng..."></textarea>
-                <input type="hidden" id="feedbackSubId">
-                <input type="hidden" id="feedbackOldContent">
+                <div class="mb-2">
+                    <label class="form-label small fw-bold text-muted">Ý KIẾN / HƯỚNG DẪN CỤ THỂ CHO SINH VIÊN</label>
+                    <textarea id="feedbackText" class="form-control bg-light border-0 small rounded-3" rows="4" 
+                              placeholder="Ví dụ: Đã duyệt phần tổng quan, đề tài cần chú ý bổ sung số liệu khảo sát thực tế..."></textarea>
+                    <input type="hidden" id="feedbackSubId">
+                </div>
             </div>
-            <div class="modal-footer border-0 px-4 pb-4">
-                <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-warning fw-bold text-white" onclick="saveFeedback()">
-                    <i class="fa-solid fa-paper-plane me-2"></i>Thêm & Thông báo SV
+
+            <div class="modal-footer border-0 px-4 pb-4 pt-0">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Hủy bỏ</button>
+                <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm" id="btn-save-review" onclick="saveFeedback()">
+                    <i class="fa-solid fa-paper-plane me-2"></i>Lưu đánh giá & Thông báo SV
                 </button>
             </div>
         </div>
@@ -196,10 +329,48 @@
 
 {% block extra_js %}
 <script>
-function openFeedbackModal(subId, feedbackListJson) {
+function selectStatusOption(statusValue) {
+    document.querySelectorAll('.status-option').forEach(el => {
+        el.classList.remove('border-primary', 'bg-primary-subtle', 'border-success', 'bg-success-subtle', 'border-danger', 'bg-danger-subtle');
+    });
+    const radio = document.querySelector(`input[name="reviewStatus"][value="${statusValue}"]`);
+    if (radio) {
+        radio.checked = true;
+        const parentCard = radio.closest('.status-option');
+        if (parentCard) {
+            if (statusValue === 'approved') {
+                parentCard.classList.add('border-success', 'bg-success-subtle');
+            } else if (statusValue === 'revision_required') {
+                parentCard.classList.add('border-danger', 'bg-danger-subtle');
+            } else {
+                parentCard.classList.add('border-primary', 'bg-primary-subtle');
+            }
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.status-option').forEach(card => {
+        card.addEventListener('click', () => {
+            const radio = card.querySelector('input[type="radio"]');
+            if (radio) selectStatusOption(radio.value);
+        });
+    });
+});
+
+function handleFeedbackClick(btn) {
+    const subId = btn.getAttribute('data-sub-id');
+    const feedbackListJson = btn.getAttribute('data-feedbacks');
+    const currentStatus = btn.getAttribute('data-status');
+    openFeedbackModal(subId, feedbackListJson, currentStatus);
+}
+
+function openFeedbackModal(subId, feedbackListJson, currentStatus) {
     document.getElementById('feedbackSubId').value = subId;
     document.getElementById('feedbackText').value = '';
     
+    selectStatusOption(currentStatus || 'submitted');
+
     const historyBox = document.getElementById('feedbackHistory');
     const historyContent = document.getElementById('feedbackHistoryContent');
     
@@ -231,28 +402,46 @@ function openFeedbackModal(subId, feedbackListJson) {
 function saveFeedback() {
     const subId = document.getElementById('feedbackSubId').value;
     const newNote = document.getElementById('feedbackText').value.trim();
-    
-    if (!newNote) {
-        showToast('Vui lòng nhập nội dung ghi chú mới!');
+    const checkedStatus = document.querySelector('input[name="reviewStatus"]:checked');
+    const status = checkedStatus ? checkedStatus.value : 'submitted';
+
+    if (!newNote && status === 'submitted') {
+        showToast('Vui lòng nhập nội dung ghi chú hoặc chọn đánh giá Đạt/Chỉnh sửa!', 'warning');
         return;
     }
 
-    fetch(`/api/submissions/${subId}/feedback`, {
+    const saveBtn = document.getElementById('btn-save-review');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Đang lưu...';
+    }
+
+    fetch(`/api/submissions/${subId}/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ feedback: newNote })
+        body: JSON.stringify({ status: status, feedback: newNote })
     })
     .then(r => r.json())
     .then(data => {
         if (data.success) {
             bootstrap.Modal.getInstance(document.getElementById('modalFeedback')).hide();
-            showToast('Đã thêm ghi chú và thông báo cho sinh viên!');
-            setTimeout(() => location.reload(), 1500);
+            showToast('Đã lưu đánh giá và gửi thông báo cho sinh viên thành công!', 'success');
+            setTimeout(() => location.reload(), 1200);
         } else {
-            showToast(data.message || 'Có lỗi xảy ra!');
+            showToast(data.error || data.message || 'Có lỗi xảy ra!', 'error');
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fa-solid fa-paper-plane me-2"></i>Lưu đánh giá & Thông báo SV';
+            }
         }
     })
-    .catch(() => showToast('Lỗi kết nối server!'));
+    .catch(() => {
+        showToast('Lỗi kết nối server!', 'error');
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-paper-plane me-2"></i>Lưu đánh giá & Thông báo SV';
+        }
+    });
 }
 </script>
 {% endblock %}

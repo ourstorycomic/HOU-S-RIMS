@@ -96,10 +96,12 @@ def sync_notifications():
     group_data = None
     led_group = Group.query.filter_by(leader_id=user_id).order_by(Group.id.desc()).first()
     if not led_group and memberships:
-        # Check any group user is member of
-        first_m = memberships[0]
-        if first_m.group:
-            led_group = first_m.group
+        # Check any group user is member of (chỉ lấy khi đã chính thức đồng ý tham gia)
+        accepted_m = [m for m in memberships if m.status in ['accepted', 'joined']]
+        if accepted_m:
+            first_m = accepted_m[0]
+            if first_m.group:
+                led_group = first_m.group
 
     if led_group:
         g_topic = led_group.topics[0] if (led_group.topics and len(led_group.topics) > 0) else None

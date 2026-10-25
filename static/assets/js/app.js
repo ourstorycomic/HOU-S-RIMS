@@ -31,14 +31,21 @@ async function handleGroupInvitation(groupId, action) {
         itemEl.classList.add('bg-white');
     }
 
-    // Hide any pending dashboard banner smoothly
-    document.querySelectorAll('.alert.bg-warning').forEach(alertBox => {
-        if (alertBox.textContent.includes('LỜI MỜI THAM GIA NHÓM')) {
-            alertBox.style.transition = 'all 0.35s ease';
-            alertBox.style.opacity = '0';
-            setTimeout(() => alertBox.remove(), 350);
-        }
-    });
+    // Xử lý ẩn mượt mà thẻ lời mời trong banner màu vàng
+    const bannerItem = document.querySelector(`button[onclick*="handleGroupInvitation(${groupId}"]`)?.closest('.d-flex.flex-wrap');
+    if (bannerItem) {
+        bannerItem.style.transition = 'all 0.35s ease';
+        bannerItem.style.opacity = '0';
+        setTimeout(() => {
+            bannerItem.remove();
+            const banner = document.getElementById('globalPendingInvitationBanner');
+            if (banner && !banner.querySelector('.btn-dark')) {
+                banner.style.transition = 'all 0.35s ease';
+                banner.style.opacity = '0';
+                setTimeout(() => banner.remove(), 350);
+            }
+        }, 350);
+    }
 
     try {
         const resp = await fetch('/api/topics/invitation', {
@@ -64,6 +71,10 @@ async function handleGroupInvitation(groupId, action) {
             // Trigger immediate sync across all badge counters and lists
             if (typeof syncNotificationsLive === 'function') {
                 syncNotificationsLive(true);
+            }
+            // Cập nhật lại ngay lập tức màn hình Đăng ký Đề tài
+            if (typeof window.checkAndLoadMyTopic === 'function') {
+                window.checkAndLoadMyTopic();
             }
         } else {
             if (typeof Swal !== 'undefined') {

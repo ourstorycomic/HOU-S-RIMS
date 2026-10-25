@@ -48,8 +48,11 @@ def portfolio():
 def register():
     user_id = session.get('user_id')
     batches = Batch.query.filter_by(status='active').all()
-    mentors = User.query.filter(func.lower(User.role) == 'lecturer').all()
-    my_groups = Group.query.join(GroupMember).join(Batch).filter(GroupMember.student_id == user_id, Batch.status == 'active').all()
+    my_groups = Group.query.join(GroupMember).join(Batch).filter(
+        GroupMember.student_id == user_id, 
+        GroupMember.status.in_(['accepted', 'joined']),
+        Batch.status == 'active'
+    ).all()
     my_topics = []
     if my_groups:
         group_ids = [g.id for g in my_groups]

@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, session, redirect, url_for
-from models import db, User, Batch, Group, Topic, TopicRegistration, Council, GroupMember, Notification, Milestone, Progress
+from models import db, User, Batch, Group, Topic, TopicRegistration, Council, GroupMember, Notification, Milestone, Progress, Submission
 from datetime import datetime
 from sqlalchemy import func
 
@@ -67,14 +67,22 @@ def dashboard():
     groups = Group.query.join(Batch).filter(Batch.academic_year == current_year, Batch.status != 'hidden').all()
     mentors = User.query.filter(func.lower(User.role) == 'lecturer').all()
     students = User.query.filter_by(role='student').all()
+    
+    recent_submissions = Submission.query.join(Topic).join(Batch).filter(
+        Batch.academic_year == current_year, 
+        Batch.status != 'hidden',
+        Submission.status == 'approved'
+    ).order_by(Submission.submitted_at.desc()).limit(10).all()
+
     # stats mapping from original web.py
     stats = {
         'total_topics': len(topics),
         'total_groups': len(groups),
         'total_mentors': len(mentors),
-        'total_students': len(students)
+        'total_students': len(students),
+        'total_submissions': len(recent_submissions)
     }
-    return render_template('faculty/dashboard.html', stats=stats, topics=topics)
+    return render_template('faculty/dashboard.html', stats=stats, topics=topics, recent_submissions=recent_submissions)
 
 @faculty_bp.route('/batches')
 def batches():

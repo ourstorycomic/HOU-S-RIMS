@@ -1,121 +1,252 @@
 {% extends "layouts/student_layout.html" %}
 
 {% block student_content %}
-<div id="view-s-submit" class="fade-in ">
-        <div class="card border-0 shadow-sm rounded-4 p-5 text-center">
-            <h4 class="fw-bold mb-2">Nộp báo cáo tiến độ</h4>
-            <div class="mb-4 text-start">
-                <label class="form-label small fw-bold text-muted">Chọn Cột mốc (Milestone)</label>
-                <select class="form-select" id="milestone-select">
-                    {% if milestones %}
-                        {% for m in milestones %}
-                        <option value="{{ m.id }}">{{ m.name }} (Hạn: {{ m.deadline.strftime('%d/%m/%Y') }})</option>
-                        {% endfor %}
-                    {% else %}
-                        <option value="">Chưa có cột mốc nào được tạo</option>
-                    {% endif %}
-                </select>
-            </div>
-            <div id="report-upload-zone" class="upload-zone p-5 rounded-4 mb-4 d-flex flex-column align-items-center justify-content-center cursor-pointer" style="cursor:pointer; border: 2px dashed #6366f1;">
-    <input type="file" id="report-file-input" class="d-none">
-    <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
-        <i class="fa-solid fa-cloud-arrow-up fs-3"></i>
-    </div>
-    <h6 class="fw-bold mb-1" id="report-file-name">Kéo thả hoặc click để chọn file</h6>
-</div>
-            <div class="text-start mb-4"><label class="form-label small fw-bold text-muted">GHI CHÚ</label><textarea class="form-control bg-light" rows="3"></textarea></div>
-            <button class="btn btn-primary w-100 py-3 fw-bold rounded-3 shadow-sm" style="background: linear-gradient(90deg, #6366f1 0%, #4f46e5 100%); border: none;" data-bs-toggle="modal" data-bs-target="#modalConfirmSubmit">XÁC NHẬN NỘP BÁO CÁO</button>
+<div id="view-s-submit" class="fade-in">
+    <!-- Header Banner -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 text-white position-relative overflow-hidden" 
+         style="background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 50%, #06b6d4 100%);">
+        <!-- Decorative Cloud Illustration as originally requested -->
+        <div class="position-absolute end-0 top-50 translate-middle-y me-4 me-lg-5 text-white d-none d-md-block" 
+             style="font-size: 115px; pointer-events: none; z-index: 1; opacity: 0.9; filter: drop-shadow(0 6px 20px rgba(0, 0, 0, 0.12));">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
         </div>
+
+        <div class="position-relative" style="z-index: 2; max-width: 80%;">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                <span class="badge bg-white text-primary fw-bold px-3 py-1.5 rounded-pill shadow-sm" style="font-size: 11px; letter-spacing: 0.3px;">
+                    <i class="fa-solid fa-graduation-cap me-1"></i> CỔNG NỘP ĐỀ CƯƠNG & BÁO CÁO NCKH
+                </span>
+                {% if topic %}
+                    {% if topic.status == 'approved' %}
+                    <span class="badge rounded-pill fw-bold px-3 py-1.5 shadow-xs border border-white border-opacity-25" 
+                          style="background: rgba(16, 185, 129, 0.25); backdrop-filter: blur(8px); color: #ecfdf5; font-size: 11px;">
+                        <i class="fa-solid fa-circle-check me-1" style="color: #6ee7b7;"></i> Khoa đã phê duyệt chính thức
+                    </span>
+                    {% elif topic.status == 'faculty_pending' %}
+                    <span class="badge rounded-pill fw-bold px-3 py-1.5 shadow-xs border border-white border-opacity-25" 
+                          style="background: rgba(245, 158, 11, 0.25); backdrop-filter: blur(8px); color: #fef3c7; font-size: 11px;">
+                        <i class="fa-solid fa-hourglass-half me-1"></i> GV đã duyệt - Chờ Khoa
+                    </span>
+                    {% else %}
+                    <span class="badge rounded-pill fw-bold px-3 py-1.5 shadow-xs border border-white border-opacity-25" 
+                          style="background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(8px); color: #fff; font-size: 11px;">
+                        <i class="fa-solid fa-clock me-1"></i> Chờ GVHD phê duyệt
+                    </span>
+                    {% endif %}
+                {% endif %}
+            </div>
+            
+            <h4 class="fw-bold mb-2 text-white text-wrap" style="letter-spacing: -0.3px;">
+                {{ topic.name_vn if topic else 'Nộp tài liệu & Báo cáo đề tài' }}
+            </h4>
+            <div class="d-flex flex-wrap align-items-center gap-2 small">
+                <span class="d-inline-flex align-items-center px-2.5 py-1 rounded-pill text-white" 
+                      style="background: rgba(255,255,255,0.15); backdrop-filter: blur(4px);">
+                    <i class="fa-solid fa-hashtag me-1.5 opacity-75"></i> Mã: <strong>#{{ topic_id or 1 }}</strong>
+                </span>
+                {% if topic and topic.mentor %}
+                <span class="d-inline-flex align-items-center px-2.5 py-1 rounded-pill text-white" 
+                      style="background: rgba(255,255,255,0.15); backdrop-filter: blur(4px);">
+                    <i class="fa-solid fa-user-tie me-1.5 opacity-75"></i> GVHD: <strong>{{ topic.mentor.full_name }}</strong>
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs: 4 Loai Tai Lieu -->
+    <div class="card border-0 shadow-sm rounded-4 p-2 mb-4">
+        <ul class="nav nav-pills nav-fill gap-2" id="submission-type-tabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link submission-type-pill active py-2 rounded-3 fw-bold text-start text-sm-center" 
+                        id="tab-btn-outline" data-type="outline" type="button" onclick="selectSubmissionType('outline')">
+                    <i class="fa-solid fa-book-bookmark me-2 text-primary"></i>
+                    <span>1. Đề cương chi tiết</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link submission-type-pill py-2 rounded-3 fw-bold text-start text-sm-center" 
+                        id="tab-btn-progress" data-type="progress" type="button" onclick="selectSubmissionType('progress')">
+                    <i class="fa-solid fa-bars-progress me-2 text-warning"></i>
+                    <span>2. Báo cáo tiến độ</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link submission-type-pill py-2 rounded-3 fw-bold text-start text-sm-center" 
+                        id="tab-btn-final" data-type="final" type="button" onclick="selectSubmissionType('final')">
+                    <i class="fa-solid fa-award me-2 text-success"></i>
+                    <span>3. Báo cáo tổng kết</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link submission-type-pill py-2 rounded-3 fw-bold text-start text-sm-center" 
+                        id="tab-btn-slide" data-type="slide" type="button" onclick="selectSubmissionType('slide')">
+                    <i class="fa-solid fa-file-powerpoint me-2 text-danger"></i>
+                    <span>4. Slide & Phụ lục</span>
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <!-- 2-Column Content Layout: Left Form (Nộp) & Right History (Cuộn & Thu gọn) -->
+    <div class="row g-3 align-items-stretch">
+        <!-- CỘT 1 (BÊN TRÁI): KHUNG NỘP TÀI LIỆU -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 p-3.5 p-md-4 h-100 d-flex flex-column bg-white">
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-primary-subtle text-primary p-2 rounded-3">
+                            <i class="fa-solid fa-arrow-up-from-bracket fs-6"></i>
+                        </span>
+                        <h6 class="fw-bold text-dark mb-0" id="submission-type-title">Nộp Đề cương chi tiết</h6>
+                    </div>
+                    <span class="badge bg-light text-muted fw-semibold small" id="submission-type-badge">Đề cương chi tiết</span>
+                </div>
+
+                <!-- Hidden topic ID -->
+                <input type="hidden" id="submission-topic-id" value="{{ topic_id or 1 }}">
+
+                <!-- Milestone select (only visible in Progress tab) -->
+                <div class="mb-2.5 d-none" id="submission-milestone-wrap">
+                    <label class="form-label small fw-bold text-muted mb-1">
+                        <i class="fa-regular fa-clock me-1 text-primary"></i> CỘT MỐC TIẾN ĐỘ <span class="text-danger">*</span>
+                    </label>
+                    <select class="form-select bg-light border-0 py-2 rounded-3 fw-semibold text-dark small" id="submission-milestone-select">
+                        {% if milestones %}
+                            {% for m in milestones %}
+                            <option value="{{ m.id }}">{{ m.name }} (Hạn: {{ m.deadline.strftime('%d/%m/%Y') if m.deadline else 'Chưa có' }})</option>
+                            {% endfor %}
+                        {% else %}
+                            <option value="1">Đợt 1: Khảo sát tài liệu & Đề cương sơ bộ</option>
+                            <option value="2">Đợt 2: Thiết kế hệ thống & Thực nghiệm bước đầu</option>
+                            <option value="3">Đợt 3: Thu thập dữ liệu & Đánh giá kết quả</option>
+                            <option value="4">Đợt 4: Hoàn thiện bản thảo báo cáo toàn văn</option>
+                        {% endif %}
+                    </select>
+                </div>
+
+                <!-- Dropzone -->
+                <div class="mb-2.5">
+                    <label class="form-label small fw-bold text-muted mb-1">
+                        <i class="fa-solid fa-paperclip me-1 text-primary"></i> TỆP TẢI LÊN <span class="text-danger">*</span>
+                    </label>
+                    <div id="submission-dropzone" 
+                         class="p-3 rounded-4 text-center cursor-pointer transition-all position-relative"
+                         style="border: 2px dashed #cbd5e1; background-color: #f8fafc; cursor: pointer; transition: all 0.2s ease;">
+                        <input type="file" id="submission-file-input" class="d-none" 
+                               accept=".pdf,.doc,.docx,.zip,.rar,.7z,.ppt,.pptx">
+                        
+                        <!-- State 1: Chưa chọn file -->
+                        <div id="submission-dropzone-content" style="pointer-events: none;">
+                            <div class="mx-auto bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center mb-1.5" 
+                                 style="width: 44px; height: 44px;">
+                                <i class="fa-solid fa-cloud-arrow-up fs-5"></i>
+                            </div>
+                            <div class="fw-bold text-dark small mb-0.5" id="submission-filename-display">
+                                Kéo thả tệp hoặc <span class="text-primary text-decoration-underline" style="pointer-events: auto;">nhấn để chọn</span>
+                            </div>
+                            <div class="text-muted" style="font-size: 11px;" id="submission-file-meta">
+                                Hỗ trợ: PDF, DOCX, ZIP, PPTX (Tối đa 50MB)
+                            </div>
+                        </div>
+
+                        <!-- State 2: Đã chọn file (Preview) -->
+                        <div id="submission-file-preview" class="d-none p-1 text-start">
+                            <div class="d-flex align-items-center gap-2.5 bg-white p-2.5 rounded-3 shadow-xs border">
+                                <div id="submission-file-icon" class="flex-shrink-0 text-center" style="width: 36px;">
+                                    <i class="fa-solid fa-file-pdf fs-3 text-danger"></i>
+                                </div>
+                                <div class="flex-grow-1 overflow-hidden">
+                                    <div id="submission-file-name" class="fw-bold text-dark text-truncate small mb-0.5">filename.ext</div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span id="submission-file-size" class="badge bg-light text-muted fw-semibold" style="font-size: 10px;">0 MB</span>
+                                        <span class="badge bg-success-subtle text-success fw-bold" style="font-size: 10px;">
+                                            <i class="fa-solid fa-check me-1"></i> Sẵn sàng nộp
+                                        </span>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-danger border-0 rounded-circle flex-shrink-0" 
+                                        onclick="event.stopPropagation(); clearSubmissionFile();" 
+                                        title="Xóa tệp / Chọn lại" style="width: 28px; height: 28px; padding: 0;">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- External Link -->
+                <div class="mb-2.5">
+                    <label class="form-label small fw-bold text-muted mb-1">
+                        <i class="fa-solid fa-link me-1 text-primary"></i> LINK TÀI LIỆU BỔ TRỢ (NẾU CÓ)
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-0 text-muted"><i class="fa-solid fa-globe"></i></span>
+                        <input type="url" id="submission-external-link" 
+                               class="form-control bg-light border-0 py-1.5 small" 
+                               placeholder="https://drive.google.com/... hoặc Github, Overleaf">
+                    </div>
+                </div>
+
+                <!-- Notes Textarea -->
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted mb-1">
+                        <i class="fa-regular fa-message me-1 text-primary"></i> GHI CHÚ / TÓM TẮT ĐIỂM MỚI
+                    </label>
+                    <textarea id="submission-notes" class="form-control bg-light border-0 small rounded-3" rows="2" 
+                              placeholder="Mô tả tóm tắt nội dung gửi, các điểm đã tiếp thu ý kiến từ giảng viên..."></textarea>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="mt-auto">
+                    <button type="button" id="btn-submit-report" 
+                            onclick="submitCurrentReport()"
+                            class="btn btn-primary w-100 py-2.5 fw-bold rounded-3 shadow-sm d-flex align-items-center justify-content-center gap-2"
+                            style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); border: none;">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>XÁC NHẬN NỘP TÀI LIỆU</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CỘT 2 (BÊN PHẢI): LỊCH SỬ NỘP & ĐÁNH GIÁ (CUỘN THU GỌN) -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 p-3.5 p-md-4 h-100 d-flex flex-column bg-white">
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-success-subtle text-success p-2 rounded-3">
+                            <i class="fa-solid fa-clock-rotate-left fs-6"></i>
+                        </span>
+                        <div>
+                            <h6 class="fw-bold text-dark mb-0">Lịch sử nộp & Đánh giá</h6>
+                            <p class="text-muted small mb-0" style="font-size: 11px;">Cuộn để xem chi tiết phản hồi từ GVHD & Cấp Khoa</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-light text-muted rounded-pill px-3" 
+                            onclick="window.loadSubmissionsData ? window.loadSubmissionsData() : null" title="Làm mới">
+                        <i class="fa-solid fa-rotate-right me-1"></i> Làm mới
+                    </button>
+                </div>
+
+                <!-- Khung cuộn Lịch sử cố định độ cao -->
+                <div id="submission-history-list" class="submission-history-scroll flex-grow-1" style="max-height: 520px; overflow-y: auto; overflow-x: hidden; padding-right: 6px;">
+                    <div class="text-center py-5 text-muted my-auto">
+                        <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
+                        <div class="small">Đang tải lịch sử các phiên bản...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
+<script src="{{ url_for('static', filename='assets/js/submissions.js') }}?v=20261026_05"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const uploadZone = document.getElementById('report-upload-zone');
-    const fileInput = document.getElementById('report-file-input');
-    const fileNameDisplay = document.getElementById('report-file-name');
-    const submitBtn = document.querySelector('button[data-bs-target="#modalConfirmSubmit"]');
-    
-    let selectedFile = null;
-
-    if (uploadZone) {
-        uploadZone.addEventListener('click', () => fileInput.click());
-        uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.style.backgroundColor = '#f8f9fa'; });
-        uploadZone.addEventListener('dragleave', () => { uploadZone.style.backgroundColor = 'transparent'; });
-        uploadZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadZone.style.backgroundColor = 'transparent';
-            if (e.dataTransfer.files.length) {
-                selectedFile = e.dataTransfer.files[0];
-                fileNameDisplay.textContent = selectedFile.name;
-            }
-        });
-    }
-
-    if (fileInput) {
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length) {
-                selectedFile = e.target.files[0];
-                fileNameDisplay.textContent = selectedFile.name;
-            }
-        });
-    }
-
-    if (submitBtn) {
-        submitBtn.removeAttribute('data-bs-toggle');
-        submitBtn.removeAttribute('data-bs-target');
-        
-        submitBtn.addEventListener('click', async () => {
-            if (!selectedFile) {
-                if (typeof Swal !== 'undefined') Swal.fire('Lỗi', 'Vui lòng chọn file báo cáo', 'error');
-                else alert('Vui lòng chọn file báo cáo');
-                return;
-            }
-            
-            const formData = new FormData();
-            formData.append('file', selectedFile);
-            
-            const currentUserIdMeta = document.querySelector('meta[name="current-user-id"]');
-            const uploaderId = currentUserIdMeta ? currentUserIdMeta.content : 1;
-            
-            formData.append('topic_id', '{{ topic_id }}');
-            formData.append('uploader_id', uploaderId);
-            formData.append('type', 'report');
-            
-            const milestoneSelect = document.getElementById('milestone-select');
-            if (milestoneSelect && milestoneSelect.value) {
-                formData.append('milestone_id', milestoneSelect.value);
-            }
-            
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Đang tải lên...';
-            
-            try {
-                const res = await fetch('/api/submissions/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                if (res.ok) {
-                    if (typeof Swal !== 'undefined') Swal.fire('Thành công', 'Đã nộp báo cáo thành công!', 'success');
-                    else alert('Đã nộp báo cáo thành công!');
-                    selectedFile = null;
-                    fileNameDisplay.textContent = 'Kéo thả hoặc click để chọn file';
-                    fileInput.value = '';
-                } else {
-                    const data = await res.json();
-                    if (typeof Swal !== 'undefined') Swal.fire('Lỗi', data.error || 'Đã xảy ra lỗi', 'error');
-                    else alert(data.error || 'Đã xảy ra lỗi');
-                }
-            } catch(e) {
-                if (typeof Swal !== 'undefined') Swal.fire('Lỗi', 'Lỗi kết nối', 'error');
-                else alert('Lỗi kết nối');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'XÁC NHẬN NỘP BÁO CÁO';
-            }
-        });
+    if (typeof window.loadSubmissionsData === 'function') {
+        window.loadSubmissionsData();
     }
 });
 </script>
-
 {% endblock %}

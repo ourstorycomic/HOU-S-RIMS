@@ -120,4 +120,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Global safety handler: tự động dọn dẹp lớp overlay backdrop bị kẹt khi đóng modal
+    document.addEventListener('hidden.bs.modal', () => {
+        if (!document.querySelector('.modal.show')) {
+            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
+        }
+    });
 });
+

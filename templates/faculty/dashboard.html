@@ -11,15 +11,96 @@
                 <div class="row g-4">
                     <div class="col-md-7">
                         <div class="card border-0 shadow-sm p-4 h-100 rounded-4">
-                            <div class="d-flex justify-content-between mb-4"><h6 class="fw-bold">Tiến độ NCKH cấp Khoa</h6><a href="#" class="small text-decoration-none fw-bold">CHI TIẾT</a></div>
-                            {% if topics %}
-                            <div class="text-center text-muted py-4">
-                                <div class="small">Đang thu thập dữ liệu tiến độ...</div>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <h6 class="fw-bold mb-1 text-dark">
+                                        <i class="fa-solid fa-file-circle-check text-success me-2"></i>Báo cáo & Đề cương Đạt yêu cầu
+                                    </h6>
+                                    <p class="text-muted small mb-0">Hồ sơ bài nộp đã được Giảng viên hướng dẫn duyệt đạt yêu cầu gửi lên Khoa</p>
+                                </div>
+                                <a href="/faculty/topics" class="btn btn-sm btn-light text-primary fw-bold rounded-pill px-3">
+                                    Xem tất cả đề tài <i class="fa-solid fa-arrow-right ms-1"></i>
+                                </a>
+                            </div>
+
+                            {% if recent_submissions and recent_submissions|length > 0 %}
+                            <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
+                                <table class="table table-hover align-middle mb-0 small">
+                                    <thead class="bg-light text-muted fw-bold">
+                                        <tr>
+                                            <th class="ps-2">TỆP BÁO CÁO</th>
+                                            <th>ĐỀ TÀI & NHÓM</th>
+                                            <th>ĐÁNH GIÁ GVHD</th>
+                                            <th class="text-end pe-2">TẢI VỀ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for s in recent_submissions %}
+                                        <tr>
+                                            <td class="ps-2">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <div class="bg-primary-subtle text-primary rounded-3 p-2 text-center" style="width: 34px; height: 34px;">
+                                                        <i class="fa-solid fa-file-lines"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-bold text-dark text-truncate" style="max-width: 200px;" title="{{ s.file_name }}">
+                                                            {{ s.file_name or 'Báo cáo' }}
+                                                        </div>
+                                                        <div class="text-muted" style="font-size: 11px;">
+                                                            <span class="badge bg-light text-dark border me-1">v{{ s.version }}</span>
+                                                            {% if s.type == 'outline' %}Đề cương chi tiết
+                                                            {% elif s.type == 'progress' %}Báo cáo tiến độ
+                                                            {% elif s.type == 'final' %}Báo cáo tổng kết
+                                                            {% else %}Slide & Phụ lục{% endif %}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="fw-semibold text-dark text-truncate" style="max-width: 220px;" title="{{ s.topic.title if s.topic else '' }}">
+                                                    {{ s.topic.title if s.topic else 'Chưa gán' }}
+                                                </div>
+                                                <div class="text-muted" style="font-size: 11px;">
+                                                    <i class="fa-solid fa-user-graduate me-1"></i>{{ s.uploader.full_name if s.uploader else 'Sinh viên' }}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {% if s.status == 'approved' %}
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1">
+                                                    <i class="fa-solid fa-check me-1"></i> Đạt yêu cầu
+                                                </span>
+                                                {% elif s.status == 'revision_required' %}
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1">
+                                                    <i class="fa-solid fa-triangle-exclamation me-1"></i> Cần sửa lại
+                                                </span>
+                                                {% else %}
+                                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-2.5 py-1">
+                                                    <i class="fa-solid fa-clock me-1"></i> Chờ GV nhận xét
+                                                </span>
+                                                {% endif %}
+                                                {% if s.feedback %}
+                                                <div class="text-muted mt-1 text-truncate" style="max-width: 160px; font-size: 11px;" title="{{ s.feedback }}">
+                                                    <i class="fa-regular fa-comment-dots me-1 text-primary"></i>{{ s.feedback.split('---')[-1].strip() }}
+                                                </div>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end pe-2">
+                                                <a href="/api/submissions/download/{{ s.id }}" class="btn btn-sm btn-light border text-primary fw-bold rounded-pill px-3" title="Tải về xem">
+                                                    <i class="fa-solid fa-download me-1"></i> Tải
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
                             </div>
                             {% else %}
-                            <div class="text-center text-muted py-4">
-                                <i class="fa-solid fa-chart-bar fs-1 mb-3 d-block opacity-25"></i>
-                                <div class="small">Chưa có đề tài nào để thống kê tiến độ.</div>
+                            <div class="text-center text-muted py-5 my-auto">
+                                <div class="bg-light rounded-circle d-inline-flex p-3 mb-2 text-muted">
+                                    <i class="fa-solid fa-folder-open fs-3"></i>
+                                </div>
+                                <div class="small fw-bold">Chưa có đề cương hoặc báo cáo nào được nộp</div>
+                                <div class="text-muted" style="font-size: 11px;">Khi sinh viên nộp báo cáo qua cổng Nộp báo cáo, hồ sơ sẽ hiển thị tại đây.</div>
                             </div>
                             {% endif %}
                         </div>
