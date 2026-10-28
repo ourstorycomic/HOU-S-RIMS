@@ -19,16 +19,19 @@ def login():
             'sv': 'student1',
             'sv01': 'student1',
             'student': 'student1',
-            'gv': 'gv1',
-            'gv01': 'gv1',
-            'lecturer': 'gv1',
-            'lecturer1': 'gv1',
-            'lecturer2': 'gv2',
-            'lecturer3': 'gv3',
-            'lecturer4': 'gv4',
-            'lecturer5': 'gv5',
-            'lecturer6': 'gv6',
-            'lecturer7': 'gv7',
+            'gv': 'lecturer1',
+            'gv1': 'lecturer1',
+            'gv01': 'lecturer1',
+            'lecturer': 'lecturer1',
+            'lecture': 'lecturer1',
+            'lecture1': 'lecturer1',
+            'lecturer1': 'lecturer1',
+            'lecturer2': 'lecturer2',
+            'lecturer3': 'lecturer3',
+            'lecturer4': 'lecturer4',
+            'lecturer5': 'lecturer5',
+            'lecturer6': 'lecturer6',
+            'lecturer7': 'lecturer7',
             'khoa': 'faculty1',
             'faculty': 'faculty1',
             'admin': 'admin'
@@ -67,12 +70,12 @@ def login():
             if role == 'faculty':
                 return redirect(url_for('faculty.dashboard'))
             if role == 'student':
-                return redirect(url_for('student.dashboard'))
+                return redirect(url_for('web.student_page'))
             if role == 'lecturer':
                 return redirect(url_for('lecturer.dashboard'))
             return redirect(url_for('web.admin_page'))
         else:
-            flash('Sai tên đăng nhập hoặc mật khẩu! Mẹo: Bạn có thể nhập student1 / gv1 / faculty1 / admin (mật khẩu: 123456).')
+            flash('Sai tên đăng nhập hoặc mật khẩu! Mẹo: Bạn có thể nhập student1 / lecturer1 / faculty1 / admin (mật khẩu: 123456).')
 
     return render_template('login.html')
 

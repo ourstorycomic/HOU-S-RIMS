@@ -50,23 +50,23 @@
 
         <!-- Navigation Links -->
         <nav class="flex-1 px-3 space-y-1.5 overflow-y-auto">
-            <a href="{{ url_for('web.student_page') }}#s-explore" class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800/80 hover:text-white transition group">
+            <a href="/student#s-explore" class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800/80 hover:text-white transition group">
                 <i class="fa-solid fa-lightbulb text-base w-5 text-center text-gray-400 group-hover:text-amber-400 transition"></i>
                 <span class="font-medium text-[13px]">Khám phá ý tưởng</span>
             </a>
 
             <!-- Active Item: Tìm kiếm Mentor -->
-            <a href="{{ url_for('web.mentors_page') }}" class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-white bg-primary font-medium shadow-md transition">
+            <a href="/student#s-mentors" class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-white bg-primary font-medium shadow-md transition">
                 <i class="fa-solid fa-chalkboard-user text-base w-5 text-center"></i>
                 <span class="font-semibold text-[13px]">Tìm kiếm Mentor</span>
             </a>
 
-            <a href="{{ url_for('web.student_page') }}#s-register" class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800/80 hover:text-white transition group">
+            <a href="/student#s-register" class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800/80 hover:text-white transition group">
                 <i class="fa-solid fa-pen-to-square text-base w-5 text-center text-gray-400 group-hover:text-white transition"></i>
                 <span class="font-medium text-[13px]">Đăng ký NCKH</span>
             </a>
 
-            <a href="{{ url_for('web.student_page') }}#s-group" class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800/80 hover:text-white transition group">
+            <a href="/student#s-group" class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800/80 hover:text-white transition group">
                 <i class="fa-solid fa-users text-base w-5 text-center text-gray-400 group-hover:text-white transition"></i>
                 <span class="font-medium text-[13px]">Nhóm nghiên cứu</span>
             </a>
@@ -74,7 +74,7 @@
 
         <!-- Sidebar Bottom: Back to General Portal -->
         <div class="p-3 border-t border-gray-800">
-            <a href="{{ url_for('web.student_page') }}" class="flex items-center gap-2.5 px-3 py-2 text-xs text-gray-400 hover:text-white hover:bg-gray-800/60 rounded-lg transition">
+            <a href="/student#s-explore" class="flex items-center gap-2.5 px-3 py-2 text-xs text-gray-400 hover:text-white hover:bg-gray-800/60 rounded-lg transition">
                 <i class="fa-solid fa-arrow-left text-xs"></i>
                 <span>Quay lại Cổng Sinh Viên</span>
             </a>

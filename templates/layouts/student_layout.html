@@ -170,7 +170,7 @@
                                     <strong>{{ student.full_name }}</strong><br>
                                     <small class="text-muted">{{ student.student_id or 'Chưa cập nhật mã' }}</small>
                                 </span>
-                                <a href="/profile/{{ student.student_id or student.username or student.id }}" target="_blank" class="btn btn-sm btn-light ms-auto rounded-circle" title="Xem Profile Sinh viên" onclick="event.stopPropagation();">
+                                <a href="/profile/{{ student.student_id or student.username or student.id }}" class="btn btn-sm btn-light ms-auto rounded-circle" title="Xem Profile Sinh viên" onclick="event.stopPropagation();">
                                     <i class="fa-regular fa-id-badge text-primary"></i>
                                 </a>
                             </label>
@@ -223,7 +223,7 @@ window.selectedMembersForGroup = [];
                             <div class="d-flex align-items-center gap-3">
                                 <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold small" style="width: 35px; height: 35px;">${name.substring(0,2).toUpperCase()}</div>
                                 <div>
-                                    <a href="/profile/${identifier}" target="_blank" class="fw-bold text-dark text-decoration-none hover-primary">${name}</a>
+                                    <a href="/profile/${identifier}" class="fw-bold text-dark text-decoration-none hover-primary">${name}</a>
                                     <div class="small text-muted">Thành viên (${sid})</div>
                                 </div>
                             </div>

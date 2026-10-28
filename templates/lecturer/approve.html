@@ -16,15 +16,19 @@
                                     <div class="d-flex gap-2 mb-1">
                                         <span class="badge bg-warning text-dark" style="font-size: 10px;">CHỜ PHÊ DUYỆT</span>
                                     </div>
-                                    <div class="fw-bold mb-1">{{ topic.title }}</div>
-                                    <small class="text-muted"><i class="fa-solid fa-users me-1"></i> {{ topic.description }}</small>
+                                    <div class="fw-bold fs-6 text-dark mb-1">{{ topic.title }}</div>
+                                    {% if topic.description %}
+                                    <div class="small text-secondary bg-light p-2 rounded-2 border mt-1 mb-1" style="line-height: 1.4; max-width: 600px;">
+                                        <i class="fa-solid fa-align-left text-primary me-1"></i><strong>Mô tả:</strong> {{ topic.description }}
+                                    </div>
+                                    {% endif %}
                                 </div>
                                 <div class="d-flex gap-2">
                                     {% set students = [] %}
                                     {% if topic.group and topic.group.members %}
                                         {% for member in topic.group.members %}
                                             {% set identifier = member.student.student_id or member.student.username or member.student.id %}
-                                            {% set link = '<a href="/profile/' ~ identifier ~ '" target="_blank" class="text-decoration-none fw-bold">' ~ member.student.full_name ~ '</a>' %}
+                                            {% set link = '<a href="/profile/' ~ identifier ~ '" class="text-decoration-none fw-bold">' ~ member.student.full_name ~ '</a>' %}
                                             {% set _ = students.append(link) %}
                                         {% endfor %}
                                     {% endif %}

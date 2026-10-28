@@ -22,7 +22,8 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Initializing views, total found:', allViews.length);
         
         // Kiểm tra URL hash hoặc sessionStorage để hiển thị view tương ứng
-        let hash = window.location.hash.substring(1); // Bỏ dấu #
+        let rawHash = window.location.hash.substring(1); // Bỏ dấu #
+        let hash = rawHash.split('?')[0];
         if (!hash) {
             hash = sessionStorage.getItem('active_admin_tab') || '';
         }
@@ -87,6 +88,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (hash === 's-chat') {
                 if (typeof initChatUI === 'function') initChatUI();
                 setTimeout(() => {
+                    const urlParams = new URLSearchParams(rawHash.includes('?') ? rawHash.split('?')[1] : window.location.search);
+                    const mentorReq = urlParams.get('mentor');
+                    if (mentorReq && typeof chatWithMentorByName === 'function') {
+                        chatWithMentorByName(mentorReq);
+                        return;
+                    }
+
                     const firstGroup = document.querySelector('#groups-pane .chat-group-item');
                     if (firstGroup) {
                         if (!window.activeChatId || window.activeChatType !== 'group') {
@@ -104,9 +112,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                         if (typeof loadPrivateConversations === 'function') {
                             loadPrivateConversations().then(() => {
-                                const firstPrivate = document.querySelector('#private-chat-list .list-group-item');
-                                if (firstPrivate && !window.activeChatId) {
-                                    firstPrivate.click();
+                                const activeItem = document.querySelector('#private-chat-list .list-group-item.active') ||
+                                                   (window.activeChatId ? document.querySelector(`#private-chat-list .list-group-item[data-user-id="${window.activeChatId}"]`) : null);
+                                if (!activeItem && !window.activeChatId) {
+                                    const firstPrivate = document.querySelector('#private-chat-list .list-group-item');
+                                    if (firstPrivate) {
+                                        firstPrivate.click();
+                                    }
                                 }
                             });
                         }
@@ -347,30 +359,85 @@ function filterTable(type, btn) {
     }
 }
 
-// Hàm dùng riêng cho Faculty
+let currentTopicFilterStatus = 'all';
+
+// Hàm lọc đề tài dùng chung cho Faculty và các trang quản lý đề tài
 function filterTopics(status, btn) {
-    updateFilterButtonState(btn);
+    currentTopicFilterStatus = status || 'all';
 
-    const pending = document.querySelectorAll('.status-pending');
-    const approved = document.querySelectorAll('.status-approved');
+    if (btn) {
+        updateFilterButtonState(btn);
+    }
 
-    if (status === 'pending') {
-        pending.forEach(el => el.classList.remove('d-none'));
-        approved.forEach(el => el.classList.add('d-none'));
-    } else if (status === 'approved') {
-        pending.forEach(el => el.classList.add('d-none'));
-        approved.forEach(el => el.classList.remove('d-none'));
-    } else {
-        // 'all'
-        pending.forEach(el => el.classList.remove('d-none'));
-        approved.forEach(el => el.classList.remove('d-none'));
+    applyTopicFiltering();
+}
+
+function searchTopics(query) {
+    applyTopicFiltering();
+}
+
+function applyTopicFiltering() {
+    const searchInput = document.getElementById('topicSearchInput');
+    const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+    const rows = document.querySelectorAll('tbody tr');
+    let visibleCount = 0;
+    let emptyRow = document.getElementById('noFilterResultsRow');
+
+    rows.forEach(row => {
+        // Bỏ qua hàng thông báo trống ban đầu nếu có
+        if (row.id === 'noFilterResultsRow' || row.querySelector('td[colspan]')) return;
+
+        let statusMatch = false;
+        if (currentTopicFilterStatus === 'all') {
+            statusMatch = true;
+        } else if (currentTopicFilterStatus === 'faculty_pending') {
+            statusMatch = row.classList.contains('status-faculty_pending') || row.classList.contains('status-pending');
+        } else if (currentTopicFilterStatus === 'pending') {
+            statusMatch = row.classList.contains('status-pending') || row.classList.contains('status-faculty_pending');
+        } else {
+            statusMatch = row.classList.contains('status-' + currentTopicFilterStatus);
+        }
+
+        let searchMatch = true;
+        if (query) {
+            const text = row.textContent.toLowerCase();
+            searchMatch = text.includes(query);
+        }
+
+        if (statusMatch && searchMatch) {
+            row.classList.remove('d-none');
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.classList.add('d-none');
+            row.style.display = 'none';
+        }
+    });
+
+    const tbody = document.querySelector('tbody');
+    if (tbody) {
+        if (visibleCount === 0) {
+            if (!emptyRow) {
+                emptyRow = document.createElement('tr');
+                emptyRow.id = 'noFilterResultsRow';
+                emptyRow.innerHTML = '<td colspan="6" class="text-center text-muted py-4"><i class="fa-regular fa-folder-open me-2"></i>Không tìm thấy đề tài nào phù hợp</td>';
+                tbody.appendChild(emptyRow);
+            } else {
+                emptyRow.style.display = '';
+                emptyRow.classList.remove('d-none');
+            }
+        } else if (emptyRow) {
+            emptyRow.style.display = 'none';
+            emptyRow.classList.add('d-none');
+        }
     }
 }
 
 // Helper: Cập nhật trạng thái active của nút lọc
 function updateFilterButtonState(clickedBtn) {
+    if (!clickedBtn) return;
     const container = clickedBtn.parentElement;
-    const allBtns = container.querySelectorAll('.btn-filter');
+    const allBtns = container ? container.querySelectorAll('.btn-filter') : document.querySelectorAll('.btn-filter');
 
     allBtns.forEach(b => {
         b.classList.remove('btn-primary', 'active');

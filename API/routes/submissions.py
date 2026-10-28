@@ -412,7 +412,7 @@ def faculty_review_submission(sub_id):
             <p>Đề tài: <strong>{topic.title}</strong> (v{sub.version} - {sub.file_name})</p>
             <p>Kết quả cấp Khoa: <span class="badge bg-{status_color}">{status_label}</span></p>
             {f'<p class="small text-muted"><strong>Ý kiến chỉ đạo của Khoa:</strong> {feedback_text}</p>' if feedback_text else ''}
-            <a href="/student/submit" class="btn btn-outline-primary btn-sm rounded-pill mt-1">Xem Hồ sơ Bài nộp</a>
+            <a href="/student#s-submit" class="btn btn-outline-primary btn-sm rounded-pill mt-1">Xem Hồ sơ Bài nộp</a>
             """
             db.session.add(Notification(user_id=stu.id, content=student_notif))
 

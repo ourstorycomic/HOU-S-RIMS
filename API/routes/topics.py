@@ -93,7 +93,7 @@ def get_my_topic():
         
     status_map = {'waiting_for_members': 0, 'pending': 1, 'faculty_pending': 2, 'approved': 3, 'rejected': 0}
     step = status_map.get(topic.status, 1)
-    pct = 100 if topic.status == 'approved' else (50 if topic.status == 'faculty_pending' else (10 if topic.status == 'pending' else 0))
+    pct = 100 if topic.status == 'approved' else (50 if topic.status == 'faculty_pending' else 0)
     
     status_labels = {
         'approved': 'ĐÃ PHÊ DUYỆT CHÍNH THỨC',
@@ -244,7 +244,7 @@ def register_topic():
                     db.session.add(invite_msg)
                     
                     from models import Notification
-                    link = f"/student/chat"
+                    link = f"/student#s-explore"
                     html_content = (
                         f"<p>Xin chào <strong>{User.query.get(int(member_id)).full_name}</strong>,</p>"
                         f"<p>Bạn vừa nhận được lời mời tham gia nhóm NCKH cho đề tài: <strong>{topic_title}</strong>.</p>"
@@ -284,15 +284,26 @@ def register_topic():
             
         topic_status = 'pending'
 
-        faculty = data.get('faculty', '')
-        domain = data.get('domain', '')
-        raw_desc = data.get('description', '')
+        faculty = data.get('faculty', '') or 'Khoa Công nghệ Thông tin'
+        major = data.get('major', '')
+        domain = data.get('domain', '') or 'Kỹ thuật & Công nghệ'
+        user_desc = (data.get('raw_description') or '').strip()
+        raw_desc = (data.get('description') or '').strip()
+        
+        if not user_desc and raw_desc and 'Chờ nhóm và GVHD thảo luận' not in raw_desc:
+            user_desc = raw_desc
+
         desc_parts = []
-        if faculty: desc_parts.append(f"Khoa: {faculty}")
-        if domain: desc_parts.append(f"Lĩnh vực: {domain}")
-        if raw_desc and not any(tag in raw_desc for tag in ['Khoa:', 'Lĩnh vực:']):
+        if user_desc:
+            desc_parts.append(user_desc)
+        elif raw_desc and not any(tag in raw_desc for tag in ['Khoa:', 'Chuyên ngành:', 'Lĩnh vực:']):
             desc_parts.append(raw_desc)
-        final_desc = " | ".join(desc_parts) if desc_parts else raw_desc
+            
+        if major:
+            desc_parts.append(f"Chuyên ngành: {major}")
+        if domain:
+            desc_parts.append(f"Lĩnh vực: {domain}")
+        final_desc = " | ".join(desc_parts) if desc_parts else (raw_desc or 'Chờ nhóm và GVHD thảo luận thống nhất tên đề tài.')
 
         new_topic = Topic(
             title=topic_title,
@@ -319,22 +330,40 @@ def register_topic():
             from models import Notification
             mentor = User.query.get(data['mentor_id'])
             link = f"/lecturer/approve"
+            
+            desc_html = (
+                f"<div style='background: #f8fafc; border-left: 4px solid #4f46e5; padding: 10px 14px; margin: 12px 0; border-radius: 6px; border: 1px solid #e2e8f0;'>"
+                f"<strong style='color: #4338ca; display: block; margin-bottom: 4px;'><i class='fa-solid fa-align-left me-1'></i> Mô tả đề tài / Ý tưởng từ sinh viên:</strong>"
+                f"<p style='margin: 0; white-space: pre-wrap; font-size: 13px; color: #334155;'>{user_desc}</p>"
+                f"</div>"
+            ) if user_desc else ""
+
             html_content = (
                 f"<p>Xin chào <strong>{mentor.full_name}</strong>,</p>"
                 f"<p>Nhóm sinh viên vừa gửi yêu cầu nhờ bạn hướng dẫn đề tài NCKH: <strong>{topic_title}</strong>.</p>"
+                f"{desc_html}"
                 f"<a href='{link}' class='btn btn-primary rounded-pill btn-sm mt-2'>Phê duyệt Đề tài</a>"
             )
             new_notif = Notification(user_id=mentor.id, content=html_content)
             db.session.add(new_notif)
+            db.session.commit()
             
             from email_utils import send_email_async
             if mentor and mentor.email:
                 email_link = f"http://127.0.0.1:5000/lecturer/approve"
+                email_desc_html = (
+                    f"<div style='background: #f1f5f9; border-left: 4px solid #4f46e5; padding: 12px 16px; margin: 14px 0; border-radius: 6px;'>"
+                    f"<strong style='color: #312e81;'>Mô tả đề tài / Ý tưởng nghiên cứu từ sinh viên:</strong>"
+                    f"<p style='margin: 8px 0 0 0; white-space: pre-wrap; font-size: 14px; color: #1e293b;'>{user_desc}</p>"
+                    f"</div>"
+                ) if user_desc else ""
+
                 email_html = (
                     f"<div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>"
                     f"<h2 style='color: #4f46e5;'>Yêu cầu Hướng dẫn Đề tài NCKH</h2>"
                     f"<p>Xin chào <strong>{mentor.full_name}</strong>,</p>"
                     f"<p>Nhóm sinh viên vừa gửi yêu cầu nhờ bạn hướng dẫn đề tài NCKH: <strong>{topic_title}</strong>.</p>"
+                    f"{email_desc_html}"
                     f"<p>Vui lòng đăng nhập hệ thống để xem chi tiết và Quyết định Phê duyệt / Từ chối.</p>"
                     f"<a href='{email_link}' style='display: inline-block; padding: 10px 20px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Phê duyệt Đề tài</a>"
                     f"<br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>"
@@ -792,7 +821,7 @@ def faculty_approve_topic(topic_id):
         for member in members:
             student = User.query.get(member.student_id)
             if student:
-                link_student = f"/student/chat"
+                link_student = f"/student#s-chat"
                 reassign_note = f"<p><em>(Khoa đã phân công Thầy/Cô <strong>{assigned_mentor.full_name}</strong> làm Giảng viên hướng dẫn thay thế do GV trước đã đủ số nhóm. Lý do: {change_reason})</em></p>" if reassigned and assigned_mentor else ""
                 notif_content = f"""
                 <p>Xin chào <strong>{student.full_name}</strong>,</p>
@@ -1053,7 +1082,7 @@ def approve_topic(topic_id):
             for member in members:
                 student = User.query.get(member.student_id)
                 if student:
-                    link_student = f"/student/progress"
+                    link_student = f"/student#s-group"
                     notif_content = f"""
                     <p>Xin chào <strong>{student.full_name}</strong>,</p>
                     <p>Giảng viên hướng dẫn vừa đồng ý tham gia đề tài NCKH: <strong>{topic.title}</strong> của nhóm bạn.</p>
@@ -1078,14 +1107,28 @@ def approve_topic(topic_id):
                         send_email_async(student.email, f"[HOU S-RIMS] Giảng viên đồng ý hướng dẫn", f"Giảng viên đồng ý hướng dẫn đề tài {topic.title}", html_content_student)
             
             # Thông báo cho Ban Chủ nhiệm Khoa (role: faculty)
+            desc_fac_html = f"<div style='margin-top: 8px; padding: 10px; background-color: #f8fafc; border-left: 4px solid #f59e0b; border-radius: 4px; font-size: 13px; color: #334155;'><strong>Mô tả / Ý tưởng nghiên cứu:</strong><br>{topic.description}</div>" if topic.description else ""
             faculty_users = User.query.filter_by(role='faculty').all()
             for fac in faculty_users:
                 notif_fac_content = f"""
                 <p><strong>Đề tài mới chờ Khoa phê duyệt</strong></p>
                 <p>Đề tài <strong>{topic.title}</strong> do Giảng viên hướng dẫn vừa đồng ý phê duyệt và đang chờ Hội đồng Khoa thẩm định.</p>
+                {desc_fac_html}
                 <a href='/faculty/topics' class='btn btn-warning rounded-pill btn-sm mt-2'>Xem & Phê duyệt</a>
                 """
                 db.session.add(Notification(user_id=fac.id, content=notif_fac_content))
+                if fac.email:
+                    email_fac_content = f"""
+                    <div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>
+                        <h2 style='color: #f59e0b;'>Đề tài mới chờ Khoa phê duyệt</h2>
+                        <p>Xin chào <strong>{fac.full_name}</strong>,</p>
+                        <p>Đề tài <strong>{topic.title}</strong> đã được Giảng viên hướng dẫn đồng ý và chuyển lên chờ Hội đồng Khoa thẩm định.</p>
+                        {desc_fac_html}
+                        <a href='http://127.0.0.1:5000/faculty/topics' style='display: inline-block; padding: 10px 20px; background-color: #f59e0b; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Xem & Phê duyệt</a>
+                        <br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>
+                    </div>
+                    """
+                    send_email_async(fac.email, f"[HOU S-RIMS] Đề tài mới chờ Khoa phê duyệt: {topic.title}", f"Đề tài {topic.title} chờ duyệt", email_fac_content)
             db.session.commit()
                     
         elif topic.status == 'approved':
@@ -1119,7 +1162,7 @@ def approve_topic(topic_id):
             for member in members:
                 student = User.query.get(member.student_id)
                 if student:
-                    link_student = f"/student/progress"
+                    link_student = f"/student#s-group"
                     notif_content = f"""
                     <p>Xin chào <strong>{student.full_name}</strong>,</p>
                     <p>Đề tài NCKH <strong>{topic.title}</strong> của nhóm bạn đã được Khoa chính thức phê duyệt.</p>

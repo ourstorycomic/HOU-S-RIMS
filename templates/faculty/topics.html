@@ -19,7 +19,7 @@
                                     ĐÃ HỦY ({{ topics|selectattr('status', 'equalto', 'rejected')|list|length }})
                                 </button>
                             </div>
-                            <input type="text" class="form-control rounded-pill bg-light border-0 px-4 small" placeholder="Tìm tên đề tài..." style="width: 300px;">
+                            <input type="text" id="topicSearchInput" oninput="searchTopics(this.value)" class="form-control rounded-pill bg-light border-0 px-4 small" placeholder="Tìm tên đề tài, mã đề tài, giảng viên..." style="width: 300px;">
                         </div>
                     </div>
                     <div class="card-body p-0">
@@ -41,6 +41,11 @@
                                         <td class="ps-4 fw-bold text-primary">DT-00{{ t.id }}</td>
                                         <td>
                                             <div class="fw-bold text-dark">{{ t.title }}</div>
+                                            {% if t.description %}
+                                            <div class="small text-secondary bg-light p-2 rounded-2 border mt-1 mb-1" style="max-width: 450px; word-break: break-word;">
+                                                <i class="fa-solid fa-align-left text-primary me-1"></i><strong>Mô tả:</strong> {{ t.description }}
+                                            </div>
+                                            {% endif %}
                                             <small class="text-muted">Nhóm ID: {{ t.group_id }}</small>
                                         </td>
                                         <td class="fw-bold text-dark small">
@@ -80,34 +85,84 @@
                 </div>
         </div>
     <script>
+        let currentTopicFilterStatus = 'all';
+
         function filterTopics(status, btn) {
-            // Update button styles
+            currentTopicFilterStatus = status || 'all';
+
+            // Cập nhật trạng thái active của nút bấm
             document.querySelectorAll('.btn-filter').forEach(b => {
                 b.classList.remove('btn-primary', 'active');
                 b.classList.add('btn-light', 'text-muted');
             });
-            if(btn) {
+            if (btn) {
                 btn.classList.remove('btn-light', 'text-muted');
                 btn.classList.add('btn-primary', 'active');
             }
-            
-            // Filter rows
+
+            applyTopicFiltering();
+        }
+
+        function searchTopics(query) {
+            applyTopicFiltering();
+        }
+
+        function applyTopicFiltering() {
+            const searchInput = document.getElementById('topicSearchInput');
+            const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
             const rows = document.querySelectorAll('tbody tr');
-            let hasVisible = false;
+            let visibleCount = 0;
+            let emptyRow = document.getElementById('noFilterResultsRow');
+
             rows.forEach(row => {
-                if(row.querySelector('td[colspan]')) return; // skip empty msg
-                
-                if(status === 'all' || row.classList.contains('status-' + status)) {
+                if (row.id === 'noFilterResultsRow' || row.querySelector('td[colspan]')) return;
+
+                let statusMatch = false;
+                if (currentTopicFilterStatus === 'all') {
+                    statusMatch = true;
+                } else if (currentTopicFilterStatus === 'faculty_pending') {
+                    statusMatch = row.classList.contains('status-faculty_pending') || row.classList.contains('status-pending');
+                } else if (currentTopicFilterStatus === 'pending') {
+                    statusMatch = row.classList.contains('status-pending') || row.classList.contains('status-faculty_pending');
+                } else {
+                    statusMatch = row.classList.contains('status-' + currentTopicFilterStatus);
+                }
+
+                let searchMatch = true;
+                if (query) {
+                    const text = row.textContent.toLowerCase();
+                    searchMatch = text.includes(query);
+                }
+
+                if (statusMatch && searchMatch) {
                     row.hidden = false;
                     row.classList.remove('d-none');
                     row.style.display = '';
-                    hasVisible = true;
+                    visibleCount++;
                 } else {
                     row.hidden = true;
                     row.classList.add('d-none');
                     row.style.display = 'none';
                 }
             });
+
+            const tbody = document.querySelector('tbody');
+            if (tbody) {
+                if (visibleCount === 0) {
+                    if (!emptyRow) {
+                        emptyRow = document.createElement('tr');
+                        emptyRow.id = 'noFilterResultsRow';
+                        emptyRow.innerHTML = '<td colspan="6" class="text-center text-muted py-4"><i class="fa-regular fa-folder-open me-2"></i>Không tìm thấy đề tài nào phù hợp với bộ lọc</td>';
+                        tbody.appendChild(emptyRow);
+                    } else {
+                        emptyRow.style.display = '';
+                        emptyRow.classList.remove('d-none');
+                    }
+                } else if (emptyRow) {
+                    emptyRow.style.display = 'none';
+                    emptyRow.classList.add('d-none');
+                }
+            }
         }
 
         async function facultyApprove(topicId) {

@@ -108,7 +108,7 @@ def sync_notifications():
         
         status_map = {'waiting_for_members': 0, 'pending': 1, 'faculty_pending': 2, 'approved': 3, 'rejected': 0}
         step = status_map.get(g_topic.status if g_topic else '', 1)
-        pct = 100 if (g_topic and g_topic.status == 'approved') else (50 if (g_topic and g_topic.status == 'faculty_pending') else (10 if (g_topic and g_topic.status == 'pending') else 0))
+        pct = 100 if (g_topic and g_topic.status == 'approved') else (50 if (g_topic and g_topic.status == 'faculty_pending') else 0)
         
         status_labels = {
             'approved': 'ĐÃ PHÊ DUYỆT CHÍNH THỨC',

@@ -238,7 +238,7 @@ function showProfilePopup(userId, userName) {
                 <h5 class="fw-bold mt-2 mb-0">${userName}</h5>
                 <p class="text-muted small mb-3">Thành viên</p>
                 <div class="d-flex gap-2 justify-content-center">
-                    <a href="/profile/${userId}" target="_blank" class="btn btn-outline-primary rounded-pill px-3 py-2 fw-bold">
+                    <a href="/profile/${userId}" class="btn btn-outline-primary rounded-pill px-3 py-2 fw-bold">
                         <i class="fa-regular fa-id-badge me-1"></i> Xem Profile
                     </a>
                     <button class="btn btn-primary rounded-pill px-3 py-2 fw-bold" onclick="document.getElementById('profile-popup-overlay').remove(); startPrivateChat(${userId}, '${userName}')">
@@ -723,7 +723,26 @@ function initChatUI() {
     const privateTabBtn = document.getElementById('private-tab');
     if (privateTabBtn && !privateTabBtn.dataset.bound) {
         privateTabBtn.dataset.bound = 'true';
-        privateTabBtn.addEventListener('shown.bs.tab', fetchPrivateConversations);
+        privateTabBtn.addEventListener('shown.bs.tab', () => {
+            fetchPrivateConversations();
+            // When in private tab, always hide "Cập nhật tên đề tài"
+            const btn = document.getElementById('btnChatUpdateTopicTitle');
+            if (btn) btn.classList.add('d-none');
+        });
+    }
+
+    const groupsTabBtn = document.getElementById('groups-tab');
+    if (groupsTabBtn && !groupsTabBtn.dataset.bound) {
+        groupsTabBtn.dataset.bound = 'true';
+        groupsTabBtn.addEventListener('shown.bs.tab', () => {
+            const activeGroup = document.querySelector('.chat-group-item.border-primary') || document.querySelector('.chat-group-item');
+            if (activeGroup) {
+                const gId = activeGroup.getAttribute('data-group-id');
+                const isAppr = activeGroup.getAttribute('data-is-approved') === 'true';
+                const name = (activeGroup.querySelector('span')?.textContent || '').trim();
+                updateChatHeader(name, gId, 'group', isAppr);
+            }
+        });
     }
 }
 
@@ -731,13 +750,41 @@ window.initChatUI = initChatUI;
 document.addEventListener('DOMContentLoaded', initChatUI);
 window.addEventListener('beforeunload', stopChatPolling);
 
-function updateChatHeader(chatName, chatId, chatType="group") {
+function updateChatHeader(chatName, chatId, chatType="group", isApproved=null) {
     activeChatType = chatType;
+    window.activeChatType = chatType;
     var headerName = document.getElementById('chat-header-name');
     var headerAvatar = document.getElementById('chat-header-avatar');
-    if (headerName) headerName.textContent = chatName;
+    if (headerName) {
+        headerName.textContent = chatName;
+        if (headerName.nextElementSibling) {
+            headerName.nextElementSibling.innerHTML = chatType === 'group' 
+                ? '<i class="fa-solid fa-circle text-success" style="font-size: 8px;"></i> Nhóm NCKH' 
+                : 'Trò chuyện riêng';
+        }
+    }
     if (headerAvatar) {
         headerAvatar.innerHTML = chatType === 'group' ? '<i class="fa-solid fa-users"></i>' : '<i class="fa-solid fa-user"></i>';
+    }
+    
+    // Toggle "Cập nhật tên đề tài": CHỈ hiện trong nhóm khi đề tài đã được Khoa phê duyệt chính thức
+    const updateTitleBtn = document.getElementById('btnChatUpdateTopicTitle');
+    if (updateTitleBtn) {
+        if (chatType === 'group') {
+            let approved = isApproved;
+            if (approved === null || approved === undefined) {
+                const activeItem = document.querySelector(`.chat-group-item[data-group-id="${chatId}"]`);
+                approved = activeItem ? (activeItem.getAttribute('data-is-approved') === 'true') : false;
+            }
+            if (approved) {
+                updateTitleBtn.classList.remove('d-none');
+            } else {
+                updateTitleBtn.classList.add('d-none');
+            }
+        } else {
+            // Khi chat cá nhân hoặc không phải nhóm -> Luôn ẩn
+            updateTitleBtn.classList.add('d-none');
+        }
     }
     
     // Switch UI tab based on type
@@ -769,10 +816,21 @@ function updateChatHeader(chatName, chatId, chatType="group") {
 }
 
 function startPrivateChat(userId, userName) {
+    const myUserId = getCurrentUserId();
+    if (userId === myUserId) return; // Can't chat with self
+
     // Pin this target so fetchPrivateConversations always keeps them in the list
     pinnedPrivateTarget = { id: userId, name: userName };
+    activeChatType = "private";
+    window.activeChatType = "private";
     
-    // Switch to private tab first
+    // Hide "Cập nhật tên đề tài" in private chat
+    const updateTitleBtn = document.getElementById('btnChatUpdateTopicTitle');
+    if (updateTitleBtn) {
+        updateTitleBtn.classList.add('d-none');
+    }
+    
+    // 1. Switch to private tab
     const privateTabBtn = document.getElementById('private-tab');
     if (privateTabBtn) {
         try {
@@ -786,9 +844,26 @@ function startPrivateChat(userId, userName) {
         }
     }
     
-    // Inject target user into private list if not already there
+    // 2. Update Header
+    const headerName = document.getElementById('chat-header-name');
+    if (headerName) {
+        headerName.textContent = userName;
+        if (headerName.nextElementSibling) {
+            headerName.nextElementSibling.textContent = 'Trò chuyện riêng';
+        }
+    }
+    const headerAvatar = document.getElementById('chat-header-avatar');
+    if (headerAvatar) {
+        headerAvatar.innerHTML = '<i class="fa-solid fa-user"></i>';
+    }
+
+    // 3. Start polling for this specific user's private messages
+    startChatPolling(userId);
+
+    // 4. Update sidebar list immediately and fetch conversation list
     const list = document.getElementById('private-chat-list');
     if (list) {
+        list.querySelectorAll('.list-group-item').forEach(el => el.classList.remove('active', 'bg-light', 'border-start', 'border-primary', 'border-4'));
         const existingItem = list.querySelector(`[data-user-id="${userId}"]`);
         if (!existingItem) {
             const placeholder = list.querySelector('.text-center');
@@ -813,13 +888,11 @@ function startPrivateChat(userId, userName) {
                 </div>`;
             list.prepend(newItem);
         } else {
-            // Highlight existing
-            list.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
             existingItem.classList.add('active');
         }
     }
     
-    updateChatHeader(userName, userId, "private");
+    fetchPrivateConversations();
 }
 
 window.openPrivateChatWithUser = function(userId, userName) {
@@ -895,30 +968,6 @@ async function fetchChatMedia() {
         console.error('Error fetching media:', e);
     }
 }
-
-function startPrivateChat(userId, userName) {
-    const myUserId = getCurrentUserId();
-    if (userId === myUserId) return; // Can't chat with self
-    
-    activeChatType = "private";
-    startChatPolling(userId);
-    
-    // Switch UI to private tab
-    const privateTabBtn = document.getElementById('private-tab');
-    if(privateTabBtn) {
-        const bsTab = new bootstrap.Tab(privateTabBtn);
-        bsTab.show();
-    }
-    
-    // Update Header
-    document.getElementById('chat-header-name').textContent = userName;
-    document.getElementById('chat-header-name').nextElementSibling.textContent = 'Trò chuyện riêng';
-    document.getElementById('chat-header-avatar').innerHTML = '<i class="fa-solid fa-user"></i>';
-    
-    fetchPrivateConversations();
-}
-
-// (User Search Autocomplete is integrated into initChatUI above)
 
 // pinnedPrivateTarget: { id, name } - set when opening chat from profile
 let pinnedPrivateTarget = null;

@@ -15,22 +15,24 @@
                                 </div>
                                 <ul class="nav nav-pills nav-fill nav-sm" id="chat-tabs" role="tablist">
                                     <li class="nav-item" role="presentation">
-                                        <button class="nav-link active py-1" id="groups-tab" data-bs-toggle="tab" data-bs-target="#groups-pane" type="button" role="tab">Nhóm</button>
+                                        <button class="nav-link {% if not target_user %}active{% endif %} py-1" id="groups-tab" data-bs-toggle="tab" data-bs-target="#groups-pane" type="button" role="tab">Nhóm</button>
                                     </li>
                                     <li class="nav-item" role="presentation">
-                                        <button class="nav-link py-1" id="private-tab" data-bs-toggle="tab" data-bs-target="#private-pane" type="button" role="tab">Cá nhân</button>
+                                        <button class="nav-link {% if target_user %}active{% endif %} py-1" id="private-tab" data-bs-toggle="tab" data-bs-target="#private-pane" type="button" role="tab">Cá nhân</button>
                                     </li>
                                 </ul>
                             </div>
                             
                             <div class="tab-content flex-grow-1 overflow-hidden d-flex flex-column">
-                                <div class="tab-pane fade show active flex-grow-1 overflow-auto" id="groups-pane" role="tabpanel">
+                                <div class="tab-pane fade {% if not target_user %}show active{% endif %} flex-grow-1 overflow-auto" id="groups-pane" role="tabpanel">
                                     <div class="list-group list-group-flush">
                                     {% if my_groups %}
                                         {% for g in my_groups %}
-                                        {% set topic_title = g.topics[0].title if (g.topics and g.topics[0] and g.topics[0].title) else '' %}
+                                        {% set topic = g.topics[0] if (g.topics and g.topics[0]) else None %}
+                                        {% set topic_title = topic.title if (topic and topic.title) else '' %}
+                                        {% set is_approved = (g.status == 'approved') or (topic and topic.status == 'approved') %}
                                         {% set display_group_name = ('Nhóm ' ~ topic_title) if topic_title else (g.name if (g.name and not g.name.startswith('Nhóm ID:')) else ('Nhóm ID: ' ~ g.id)) %}
-                                        <a href="#" class="list-group-item list-group-item-action border-0 p-3 chat-group-item" data-group-id="{{ g.id }}" onclick="updateChatHeader('{{ display_group_name | escape }}', {{ g.id }})">
+                                        <a href="#" class="list-group-item list-group-item-action border-0 p-3 chat-group-item" data-group-id="{{ g.id }}" data-is-approved="{{ 'true' if is_approved else 'false' }}" onclick="updateChatHeader('{{ display_group_name | escape }}', {{ g.id }}, 'group', {{ 'true' if is_approved else 'false' }})">
                                             <div class="d-flex align-items-center gap-3">
                                                 <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px; background-color: #6366f1 !important;"><i class="fa-solid fa-users"></i></div>
                                                 <div class="overflow-hidden">
@@ -48,7 +50,7 @@
                                     </div>
                                 </div>
                                 
-                                <div class="tab-pane fade flex-grow-1 overflow-auto" id="private-pane" role="tabpanel">
+                                <div class="tab-pane fade {% if target_user %}show active{% endif %} flex-grow-1 overflow-auto" id="private-pane" role="tabpanel">
                                     <div class="list-group list-group-flush" id="private-chat-list">
                                         <div class="text-center text-muted p-4 small">Đang tải...</div>
                                     </div>
@@ -57,12 +59,29 @@
                         </div>
                         <div id="main-chat-area" class="col-md-9 d-flex flex-column bg-white h-100 transition-all">
                             <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+                                {% if target_user %}
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="bg-primary text-white rounded-3 d-flex align-items-center justify-content-center fw-bold" id="chat-header-avatar" style="width: 40px; height: 40px; background-color: #6366f1 !important;">
+                                        {{ (target_user.full_name[:2] | upper) if target_user.full_name else '?' }}
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold" id="chat-header-name">{{ target_user.full_name }}</div>
+                                        <div class="small text-muted">Trò chuyện riêng</div>
+                                    </div>
+                                </div>
+                                {% else %}
+                                {% set first_topic = my_groups[0].topics[0] if (my_groups and my_groups[0].topics) else None %}
+                                {% set is_first_approved = (my_groups[0].status == 'approved') or (first_topic and first_topic.status == 'approved') if my_groups else false %}
+                                {% set first_title = first_topic.title if (first_topic and first_topic.title) else '' %}
+                                {% set first_display_name = ('Nhóm ' ~ first_title) if first_title else (my_groups[0].name if (my_groups and my_groups[0].name and not my_groups[0].name.startswith('Nhóm ID:')) else ('Nhóm ID: ' ~ my_groups[0].id)) if my_groups else 'Chưa có nhóm' %}
                                 <div class="d-flex align-items-center gap-3">
                                     <div class="bg-primary text-white rounded-3 d-flex align-items-center justify-content-center fw-bold" id="chat-header-avatar" style="width: 40px; height: 40px; background-color: #6366f1 !important;">{{ my_groups[0].id if my_groups else '?' }}</div>
-                                    <div><div class="fw-bold" id="chat-header-name">{{ my_groups[0].name if my_groups else 'Chưa có nhóm' }}</div><div class="small text-success"><i class="fa-solid fa-circle" style="font-size: 8px;"></i> Nhóm NCKH</div></div>
+                                    <div><div class="fw-bold" id="chat-header-name">{{ first_display_name }}</div><div class="small text-success"><i class="fa-solid fa-circle" style="font-size: 8px;"></i> Nhóm NCKH</div></div>
                                 </div>
+                                {% endif %}
                                 <div class="d-flex align-items-center gap-3">
-                                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-bold shadow-xs" id="btnChatUpdateTopicTitle" onclick="openUpdateTopicTitleFromChat()" style="font-size: 12px;">
+                                    {% set show_init_btn = (not target_user) and my_groups and is_first_approved %}
+                                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-bold shadow-xs {% if not show_init_btn %}d-none{% endif %}" id="btnChatUpdateTopicTitle" onclick="openUpdateTopicTitleFromChat()" style="font-size: 12px;">
                                         <i class="fa-solid fa-pen-to-square me-1"></i> Cập nhật tên đề tài
                                     </button>
                                     <!-- Search Box -->
@@ -239,8 +258,8 @@
         <script>
             function openUpdateTopicTitleFromChat() {
                 const groupId = window.activeChatId;
-                if (!groupId) {
-                    if (typeof Swal !== 'undefined') Swal.fire('Thông báo', 'Vui lòng chọn một nhóm chat trước!', 'info');
+                if (!groupId || window.activeChatType !== 'group') {
+                    if (typeof Swal !== 'undefined') Swal.fire('Thông báo', 'Tính năng này chỉ áp dụng cho nhóm đề tài NCKH chính thức đã được Khoa phê duyệt!', 'info');
                     return;
                 }
                 const currentName = (document.getElementById('chat-header-name')?.textContent || '').replace(/^Nhóm\s+/, '').trim();
@@ -322,12 +341,13 @@
         {% if target_user %}
         <script>
             document.addEventListener("DOMContentLoaded", function() {
-                // Add a small delay to ensure chat.js has initialized the UI
+                const btn = document.getElementById('btnChatUpdateTopicTitle');
+                if (btn) btn.classList.add('d-none');
                 setTimeout(() => {
                     if (typeof startPrivateChat === 'function') {
                         startPrivateChat({{ target_user.id }}, '{{ target_user.full_name }}');
                     }
-                }, 500);
+                }, 100);
             });
         </script>
         {% endif %}

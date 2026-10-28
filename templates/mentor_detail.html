@@ -50,30 +50,30 @@
 
         <!-- Navigation Links -->
         <nav class="flex-1 py-3 px-2 lg:px-3 space-y-1.5 overflow-y-auto">
-            <a href="{{ url_for('web.student_page') }}#s-explore" class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800/80 hover:text-white transition group">
+            <a href="/student#s-explore" class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800/80 hover:text-white transition group">
                 <i class="fa-solid fa-lightbulb text-base w-5 text-center text-gray-400 group-hover:text-amber-400 transition"></i>
                 <span class="hidden lg:inline font-medium text-[13px]">Khám phá ý tưởng</span>
             </a>
 
             <!-- Active Item: Tìm kiếm Mentor -->
-            <a href="{{ url_for('web.mentors_page') }}" class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-white bg-primary font-medium shadow-md transition">
+            <a href="/student#s-mentors" class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-white bg-primary font-medium shadow-md transition">
                 <i class="fa-solid fa-chalkboard-user text-base w-5 text-center"></i>
                 <span class="hidden lg:inline font-semibold text-[13px]">Tìm kiếm Mentor</span>
             </a>
 
-            <a href="{{ url_for('web.student_page') }}#s-register" class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800/80 hover:text-white transition group">
+            <a href="/student#s-register" class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800/80 hover:text-white transition group">
                 <i class="fa-solid fa-pen-to-square text-base w-5 text-center text-gray-400 group-hover:text-white transition"></i>
                 <span class="hidden lg:inline font-medium text-[13px]">Đăng ký NCKH</span>
             </a>
 
-            <a href="{{ url_for('web.student_page') }}#s-group" class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800/80 hover:text-white transition group">
+            <a href="/student#s-group" class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800/80 hover:text-white transition group">
                 <i class="fa-solid fa-users text-base w-5 text-center text-gray-400 group-hover:text-white transition"></i>
                 <span class="hidden lg:inline font-medium text-[13px]">Nhóm nghiên cứu</span>
             </a>
         </nav>
 
         <div class="p-3 border-t border-gray-800 hidden lg:block">
-            <a href="{{ url_for('web.mentors_page') }}" class="flex items-center gap-2.5 px-3 py-2 text-xs text-gray-400 hover:text-white hover:bg-gray-800/60 rounded-lg transition">
+            <a href="/student#s-mentors" class="flex items-center gap-2.5 px-3 py-2 text-xs text-gray-400 hover:text-white hover:bg-gray-800/60 rounded-lg transition">
                 <i class="fa-solid fa-arrow-left text-xs"></i>
                 <span>Quay lại Danh sách</span>
             </a>
@@ -180,7 +180,7 @@
                                     <i class="fa-solid fa-headset text-gray-400"></i>
                                     <span>Liên hệ & Trao đổi định hướng</span>
                                 </div>
-                                <button type="button" onclick="alert('Đã mở cuộc trò chuyện trao đổi!')" class="w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-2.5 px-4 rounded-lg border border-gray-300 shadow-xs flex items-center justify-center gap-2 transition duration-200 hover:border-gray-400">
+                                <button type="button" onclick="const mName = document.getElementById('detailName')?.textContent?.trim() || ''; window.location.href = '/student/chat?mentor=' + encodeURIComponent(mName);" class="w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-2.5 px-4 rounded-lg border border-gray-300 shadow-xs flex items-center justify-center gap-2 transition duration-200 hover:border-gray-400">
                                     <i class="fa-regular fa-comment-dots text-gray-500"></i>
                                     <span>Nhắn tin trao đổi</span>
                                 </button>

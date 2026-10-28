@@ -100,8 +100,12 @@ def view_profile(identifier):
         context['global_topic_count'] = Topic.query.join(Batch).filter(Batch.academic_year == current_year, Batch.status != 'hidden').count()
         context['notifications'] = Notification.query.filter_by(user_id=user_id).order_by(Notification.is_read.asc(), Notification.created_at.desc()).all()
     
-    # Try to find by student_id first, then by username, then by ID as string
-    user = User.query.filter((User.student_id == identifier) | (User.username == identifier) | (User.id == identifier)).first_or_404()
+    # Try to find by student_id first, then by username, then by ID as integer if numeric
+    from sqlalchemy import or_
+    conditions = [(User.student_id == identifier), (User.username == identifier)]
+    if identifier.isdigit():
+        conditions.append(User.id == int(identifier))
+    user = User.query.filter(or_(*conditions)).first_or_404()
     
     # Get portfolio data if student
     skills = Skill.query.filter_by(student_id=user.id).all() if user.role == 'student' else []
