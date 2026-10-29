@@ -32,9 +32,6 @@
         {% set topic_count = global_topic_count if global_topic_count is defined else (topics | length if topics is defined else 0) %}
         {% if topic_count > 0 %}<span class="badge bg-primary rounded-pill ms-1" style="font-size: 9px;">{{ topic_count }}</span>{% endif %}
     </a>
-       <a href="{{ url_for('faculty.assignment') }}" class="nav-link {{ 'active-main' if request.endpoint == 'faculty.assignment' else '' }}">
-       <i class="fa-solid fa-shuffle"></i> Luân chuyển GV
-   </a>
     <a href="{{ url_for('faculty.lecturers') }}" class="nav-link {{ 'active-main' if request.endpoint == 'faculty.lecturers' else '' }}">
         <i class="fa-regular fa-user"></i> Giảng viên
     </a>

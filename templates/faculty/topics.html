@@ -34,9 +34,10 @@
                                             <div class="fw-bold text-dark">{{ t.title }}</div>
                                             <small class="text-muted">Nhóm ID: {{ t.group_id }}</small>
                                         </td>
+                                        {% set ns = namespace(mentor_name='') %}
+                                        {% for m in mentors %}{% if m.id == t.mentor_id %}{% set ns.mentor_name = m.full_name %}{% endif %}{% endfor %}
                                         <td class="fw-bold text-dark small">
-                                            {% for m in mentors %}{% if m.id == t.mentor_id %}{{ m.full_name }}{% endif %}{% endfor %}
-                                            {% if not t.mentor_id %}Chưa phân công{% endif %}
+                                            {{ ns.mentor_name if ns.mentor_name else 'Chưa phân công' }}
                                         </td>
                                         <td>
                                             <span class="badge {% if t.status == 'approved' %}bg-success-subtle text-success border-success-subtle{% elif t.status == 'pending' %}bg-secondary-subtle text-secondary border-secondary-subtle{% elif t.status == 'faculty_pending' %}bg-warning-subtle text-warning border-warning-subtle{% elif t.status == 'rejected' %}bg-danger-subtle text-danger border-danger-subtle{% else %}bg-primary-subtle text-primary border-primary-subtle{% endif %} border rounded-pill px-3 py-1 small">{{ t.status | upper }}</span>
@@ -45,6 +46,13 @@
                                             {% if t.status == 'faculty_pending' %}
                                             <button class="btn btn-sm btn-success fw-bold me-1" onclick="facultyApprove({{ t.id }})">Duyệt</button>
                                             <button class="btn btn-sm btn-danger fw-bold me-2" onclick="facultyReject({{ t.id }})">Hủy</button>
+                                            {% endif %}
+                                            {% if t.status in ('pending', 'faculty_pending', 'approved') %}
+                                            <button class="btn btn-sm btn-outline-primary fw-bold rounded-pill me-1" title="Chuyển giảng viên hướng dẫn"
+                                                    data-reassign="{{ t.id }}" data-title="{{ t.title }}" data-status="{{ t.status }}"
+                                                    data-mentor-id="{{ t.mentor_id or '' }}" data-mentor-name="{{ ns.mentor_name }}">
+                                                <i class="fa-solid fa-shuffle me-1"></i> Chuyển GV
+                                            </button>
                                             {% endif %}
                                             <button class="btn btn-sm text-primary" onclick="openEditTopicModal({{ t.id }}, '{{ t.title|replace('\'', '\\\'') }}', '{{ t.description|replace('\'', '\\\'') }}', '{{ t.mentor_id or '' }}', '{{ t.batch_id or '' }}', '{{ t.status }}')"><i class="fa-solid fa-pen-to-square"></i></button>
                                         </td>
@@ -154,4 +162,159 @@
             }
         }
     </script>
+
+<!-- Modal chọn GV mới (tích hợp từ mục Luân chuyển GV) -->
+<div class="modal fade" id="modalReassign" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+    <div class="modal-content border-0 rounded-4 shadow">
+      <div class="modal-header border-bottom-0 pb-0">
+        <h5 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-shuffle me-2"></i>CHUYỂN GIẢNG VIÊN HƯỚNG DẪN</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4 pt-3">
+        <div class="small text-muted mb-2" id="asgTopicInfo"></div>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div class="fw-bold small" id="asgSuggestTitle">Giảng viên cùng chuyên môn</div>
+          <div class="form-check form-switch small">
+            <input class="form-check-input" type="checkbox" id="asgShowAll">
+            <label class="form-check-label" for="asgShowAll">Hiện tất cả giảng viên</label>
+          </div>
+        </div>
+        <div id="asgSuggestList"></div>
+        <div class="mt-3">
+          <label class="form-label small fw-bold">Lý do chuyển (không bắt buộc)</label>
+          <input type="text" id="asgReason" class="form-control" maxlength="300" placeholder="Ví dụ: GV cũ quá tải, đổi hướng nghiên cứu...">
+        </div>
+      </div>
+      <div class="modal-footer border-0 px-4 pb-4">
+        <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal">Hủy</button>
+        <button type="button" class="btn btn-primary fw-bold px-4 shadow-sm" id="asgConfirm" disabled>Xác nhận chuyển</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== CHUYỂN GIẢNG VIÊN HƯỚNG DẪN =====================
+(function () {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  let selectedTopic = null, selectedMentor = null, suggestions = [];
+  const modal = () => bootstrap.Modal.getOrCreateInstance($('modalReassign'));
+
+  async function api(url, opts) {
+    const res = await fetch(url, opts);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw Object.assign(new Error(data.error || res.statusText), { code: data.code });
+    return data;
+  }
+
+  function loadBar(cur, quota) {
+    const pct = Math.min(100, Math.round(cur / quota * 100));
+    const color = cur >= quota ? 'bg-danger' : (pct >= 60 ? 'bg-warning' : 'bg-success');
+    return `<div class="progress" style="height:6px"><div class="progress-bar ${color}" style="width:${pct}%"></div></div>`;
+  }
+
+  async function loadSuggestions() {
+    const box = $('asgSuggestList');
+    selectedMentor = null; $('asgConfirm').disabled = true;
+    box.innerHTML = '<div class="text-muted small py-3 text-center">Đang tìm giảng viên phù hợp...</div>';
+    try {
+      const all = $('asgShowAll').checked ? 1 : 0;
+      const data = await api(`/api/assignment/suggest?topic_id=${selectedTopic.topic_id}&all=${all}`);
+      suggestions = data.suggestions;
+      $('asgSuggestTitle').textContent = all ? 'Tất cả giảng viên' : 'Giảng viên cùng chuyên môn';
+      if (!suggestions.length) {
+        box.innerHTML = '<div class="text-muted text-center py-4">Không có giảng viên nào cùng chuyên môn. Bật "Hiện tất cả giảng viên" để chọn người khác.</div>';
+        return;
+      }
+      box.innerHTML = suggestions.map((s, i) => `
+        <label class="d-flex gap-3 align-items-start border rounded-3 p-3 mb-2" style="cursor:pointer;${s.available ? '' : 'opacity:.75'}">
+          <input type="radio" name="asgMentor" class="form-check-input mt-1" value="${i}">
+          <div class="flex-grow-1">
+            <div class="d-flex justify-content-between flex-wrap gap-1">
+              <span class="fw-bold">${esc(s.full_name)}</span>
+              <span>${s.available ? '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Còn chỗ</span>'
+                                   : '<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">Đã đủ</span>'}</span>
+            </div>
+            <div class="small text-muted">${esc(s.faculty || '')}${s.same_department ? ' · <span class="text-primary fw-bold">cùng bộ môn</span>' : ''}</div>
+            ${s.matched_keywords.length ? '<div class="mt-1">' + s.matched_keywords.map(k => `<span class="badge bg-primary-subtle text-primary me-1">${esc(k)}</span>`).join('') + '</div>' : ''}
+            <div class="mt-2">${loadBar(s.current_topics, s.quota)}
+              <div class="small text-muted">Đang giữ ${s.current_topics}/${s.quota} đề tài (${s.approved} đã duyệt, ${s.pending} đang chờ)</div></div>
+          </div>
+        </label>`).join('');
+      box.querySelectorAll('input[name=asgMentor]').forEach(r => r.addEventListener('change', () => {
+        selectedMentor = suggestions[+r.value]; $('asgConfirm').disabled = false;
+      }));
+    } catch (e) { box.innerHTML = `<div class="text-danger">${esc(e.message)}</div>`; }
+  }
+
+  function openReassign(info) {
+    selectedTopic = info;
+    $('asgReason').value = '';
+    $('asgShowAll').checked = false;
+    $('asgTopicInfo').innerHTML = `Đề tài <b>${esc(info.title)}</b> — GV hiện tại: <b>${esc(info.mentor_name || 'Chưa phân công')}</b>`;
+    modal().show();
+    loadSuggestions();
+  }
+
+  async function confirmReassign() {
+    if (!selectedMentor || !selectedTopic) return;
+    const full = !selectedMentor.available;
+    const approved = selectedTopic.status === 'approved';
+    const warn = [];
+    if (full) warn.push(`${selectedMentor.full_name} đã giữ ${selectedMentor.current_topics}/${selectedMentor.quota} đề tài.`);
+    if (approved) warn.push('Đề tài đã được phê duyệt chính thức.');
+    const c = await Swal.fire({
+      title: `Chuyển cho ${selectedMentor.full_name}?`,
+      html: (warn.length ? warn.map(esc).join('<br>') + '<br><br>' : '') + 'Hệ thống sẽ gửi email thông báo cho GV cũ, GV mới và nhóm sinh viên.',
+      icon: warn.length ? 'warning' : 'question', showCancelButton: true,
+      confirmButtonText: 'Chuyển', cancelButtonText: 'Hủy'
+    });
+    if (!c.isConfirmed) return;
+    try {
+      const r = await api('/api/assignment/reassign', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic_id: selectedTopic.topic_id, new_mentor_id: selectedMentor.id,
+          reason: $('asgReason').value.trim(), force: full, confirm_approved: approved })
+      });
+      modal().hide();
+      let msg = 'Đã chuyển giảng viên hướng dẫn.';
+      if (r.released_slots) msg += ` Đã hủy ${r.released_slots} lịch báo cáo của nhóm với GV cũ.`;
+      await Swal.fire('Thành công', msg, 'success');
+      location.reload();
+    } catch (e) { Swal.fire('Không thể chuyển', e.message, 'error'); }
+  }
+
+  function infoFromButton(b) {
+    return { topic_id: +b.dataset.reassign, title: b.dataset.title, status: b.dataset.status, mentor_name: b.dataset.mentorName };
+  }
+
+  // Nút "Chuyển GV" trên từng dòng
+  document.addEventListener('click', e => {
+    const b = e.target.closest('button[data-reassign]');
+    if (b) openReassign(infoFromButton(b));
+  });
+
+  // Nút "Đổi GV" trong modal Cập nhật đề tài
+  window.openReassignFromEdit = function () {
+    const id = $('editTopicId')?.value;
+    const b = id && document.querySelector(`button[data-reassign="${id}"]`);
+    if (!b) {
+      Swal.fire('Không thể chuyển', 'Đề tài ở trạng thái này không thể đổi giảng viên.', 'info');
+      return;
+    }
+    const info = infoFromButton(b);
+    const editEl = $('modalEditTopic');
+    const inst = editEl && bootstrap.Modal.getInstance(editEl);
+    if (inst) {
+      editEl.addEventListener('hidden.bs.modal', () => openReassign(info), { once: true });
+      inst.hide();
+    } else openReassign(info);
+  };
+
+  $('asgShowAll').addEventListener('change', loadSuggestions);
+  $('asgConfirm').addEventListener('click', confirmReassign);
+})();
+</script>
 {% endblock %}

@@ -205,12 +205,17 @@
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
                             <label class="form-label">Giảng viên hướng dẫn</label>
-                            <select id="editTopicMentor" class="form-select" disabled>
-                                <option value="">-- Không có/Chưa phân công --</option>
-                                {% for m in mentors %}
-                                <option value="{{ m.id }}">{{ m.full_name }}</option>
-                                {% endfor %}
-                            </select>
+                            <div class="input-group">
+                                <select id="editTopicMentor" class="form-select" disabled>
+                                    <option value="">-- Không có/Chưa phân công --</option>
+                                    {% for m in mentors %}
+                                    <option value="{{ m.id }}">{{ m.full_name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button type="button" class="btn btn-outline-primary fw-bold" id="btnChangeMentor"
+                                        onclick="if (typeof openReassignFromEdit === 'function') openReassignFromEdit();"
+                                        title="Chuyển sang giảng viên khác"><i class="fa-solid fa-shuffle"></i> Đổi GV</button>
+                            </div>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Đợt NCKH</label>
