@@ -1,7 +1,38 @@
+from datetime import datetime, time
+from zoneinfo import ZoneInfo
+
 from flask import Blueprint, request, jsonify
 from models import db, Milestone, Progress
 
 progress_bp = Blueprint('progress_api', __name__, url_prefix='/api/topics')
+
+LOCAL_TZ = ZoneInfo('Asia/Ho_Chi_Minh')
+
+
+def _now_local():
+    """Giờ hiện tại theo giờ Việt Nam (naive) để so với giá trị lưu trong DB."""
+    return datetime.now(LOCAL_TZ).replace(tzinfo=None)
+
+
+def _parse_deadline(value):
+    """
+    Nhận 'YYYY-MM-DDTHH:MM' / 'YYYY-MM-DD HH:MM' (có thể kèm giây).
+    Nếu chỉ có ngày 'YYYY-MM-DD' (client cũ) thì coi là hết ngày đó (23:59).
+    Không hợp lệ -> None.
+    """
+    if not value or not isinstance(value, str):
+        return None
+    value = value.strip()
+    for fmt in ('%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M:%S'):
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            continue
+    try:
+        return datetime.combine(datetime.strptime(value, '%Y-%m-%d').date(), time(23, 59))
+    except ValueError:
+        return None
+
 
 @progress_bp.route('/<int:topic_id>/progress', methods=['GET'])
 def get_progress(topic_id):
@@ -112,17 +143,22 @@ HOU S-RIMS"""
 
 @progress_bp.route('/<int:topic_id>/milestones', methods=['POST'])
 def add_milestone(topic_id):
-    from datetime import datetime
-    data = request.get_json()
+    data = request.get_json(silent=True)
     if not data or 'name' not in data or 'deadline' not in data:
         return jsonify({'error': 'Missing required fields'}), 400
-        
+
+    deadline = _parse_deadline(data['deadline'])
+    if not deadline:
+        return jsonify({'error': 'Hạn chót không hợp lệ (định dạng YYYY-MM-DDTHH:MM)'}), 400
+    # Không cho đặt hạn chót trong quá khứ (tính cả giờ, theo giờ Việt Nam)
+    if deadline <= _now_local():
+        return jsonify({'error': 'Hạn chót phải sau thời điểm hiện tại (tính cả giờ)'}), 400
+
     try:
-        deadline_date = datetime.strptime(data['deadline'], '%Y-%m-%d')
         new_milestone = Milestone(
             topic_id=topic_id,
             name=data['name'],
-            deadline=deadline_date,
+            deadline=deadline,
             description=data.get('description', '')
         )
         db.session.add(new_milestone)
