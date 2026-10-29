@@ -36,30 +36,91 @@ def dashboard():
 def approve():
     user_id = session.get('user_id')
     pending_topics = Topic.query.join(Batch).filter(Topic.mentor_id == user_id, Topic.status == 'pending', Batch.status == 'active').all()
-    approved_topics = Topic.query.join(Batch).filter(Topic.mentor_id == user_id, Topic.status != 'pending', Batch.status == 'active').all()
+    approved_topics = Topic.query.join(Batch).filter(Topic.mentor_id == user_id, Topic.status.in_(['faculty_pending', 'approved']), Batch.status == 'active').all()
     return render_template('lecturer/approve.html', pending_topics=pending_topics, approved_topics=approved_topics)
 
 @lecturer_bp.route('/progress')
 def progress():
     user_id = session.get('user_id')
-    my_topics = Topic.query.filter(Topic.mentor_id == user_id, Topic.status.in_(['pending', 'faculty_pending', 'approved'])).order_by(Topic.id.desc()).all()
+    my_topics = Topic.query.filter(Topic.mentor_id == user_id, Topic.status.in_(['faculty_pending', 'approved'])).order_by(Topic.id.desc()).all()
     all_milestones = []
     
     if my_topics:
+        from models import Evaluation
         # Get progress for all topics mentored by this lecturer
         for t in my_topics:
-            t.submissions = Submission.query.filter_by(topic_id=t.id).order_by(Submission.submitted_at.desc()).all()
+            t.submissions = Submission.query.filter_by(topic_id=t.id).order_by(
+                Submission.submitted_at.desc(), 
+                Submission.version.desc(), 
+                Submission.id.desc()
+            ).all()
             t.milestones_list = Milestone.query.filter_by(topic_id=t.id).order_by(Milestone.deadline.asc()).all()
-            total_progress = 0
-            for m in t.milestones_list:
-                p = Progress.query.filter_by(milestone_id=m.id).order_by(Progress.updated_at.desc()).first()
-                m.progress_pct = p.percentage if p else 0
-                total_progress += m.progress_pct
-                all_milestones.append(m)
             
-            if len(t.milestones_list) > 0:
-                total_progress = total_progress // len(t.milestones_list)
-            t.total_progress = total_progress
+            # Đánh dấu bản nộp mới nhất vs bản nộp cũ (cho từng loại bài nộp/cột mốc)
+            latest_by_group = {}
+            for s in t.submissions:
+                group_key = (s.type, s.milestone_id)
+                if group_key not in latest_by_group:
+                    latest_by_group[group_key] = s
+                    s.is_latest = True
+                    s.latest_version = s.version or 1
+                else:
+                    s.is_latest = False
+                    s.latest_version = latest_by_group[group_key].version or 1
+            
+            # Phân loại bài nộp theo chu trình tiến độ NCKH
+            outline_subs = [s for s in t.submissions if s.type == 'outline']
+            progress_subs = [s for s in t.submissions if s.type == 'progress']
+            final_subs = [s for s in t.submissions if s.type in ['final', 'slide']]
+            
+            latest_outline = next((s for s in outline_subs if getattr(s, 'is_latest', False)), None)
+            latest_progress = next((s for s in progress_subs if getattr(s, 'is_latest', False)), None)
+            latest_final = next((s for s in final_subs if getattr(s, 'is_latest', False)), None)
+
+            t.outline_status = latest_outline.status if latest_outline else 'none'
+            t.progress_status = latest_progress.status if latest_progress else 'none'
+            t.final_status = latest_final.status if latest_final else 'none'
+            
+            evaluations = Evaluation.query.filter_by(topic_id=t.id).all()
+            t.is_evaluated = len(evaluations) > 0
+            
+            # Tính toán tiến độ tổng thể theo Chu trình tiến độ thực của đề tài NCKH
+            # 1. Giai đoạn Phê duyệt đề tài (Trọng số 20%):
+            pct = 20 if t.status == 'approved' else (12 if t.status == 'faculty_pending' else 5)
+            
+            # 2. Giai đoạn Đề cương chi tiết (Trọng số 20%):
+            if t.outline_status == 'approved':
+                pct += 20
+            elif t.outline_status == 'submitted':
+                pct += 10
+                
+            # 3. Giai đoạn Thực hiện & Báo cáo tiến độ (Trọng số 30%):
+            if t.milestones_list:
+                ms_pct_sum = 0
+                for m in t.milestones_list:
+                    p = Progress.query.filter_by(milestone_id=m.id).order_by(Progress.updated_at.desc()).first()
+                    m.progress_pct = p.percentage if p else 0
+                    ms_pct_sum += m.progress_pct
+                    all_milestones.append(m)
+                avg_ms = ms_pct_sum / len(t.milestones_list)
+                pct += int(round(avg_ms * 0.3))
+            else:
+                if t.progress_status == 'approved':
+                    pct += 30
+                elif t.progress_status == 'submitted':
+                    pct += 15
+                    
+            # 4. Giai đoạn Báo cáo tổng kết & Slide (Trọng số 20%):
+            if t.final_status == 'approved':
+                pct += 20
+            elif t.final_status == 'submitted':
+                pct += 10
+                
+            # 5. Giai đoạn Nghiệm thu & Bảo vệ hội đồng (Trọng số 10%):
+            if t.is_evaluated:
+                pct += 10
+                
+            t.total_progress = min(max(pct, 0), 100)
             
     return render_template('lecturer/progress.html', all_mentored_topics=my_topics, all_milestones=all_milestones)
 

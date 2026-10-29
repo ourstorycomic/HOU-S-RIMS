@@ -105,6 +105,32 @@ def get_my_topic():
     status_label = status_labels.get(topic.status, 'ĐANG CHỜ GV DUYỆT')
     
     is_leader = bool(topic.group and topic.group.leader_id == user_id)
+
+    members_data = []
+    has_rejected_members = False
+    has_pending_members = False
+    rejected_names = []
+    if topic.group:
+        for m in topic.group.members:
+            st = m.student
+            if st:
+                is_mem_leader = (st.id == topic.group.leader_id)
+                st_code = getattr(st, 'student_id', '') or ''
+                m_info = {
+                    'id': m.id,
+                    'student_id': st.id,
+                    'student_code': st_code,
+                    'full_name': st.full_name or '',
+                    'avatar': getattr(st, 'avatar', None),
+                    'status': m.status,
+                    'is_leader': is_mem_leader
+                }
+                members_data.append(m_info)
+                if m.status in ['rejected', 'declined']:
+                    has_rejected_members = True
+                    rejected_names.append(st.full_name or f"SV {st_code}")
+                elif m.status in ['pending', 'invited']:
+                    has_pending_members = True
     
     return jsonify({
         'has_topic': True,
@@ -123,7 +149,11 @@ def get_my_topic():
             'group_name': topic.group.name if topic.group else f"Nhóm ID: {topic.group_id}",
             'is_leader': is_leader,
             'step': step,
-            'pct': pct
+            'pct': pct,
+            'members': members_data,
+            'has_rejected_members': has_rejected_members,
+            'has_pending_members': has_pending_members,
+            'rejected_names': rejected_names
         }
     }), 200
 
@@ -204,7 +234,7 @@ def register_topic():
         group_id = data.get('group_id', 0)
         members_list = data.get('members', [])
         topic_title = data.get('name', '').strip() or 'Đề tài NCKH (Chưa đặt tên)'
-        
+        # 1. Xác định group_id và tạo/cập nhật nhóm
         if group_id == 0:
             # Auto-create group
             group_name = f"Nhóm {topic_title}" if topic_title != 'Đề tài NCKH (Chưa đặt tên)' else f"Nhóm NCKH - SV{user_id}"
@@ -222,52 +252,6 @@ def register_topic():
             # Add leader as accepted member
             new_member = GroupMember(group_id=group_id, student_id=user_id, status='accepted')
             db.session.add(new_member)
-            
-            # Add other members as pending
-            for member_id in members_list:
-                if str(member_id) != str(user_id):
-                    invited_member = GroupMember(group_id=group_id, student_id=int(member_id), status='pending')
-                    db.session.add(invited_member)
-                    
-                    # Send invitation as a private chat message (type: invitation)
-                    from models import Message as Msg
-                    import json
-                    inviter = User.query.get(user_id)
-                    invite_msg = Msg(
-                        sender_id=user_id,
-                        receiver_id=int(member_id),
-                        group_id=None,
-                        content=f"📩 Mời bạn tham gia nhóm NCKH cho đề tài **{topic_title}**. Nhấn Đồng ý để xác nhận.",
-                        message_type='invitation',
-                        meta_data=json.dumps({'invite_group_id': group_id, 'topic_name': topic_title})
-                    )
-                    db.session.add(invite_msg)
-                    
-                    from models import Notification
-                    link = f"/student#s-explore"
-                    html_content = (
-                        f"<p>Xin chào <strong>{User.query.get(int(member_id)).full_name}</strong>,</p>"
-                        f"<p>Bạn vừa nhận được lời mời tham gia nhóm NCKH cho đề tài: <strong>{topic_title}</strong>.</p>"
-                        f"<a href='{link}' class='btn btn-primary rounded-pill btn-sm mt-2'>Xem lời mời</a>"
-                    )
-                    new_notif = Notification(user_id=int(member_id), content=html_content)
-                    db.session.add(new_notif)
-                    
-                    from email_utils import send_email_async
-                    invited_user = User.query.get(int(member_id))
-                    if invited_user and invited_user.email:
-                        email_link = f"http://127.0.0.1:5000/student/chat"
-                        email_html = (
-                            f"<div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>"
-                            f"<h2 style='color: #4f46e5;'>Lời mời tham gia nhóm NCKH</h2>"
-                            f"<p>Xin chào <strong>{invited_user.full_name}</strong>,</p>"
-                            f"<p>Bạn vừa nhận được lời mời tham gia nhóm NCKH cho đề tài: <strong>{topic_title}</strong> từ sinh viên {inviter.full_name}.</p>"
-                            f"<p>Vui lòng đăng nhập hệ thống và vào mục Chat Cá nhân để Đồng ý hoặc Từ chối lời mời này.</p>"
-                            f"<a href='{email_link}' style='display: inline-block; padding: 10px 20px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Xem lời mời</a>"
-                            f"<br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>"
-                            f"</div>"
-                        )
-                        send_email_async(invited_user.email, f"[HOU S-RIMS] Lời mời tham gia nhóm NCKH", f"Bạn được mời tham gia đề tài {topic_title}", email_html)
         else:
             # Check if group already has a topic in this batch
             existing_topic = Topic.query.filter_by(group_id=group_id, batch_id=batch_id).first()
@@ -281,8 +265,78 @@ def register_topic():
                 target_group.status = 'pending_mentor'
                 if topic_title != 'Đề tài NCKH (Chưa đặt tên)':
                     target_group.name = f"Nhóm {topic_title}"
-            
-        topic_status = 'pending'
+
+        # 2. Xử lý thành viên nhóm khác user_id (dù là tạo mới hay nhóm có sẵn)
+        other_member_ids = set()
+        for mid in members_list:
+            if mid and str(mid) != str(user_id):
+                try:
+                    other_member_ids.add(int(mid))
+                except (ValueError, TypeError):
+                    pass
+
+        # Nếu group có các thành viên khác từ trước, cũng thêm vào danh sách cần xác nhận
+        existing_other_gms = GroupMember.query.filter(
+            GroupMember.group_id == group_id,
+            GroupMember.student_id != user_id
+        ).all()
+        for gm in existing_other_gms:
+            other_member_ids.add(gm.student_id)
+
+        # Với mỗi thành viên khác: Đặt status = 'pending' và gửi lời mời
+        for mid in other_member_ids:
+            gm = GroupMember.query.filter_by(group_id=group_id, student_id=mid).first()
+            if not gm:
+                gm = GroupMember(group_id=group_id, student_id=mid, status='pending')
+                db.session.add(gm)
+            else:
+                gm.status = 'pending'
+
+            # Gửi lời mời qua tin nhắn chat riêng
+            from models import Message as Msg
+            import json
+            inviter = User.query.get(user_id)
+            invite_msg = Msg(
+                sender_id=user_id,
+                receiver_id=mid,
+                group_id=None,
+                content=f"📩 Mời bạn tham gia nhóm NCKH cho đề tài **{topic_title}**. Nhấn Đồng ý để xác nhận.",
+                message_type='invitation',
+                meta_data=json.dumps({'invite_group_id': group_id, 'topic_name': topic_title})
+            )
+            db.session.add(invite_msg)
+
+            # Gửi notification in-app cho thành viên
+            from models import Notification
+            invited_user = User.query.get(mid)
+            if invited_user:
+                link = f"/student#s-explore"
+                html_content = (
+                    f"<p>Xin chào <strong>{invited_user.full_name}</strong>,</p>"
+                    f"<p>Bạn vừa nhận được lời mời tham gia nhóm NCKH cho đề tài: <strong>{topic_title}</strong>.</p>"
+                    f"<a href='{link}' class='btn btn-primary rounded-pill btn-sm mt-2'>Xem lời mời</a>"
+                )
+                new_notif = Notification(user_id=mid, content=html_content)
+                db.session.add(new_notif)
+
+                # Gửi email cho thành viên
+                if invited_user.email:
+                    from email_utils import send_email_async
+                    email_link = f"http://127.0.0.1:5000/student/chat"
+                    email_html = (
+                        f"<div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>"
+                        f"<h2 style='color: #4f46e5;'>Lời mời tham gia nhóm NCKH</h2>"
+                        f"<p>Xin chào <strong>{invited_user.full_name}</strong>,</p>"
+                        f"<p>Bạn vừa nhận được lời mời tham gia nhóm NCKH cho đề tài: <strong>{topic_title}</strong> từ sinh viên {inviter.full_name if inviter else ''}.</p>"
+                        f"<p>Vui lòng đăng nhập hệ thống và vào mục Chat Cá nhân để Đồng ý hoặc Từ chối lời mời này.</p>"
+                        f"<a href='{email_link}' style='display: inline-block; padding: 10px 20px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Xem lời mời</a>"
+                        f"<br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>"
+                        f"</div>"
+                    )
+                    send_email_async(invited_user.email, f"[HOU S-RIMS] Lời mời tham gia nhóm NCKH", f"Bạn được mời tham gia đề tài {topic_title}", email_html)
+
+        has_pending_members = len(other_member_ids) > 0
+        topic_status = 'waiting_for_members' if has_pending_members else 'pending'
 
         faculty = data.get('faculty', '') or 'Khoa Công nghệ Thông tin'
         major = data.get('major', '')
@@ -293,17 +347,19 @@ def register_topic():
         if not user_desc and raw_desc and 'Chờ nhóm và GVHD thảo luận' not in raw_desc:
             user_desc = raw_desc
 
-        desc_parts = []
         if user_desc:
-            desc_parts.append(user_desc)
-        elif raw_desc and not any(tag in raw_desc for tag in ['Khoa:', 'Chuyên ngành:', 'Lĩnh vực:']):
-            desc_parts.append(raw_desc)
-            
-        if major:
-            desc_parts.append(f"Chuyên ngành: {major}")
-        if domain:
-            desc_parts.append(f"Lĩnh vực: {domain}")
-        final_desc = " | ".join(desc_parts) if desc_parts else (raw_desc or 'Chờ nhóm và GVHD thảo luận thống nhất tên đề tài.')
+            meta_badges = []
+            if major: meta_badges.append(f"<span class='badge bg-light text-dark border me-1'>Chuyên ngành: {major}</span>")
+            if domain: meta_badges.append(f"<span class='badge bg-light text-dark border'>Lĩnh vực: {domain}</span>")
+            meta_html = f"<div class='mt-2 pt-2 border-top'>{' '.join(meta_badges)}</div>" if meta_badges else ""
+            final_desc = f"{user_desc}{meta_html}"
+        else:
+            desc_parts = []
+            if raw_desc and not any(tag in raw_desc for tag in ['Khoa:', 'Chuyên ngành:', 'Lĩnh vực:']):
+                desc_parts.append(raw_desc)
+            if major: desc_parts.append(f"Chuyên ngành: {major}")
+            if domain: desc_parts.append(f"Lĩnh vực: {domain}")
+            final_desc = " | ".join(desc_parts) if desc_parts else (raw_desc or 'Chờ nhóm và GVHD thảo luận thống nhất tên đề tài.')
 
         new_topic = Topic(
             title=topic_title,
@@ -321,26 +377,27 @@ def register_topic():
             topic_id=new_topic.id,
             group_id=new_topic.group_id,
             mentor_id=new_topic.mentor_id,
-            status='pending'
+            status=topic_status
         )
         db.session.add(registration)
         db.session.commit() # Transaction completed
         
-        if topic_status == 'pending':
+        # TUYỆT ĐỐI CHỈ GỬI THÔNG BÁO CHO GIẢNG VIÊN KHI ĐÂY LÀ ĐĂNG KÝ CÁ NHÂN (1 người)
+        if topic_status == 'pending' and not has_pending_members:
             from models import Notification
             mentor = User.query.get(data['mentor_id'])
             link = f"/lecturer/approve"
             
             desc_html = (
-                f"<div style='background: #f8fafc; border-left: 4px solid #4f46e5; padding: 10px 14px; margin: 12px 0; border-radius: 6px; border: 1px solid #e2e8f0;'>"
-                f"<strong style='color: #4338ca; display: block; margin-bottom: 4px;'><i class='fa-solid fa-align-left me-1'></i> Mô tả đề tài / Ý tưởng từ sinh viên:</strong>"
-                f"<p style='margin: 0; white-space: pre-wrap; font-size: 13px; color: #334155;'>{user_desc}</p>"
+                f"<div style='background: #f8fafc; border-left: 4px solid #4f46e5; padding: 12px 16px; margin: 12px 0; border-radius: 6px; border: 1px solid #e2e8f0;'>"
+                f"<strong style='color: #4338ca; display: block; margin-bottom: 6px;'><i class='fa-solid fa-align-left me-1'></i> Mô tả đề tài / Ý tưởng từ sinh viên:</strong>"
+                f"<div class='rich-content-display' style='margin: 0; font-size: 13px; color: #334155; line-height: 1.6;'>{user_desc}</div>"
                 f"</div>"
             ) if user_desc else ""
 
             html_content = (
                 f"<p>Xin chào <strong>{mentor.full_name}</strong>,</p>"
-                f"<p>Nhóm sinh viên vừa gửi yêu cầu nhờ bạn hướng dẫn đề tài NCKH: <strong>{topic_title}</strong>.</p>"
+                f"<p>Sinh viên vừa gửi yêu cầu nhờ bạn hướng dẫn đề tài NCKH: <strong>{topic_title}</strong>.</p>"
                 f"{desc_html}"
                 f"<a href='{link}' class='btn btn-primary rounded-pill btn-sm mt-2'>Phê duyệt Đề tài</a>"
             )
@@ -352,9 +409,9 @@ def register_topic():
             if mentor and mentor.email:
                 email_link = f"http://127.0.0.1:5000/lecturer/approve"
                 email_desc_html = (
-                    f"<div style='background: #f1f5f9; border-left: 4px solid #4f46e5; padding: 12px 16px; margin: 14px 0; border-radius: 6px;'>"
-                    f"<strong style='color: #312e81;'>Mô tả đề tài / Ý tưởng nghiên cứu từ sinh viên:</strong>"
-                    f"<p style='margin: 8px 0 0 0; white-space: pre-wrap; font-size: 14px; color: #1e293b;'>{user_desc}</p>"
+                    f"<div style='background: #f1f5f9; border-left: 4px solid #4f46e5; padding: 14px 18px; margin: 14px 0; border-radius: 6px;'>"
+                    f"<strong style='color: #312e81; display: block; margin-bottom: 8px;'>Mô tả đề tài / Ý tưởng nghiên cứu từ sinh viên:</strong>"
+                    f"<div class='rich-content-display' style='margin: 0; font-size: 14px; color: #1e293b; line-height: 1.6;'>{user_desc}</div>"
                     f"</div>"
                 ) if user_desc else ""
 
@@ -362,7 +419,7 @@ def register_topic():
                     f"<div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>"
                     f"<h2 style='color: #4f46e5;'>Yêu cầu Hướng dẫn Đề tài NCKH</h2>"
                     f"<p>Xin chào <strong>{mentor.full_name}</strong>,</p>"
-                    f"<p>Nhóm sinh viên vừa gửi yêu cầu nhờ bạn hướng dẫn đề tài NCKH: <strong>{topic_title}</strong>.</p>"
+                    f"<p>Sinh viên vừa gửi yêu cầu nhờ bạn hướng dẫn đề tài NCKH: <strong>{topic_title}</strong>.</p>"
                     f"{email_desc_html}"
                     f"<p>Vui lòng đăng nhập hệ thống để xem chi tiết và Quyết định Phê duyệt / Từ chối.</p>"
                     f"<a href='{email_link}' style='display: inline-block; padding: 10px 20px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Phê duyệt Đề tài</a>"
@@ -370,8 +427,21 @@ def register_topic():
                     f"</div>"
                 )
                 send_email_async(mentor.email, f"[HOU S-RIMS] Yêu cầu Hướng dẫn Đề tài NCKH", f"Yêu cầu hướng dẫn đề tài {topic_title}", email_html)
+        else:
+            # ĐỀ TÀI THEO NHÓM: TUYỆT ĐỐI KHÔNG GỬI GÌ CHO GIẢNG VIÊN
+            # CHỈ thông báo cho trưởng nhóm về việc chờ các thành viên nhóm xác nhận
+            from models import Notification
+            leader_notif = Notification(
+                user_id=user_id,
+                content=(
+                    f"<p>Đề tài <strong>{topic_title}</strong> đã được đăng ký thành công!</p>"
+                    f"<p>Hệ thống đã gửi lời mời tới các thành viên nhóm. Đề tài đang ở trạng thái <em>Chờ thành viên xác nhận</em> trước khi gửi tới Giảng viên hướng dẫn.</p>"
+                )
+            )
+            db.session.add(leader_notif)
+            db.session.commit()
                 
-        return jsonify({'message': 'Topic registered successfully', 'topic_id': new_topic.id}), 201
+        return jsonify({'message': 'Topic registered successfully', 'topic_id': new_topic.id, 'status': topic_status}), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
@@ -474,10 +544,11 @@ def handle_invitation():
                 )
             else:
                 notif_html = (
-                    f"<p>Sinh viên <strong>{responder_name}</strong> đã <span class='text-danger fw-bold'>từ chối</span> "
-                    f"lời mời tham gia nhóm <strong>{group_name}</strong>.</p>"
-                    f"<button type='button' onclick='event.stopPropagation(); showGroupMembersModal({group_id})' class='btn btn-outline-secondary btn-sm rounded-pill mt-2 px-3 fw-bold'>"
-                    f"<i class='fa-solid fa-users-gear me-1'></i> Quản lý nhóm</button>"
+                    f"<p>⚠️ Sinh viên <strong>{responder_name}</strong> đã <span class='text-danger fw-bold'>từ chối</span> "
+                    f"tham gia nhóm <strong>{group_name}</strong> (Đề tài: <em>{topic_title}</em>).</p>"
+                    f"<p class='small text-muted mb-2'>Hệ thống đã <strong>tạm ngưng không gửi đề tài tới Giảng viên hướng dẫn</strong>. Bạn có thể hủy đăng ký để mời thành viên khác hoặc tiếp tục gửi đề tài với số người hiện tại.</p>"
+                    f"<a href='/student#s-register' class='btn btn-danger btn-sm rounded-pill mt-1 px-3 fw-bold shadow-xs'>"
+                    f"<i class='fa-solid fa-sliders me-1'></i> Xử lý đề tài ngay</a>"
                 )
             leader_notif = Notification(user_id=leader_id, content=notif_html)
             db.session.add(leader_notif)
@@ -508,7 +579,7 @@ def handle_invitation():
                             f"<p>Xin chào <strong>{leader_user.full_name}</strong>,</p>"
                             f"<p>Sinh viên <strong>{responder_name}</strong> đã <strong style='color: #10b981;'>đồng ý</strong> tham gia nhóm <strong>{group_name}</strong> (Đề tài: {topic_title}).</p>"
                             f"<p>Bạn có thể vào hệ thống để kiểm tra danh sách thành viên nhóm và tiến độ đề tài.</p>"
-                            f"<a href='http://127.0.0.1:5000/student#s-group' style='display: inline-block; padding: 10px 20px; background-color: #10b981; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Xem nhóm NCKH</a>"
+                            f"<a href='http://127.0.0.1:5000/student#s-register' style='display: inline-block; padding: 10px 20px; background-color: #10b981; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Xem nhóm NCKH</a>"
                             f"<br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>"
                             f"</div>"
                         )
@@ -520,19 +591,27 @@ def handle_invitation():
                         )
                     else:
                         email_html = (
-                            f"<div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>"
-                            f"<h2 style='color: #ef4444;'>Phản hồi lời mời tham gia nhóm NCKH</h2>"
-                            f"<p>Xin chào <strong>{leader_user.full_name}</strong>,</p>"
-                            f"<p>Sinh viên <strong>{responder_name}</strong> đã <strong style='color: #ef4444;'>từ chối</strong> lời mời tham gia nhóm <strong>{group_name}</strong>.</p>"
-                            f"<p>Bạn có thể vào hệ thống để mời thành viên khác vào nhóm.</p>"
-                            f"<a href='http://127.0.0.1:5000/student#s-group' style='display: inline-block; padding: 10px 20px; background-color: #ef4444; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Quản lý nhóm NCKH</a>"
-                            f"<br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>"
+                            f"<div style='font-family: Arial, sans-serif; padding: 20px; color: #333; line-height: 1.6;'>"
+                            f"<h2 style='color: #ef4444; border-bottom: 2px solid #ef4444; padding-bottom: 8px;'>Thông báo: Thành viên từ chối tham gia nhóm NCKH</h2>"
+                            f"<p>Xin chào <strong>{leader_user.full_name}</strong> (Trưởng nhóm),</p>"
+                            f"<p>Sinh viên <strong>{responder_name}</strong> đã <strong style='color: #ef4444;'>từ chối</strong> lời mời tham gia nhóm <strong>{group_name}</strong> cho đề tài: <em>{topic_title}</em>.</p>"
+                            f"<div style='background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 12px 16px; margin: 15px 0; border-radius: 4px;'>"
+                            f"<strong style='color: #991b1b;'>LƯU Ý QUAN TRỌNG:</strong>"
+                            f"<p style='margin: 6px 0 0 0; color: #7f1d1d;'>Hệ thống đã <strong>TẠM NGƯNG GỬI HỒ SƠ ĐỀ TÀI LÊN GIẢNG VIÊN HƯỚNG DẪN</strong> để chờ quyết định của bạn.</p>"
+                            f"</div>"
+                            f"<p>Bạn có 2 sự lựa chọn trên hệ thống:</p>"
+                            f"<ul>"
+                            f"<li><strong>Lựa chọn 1:</strong> Hủy đăng ký đề tài hiện tại để đăng ký mới và mời thành viên khác thay thế.</li>"
+                            f"<li><strong>Lựa chọn 2:</strong> Tiếp tục gửi hồ sơ đề tài lên Giảng viên hướng dẫn / Khoa với số lượng thành viên hiện tại (sau khi đã loại bỏ người từ chối ra khỏi nhóm).</li>"
+                            f"</ul>"
+                            f"<a href='http://127.0.0.1:5000/student#s-register' style='display: inline-block; padding: 10px 22px; background-color: #ef4444; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 10px;'>Vào hệ thống xử lý đề tài</a>"
+                            f"<br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống Quản lý Nghiên cứu Khoa học Sinh viên HOU S-RIMS</p>"
                             f"</div>"
                         )
                         send_email_async(
                             leader_user.email,
-                            f"[HOU S-RIMS] {responder_name} đã từ chối tham gia nhóm {group_name}",
-                            f"{responder_name} đã từ chối tham gia nhóm {group_name}",
+                            f"[HOU S-RIMS] Thành viên {responder_name} từ chối tham gia nhóm {group_name}",
+                            f"{responder_name} đã từ chối tham gia nhóm {group_name}. Đề tài tạm ngưng gửi GVHD.",
                             email_html
                         )
                 except Exception:
@@ -551,16 +630,22 @@ def handle_invitation():
         
         if topic and topic.status == 'waiting_for_members':
             if rejected_count > 0:
-                pass # Don't advance if someone rejected, leave it for the leader to cancel
+                pass # TH2: Có thành viên từ chối, tạm ngưng không gửi lên GVHD, chờ quyết định trưởng nhóm
             elif pending_count == 0:
+                # TH1: TẤT CẢ THÀNH VIÊN ĐỀU ĐỒNG Ý -> TỰ ĐỘNG GỬI LÊN GIẢNG VIÊN HƯỚNG DẪN
                 topic.status = 'pending' # Now waiting for lecturer
                 
+                from models import TopicRegistration
+                registration = TopicRegistration.query.filter_by(topic_id=topic.id).first()
+                if registration:
+                    registration.status = 'pending'
+                    
                 mentor = User.query.get(topic.mentor_id)
                 if mentor:
                     link = f"/lecturer/approve"
                     html_content = (
                         f"<p>Xin chào <strong>{mentor.full_name}</strong>,</p>"
-                        f"<p>Nhóm sinh viên vừa gửi yêu cầu nhờ bạn hướng dẫn đề tài NCKH: <strong>{topic.title}</strong>.</p>"
+                        f"<p>Nhóm sinh viên vừa gửi yêu cầu nhờ bạn hướng dẫn đề tài NCKH: <strong>{topic.title}</strong> (Tất cả thành viên trong nhóm đã đồng ý tham gia).</p>"
                         f"<a href='{link}' class='btn btn-primary rounded-pill btn-sm mt-2'>Phê duyệt Đề tài</a>"
                     )
                     new_notif = Notification(user_id=mentor.id, content=html_content)
@@ -574,12 +659,43 @@ def handle_invitation():
                         f"<h2 style='color: #4f46e5;'>Yêu cầu Hướng dẫn Đề tài NCKH</h2>"
                         f"<p>Xin chào <strong>{mentor.full_name}</strong>,</p>"
                         f"<p>Nhóm sinh viên vừa gửi yêu cầu nhờ bạn hướng dẫn đề tài NCKH: <strong>{topic.title}</strong>.</p>"
+                        f"<p>Tất cả các thành viên trong nhóm đã xác nhận đồng ý tham gia.</p>"
                         f"<p>Vui lòng đăng nhập hệ thống để xem chi tiết và Quyết định Phê duyệt / Từ chối.</p>"
                         f"<a href='{email_link}' style='display: inline-block; padding: 10px 20px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Phê duyệt Đề tài</a>"
                         f"<br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>"
                         f"</div>"
                     )
                     send_email_async(mentor.email, f"[HOU S-RIMS] Yêu cầu hướng dẫn đề tài", f"Yêu cầu hướng dẫn đề tài {topic.title}", email_html)
+
+                # Thông báo cho Trưởng nhóm biết đề tài đã chuyển tới GVHD
+                if group and group.leader_id:
+                    leader_user = User.query.get(group.leader_id)
+                    all_accepted_notif = Notification(
+                        user_id=group.leader_id,
+                        content=(
+                            f"<p>🎉 <strong>Tất cả thành viên trong nhóm đã đồng ý tham gia!</strong></p>"
+                            f"<p>Hồ sơ đề tài <strong>{topic.title}</strong> đã được tự động chuyển tới Giảng viên hướng dẫn "
+                            f"<strong>{mentor.full_name if mentor else ''}</strong> để xem xét phê duyệt.</p>"
+                        )
+                    )
+                    db.session.add(all_accepted_notif)
+                    if leader_user and leader_user.email:
+                        from email_utils import send_email_async
+                        send_email_async(
+                            leader_user.email,
+                            f"[HOU S-RIMS] Tất cả thành viên đã đồng ý - Đề tài {topic.title} đã gửi tới GVHD",
+                            f"Tất cả thành viên nhóm đã đồng ý. Đề tài {topic.title} đã được gửi tới GVHD.",
+                            (
+                                f"<div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>"
+                                f"<h2 style='color: #10b981;'>Tất cả thành viên đã xác nhận tham gia nhóm</h2>"
+                                f"<p>Xin chào <strong>{leader_user.full_name}</strong>,</p>"
+                                f"<p>Tất cả các thành viên bạn mời đã đồng ý tham gia nhóm <strong>{group_name}</strong>.</p>"
+                                f"<p>Hồ sơ đề tài <strong>{topic.title}</strong> đã chính thức được chuyển tới Giảng viên hướng dẫn <strong>{mentor.full_name if mentor else ''}</strong> để phê duyệt.</p>"
+                                f"<a href='http://127.0.0.1:5000/student#s-register' style='display: inline-block; padding: 10px 20px; background-color: #10b981; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Xem tiến độ đề tài</a>"
+                                f"<br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>"
+                                f"</div>"
+                            )
+                        )
             
         db.session.commit()
         return jsonify({'message': 'Successfully processed invitation'}), 200
@@ -587,47 +703,183 @@ def handle_invitation():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+@topics_bp.route('/<int:topic_id>/proceed-without-declined', methods=['POST'])
+def proceed_without_declined(topic_id):
+    from flask import session
+    from models import Topic, TopicRegistration, Group, GroupMember, User, Notification
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    try:
+        topic = Topic.query.get(topic_id)
+        if not topic:
+            return jsonify({'error': 'Không tìm thấy đề tài'}), 404
+
+        group = Group.query.get(topic.group_id)
+        if not group or group.leader_id != user_id:
+            return jsonify({'error': 'Chỉ trưởng nhóm mới có quyền quyết định luồng gửi đề tài này!'}), 403
+
+        # Xóa toàn bộ các thành viên đã từ chối ra khỏi nhóm
+        declined_members = GroupMember.query.filter(
+            GroupMember.group_id == group.id,
+            GroupMember.status.in_(['rejected', 'declined'])
+        ).all()
+        
+        declined_count = len(declined_members)
+        for m in declined_members:
+            db.session.delete(m)
+        db.session.flush()
+
+        # Kiểm tra xem còn ai đang pending không
+        pending_members = GroupMember.query.filter(
+            GroupMember.group_id == group.id,
+            GroupMember.student_id != user_id,
+            GroupMember.status.in_(['pending', 'invited'])
+        ).all()
+
+        mentor = User.query.get(topic.mentor_id)
+        mentor_name = mentor.full_name if mentor else "Giảng viên hướng dẫn"
+
+        if len(pending_members) > 0:
+            # Vẫn còn thành viên chưa trả lời lời mời
+            db.session.commit()
+            return jsonify({
+                'success': True,
+                'topic_status': topic.status,
+                'message': f"Đã loại bỏ {declined_count} thành viên từ chối. Nhóm vẫn đang chờ {len(pending_members)} thành viên còn lại xác nhận lời mời."
+            }), 200
+        else:
+            # Không còn ai pending (chỉ còn những người đã accept hoặc chỉ còn trưởng nhóm) -> Gửi thẳng cho GVHD!
+            topic.status = 'pending'
+            registration = TopicRegistration.query.filter_by(topic_id=topic.id).first()
+            if registration:
+                registration.status = 'pending'
+
+            # Gửi thông báo & email cho GVHD
+            if mentor:
+                link = f"/lecturer/approve"
+                html_content = (
+                    f"<p>Xin chào <strong>{mentor.full_name}</strong>,</p>"
+                    f"<p>Nhóm sinh viên vừa gửi yêu cầu nhờ bạn hướng dẫn đề tài NCKH: <strong>{topic.title}</strong>.</p>"
+                    f"<p>Danh sách thành viên chính thức đã được Trưởng nhóm xác nhận.</p>"
+                    f"<a href='{link}' class='btn btn-primary rounded-pill btn-sm mt-2'>Phê duyệt Đề tài</a>"
+                )
+                new_notif = Notification(user_id=mentor.id, content=html_content)
+                db.session.add(new_notif)
+
+                if mentor.email:
+                    from email_utils import send_email_async
+                    email_link = f"http://127.0.0.1:5000/lecturer/approve"
+                    email_html = (
+                        f"<div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>"
+                        f"<h2 style='color: #4f46e5;'>Yêu cầu Hướng dẫn Đề tài NCKH</h2>"
+                        f"<p>Xin chào <strong>{mentor.full_name}</strong>,</p>"
+                        f"<p>Nhóm sinh viên vừa gửi yêu cầu nhờ bạn hướng dẫn đề tài NCKH: <strong>{topic.title}</strong>.</p>"
+                        f"<p>Danh sách thành viên chính thức đã được Trưởng nhóm xác nhận.</p>"
+                        f"<a href='{email_link}' style='display: inline-block; padding: 10px 20px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Phê duyệt Đề tài</a>"
+                        f"<br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>"
+                        f"</div>"
+                    )
+                    send_email_async(mentor.email, f"[HOU S-RIMS] Yêu cầu hướng dẫn đề tài", f"Yêu cầu hướng dẫn đề tài {topic.title}", email_html)
+
+            # Gửi thông báo xác nhận cho Trưởng nhóm
+            leader_confirm_notif = Notification(
+                user_id=user_id,
+                content=(
+                    f"<p>✅ Đã loại bỏ thành viên từ chối và gửi hồ sơ đề tài <strong>{topic.title}</strong> "
+                    f"tới Giảng viên hướng dẫn <strong>{mentor_name}</strong> thành công!</p>"
+                )
+            )
+            db.session.add(leader_confirm_notif)
+            db.session.commit()
+
+            return jsonify({
+                'success': True,
+                'topic_status': 'pending',
+                'message': f"Đã loại bỏ thành viên từ chối và chuyển hồ sơ đề tài tới {mentor_name} thành công!"
+            }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 @topics_bp.route('/<int:topic_id>', methods=['DELETE'])
 def cancel_topic(topic_id):
     from flask import session
-    from models import Topic, TopicRegistration, Group, GroupMember
+    from models import Topic, TopicRegistration, Group, GroupMember, Evaluation, Meeting, Milestone, Submission, Message
     
     user_id = session.get('user_id')
     if not user_id:
         return jsonify({'error': 'Unauthorized'}), 401
         
     try:
-        topic = Topic.query.get(topic_id)
-        if not topic:
-            return jsonify({'error': 'Topic not found'}), 404
+        topic = None
+        if topic_id and topic_id != 0:
+            topic = Topic.query.get(topic_id)
             
-        group = Group.query.get(topic.group_id)
-        if not group or group.leader_id != user_id:
+        if not topic:
+            # Fallback: Tìm đề tài chưa được duyệt chính thức của user_id (với vai trò Trưởng nhóm)
+            user_groups = Group.query.filter_by(leader_id=user_id).order_by(Group.id.desc()).all()
+            for g in user_groups:
+                t = Topic.query.filter_by(group_id=g.id).filter(Topic.status != 'approved').order_by(Topic.id.desc()).first()
+                if t:
+                    topic = t
+                    break
+
+        if not topic:
+            return jsonify({'error': 'Không tìm thấy hồ sơ đề tài cần hủy (Topic not found)'}), 404
+            
+        group = Group.query.get(topic.group_id) if topic.group_id else None
+        if group and group.leader_id != user_id:
             return jsonify({'error': 'Chỉ trưởng nhóm mới có quyền hủy đăng ký đề tài này'}), 403
             
         if topic.status == 'approved':
             return jsonify({'error': 'Đề tài đã được Khoa phê duyệt chính thức nên không thể tự ý hủy!'}), 400
             
-        # Delete registration
+        # 1. Xóa các đăng ký đề tài (TopicRegistration)
         TopicRegistration.query.filter_by(topic_id=topic.id).delete()
+        if group:
+            TopicRegistration.query.filter_by(group_id=group.id).delete()
         
-        # Delete milestones, meetings, submissions if any
-        from models import Meeting, Milestone, Submission
+        # 2. Xóa các dữ liệu liên quan (Evaluation, Meeting, Milestone, Submission)
+        try:
+            Evaluation.query.filter_by(topic_id=topic.id).delete()
+        except Exception:
+            pass
         try:
             Meeting.query.filter_by(topic_id=topic.id).delete()
+        except Exception:
+            pass
+        try:
             Milestone.query.filter_by(topic_id=topic.id).delete()
+        except Exception:
+            pass
+        try:
             Submission.query.filter_by(topic_id=topic.id).delete()
-        except:
+        except Exception:
             pass
         
-        # Delete topic
+        # 3. Xóa các tin nhắn chat trong nhóm & các tin nhắn lời mời liên quan tới nhóm này
+        if group:
+            try:
+                Message.query.filter_by(group_id=group.id).delete()
+                # Xóa các lời mời liên quan group_id
+                invitations = Message.query.filter(Message.message_type == 'invitation').all()
+                for inv in invitations:
+                    if inv.meta_data and (f'"group_id": {group.id}' in inv.meta_data or f'"group_id":{group.id}' in inv.meta_data):
+                        db.session.delete(inv)
+            except Exception:
+                pass
+            
+            # 4. Xóa thành viên nhóm
+            GroupMember.query.filter_by(group_id=group.id).delete()
+
+        # 5. Xóa topic
         db.session.delete(topic)
         
-        # Delete group members and group if it was attached
+        # 6. Xóa nhóm nghiên cứu (để trưởng nhóm có thể tạo nhóm/mời thành viên mới)
         if group:
-            GroupMember.query.filter_by(group_id=group.id).delete()
-            from models import Message
-            Message.query.filter_by(group_id=group.id).delete()
             db.session.delete(group)
         
         db.session.commit()
@@ -827,7 +1079,7 @@ def faculty_approve_topic(topic_id):
                 <p>Xin chào <strong>{student.full_name}</strong>,</p>
                 <p>Đề tài NCKH <strong>{topic.title}</strong> của nhóm bạn đã được Khoa chính thức phê duyệt!</p>
                 {reassign_note}
-                <a href='{link_student}' class='btn btn-success rounded-pill btn-sm mt-2'>Vào phòng Chat Nhóm</a>
+                <a href='{link_student}' onclick='if(window.Swal) Swal.close(); window.location.href=\"{link_student}\"; window.location.reload();' class='btn btn-success rounded-pill btn-sm mt-2'>Vào phòng Chat Nhóm</a>
                 """
                 new_notif = Notification(user_id=student.id, content=notif_content)
                 db.session.add(new_notif)
@@ -1078,6 +1330,9 @@ def approve_topic(topic_id):
         
         if topic.status == 'faculty_pending':
             # Lecturer approved it, send email to students
+            note = (data.get('note') or '').strip()
+            note_box = f"<div style='background: #f0fdf4; border-left: 4px solid #22c55e; padding: 10px 14px; margin: 10px 0; border-radius: 6px; color: #166534; font-size: 13px; line-height: 1.6;'><strong>Ghi chú & Định hướng từ Giảng viên:</strong><div class='mt-1 rich-content-display'>{note}</div></div>" if note else ""
+
             members = GroupMember.query.filter_by(group_id=topic.group_id, status='accepted').all()
             for member in members:
                 student = User.query.get(member.student_id)
@@ -1086,6 +1341,7 @@ def approve_topic(topic_id):
                     notif_content = f"""
                     <p>Xin chào <strong>{student.full_name}</strong>,</p>
                     <p>Giảng viên hướng dẫn vừa đồng ý tham gia đề tài NCKH: <strong>{topic.title}</strong> của nhóm bạn.</p>
+                    {note_box}
                     <p>Hiện tại, đề tài đang chờ Khoa/Viện phê duyệt chính thức.</p>
                     <a href='{link_student}' class='btn btn-primary rounded-pill btn-sm mt-2'>Xem Tiến độ</a>
                     """
@@ -1099,6 +1355,7 @@ def approve_topic(topic_id):
                             <h2 style='color: #3b82f6;'>Giảng viên đã đồng ý Hướng dẫn</h2>
                             <p>Xin chào <strong>{student.full_name}</strong>,</p>
                             <p>Giảng viên hướng dẫn vừa đồng ý tham gia đề tài NCKH: <strong>{topic.title}</strong> của nhóm bạn.</p>
+                            {note_box}
                             <p>Hiện tại, đề tài đang chờ Khoa/Viện phê duyệt chính thức. Vui lòng theo dõi trạng thái thường xuyên.</p>
                             <a href='{email_link_student}' style='display: inline-block; padding: 10px 20px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Xem Tiến độ</a>
                             <br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>
@@ -1166,7 +1423,7 @@ def approve_topic(topic_id):
                     notif_content = f"""
                     <p>Xin chào <strong>{student.full_name}</strong>,</p>
                     <p>Đề tài NCKH <strong>{topic.title}</strong> của nhóm bạn đã được Khoa chính thức phê duyệt.</p>
-                    <a href='{link_student}' class='btn btn-success rounded-pill btn-sm mt-2'>Xem Tiến độ</a>
+                    <a href='{link_student}' onclick='if(window.Swal) Swal.close(); window.location.href=\"{link_student}\"; window.location.reload();' class='btn btn-success rounded-pill btn-sm mt-2'>Xem Tiến độ & Nhóm</a>
                     """
                     new_notif = Notification(user_id=student.id, content=notif_content)
                     db.session.add(new_notif)
@@ -1185,9 +1442,182 @@ def approve_topic(topic_id):
                         """
                         send_email_async(student.email, f"[HOU S-RIMS] Đề tài được phê duyệt", f"Đề tài {topic.title} đã được phê duyệt", html_content_student)
                         
+        elif topic.status == 'rejected':
+            # Lecturer/Faculty rejected it: send in-app notification & email to students so they can pick a new mentor
+            reason = data.get('reason', '').strip()
+            mentor = User.query.get(topic.mentor_id) if topic.mentor_id else None
+            mentor_name = mentor.full_name if mentor else 'Giảng viên'
+            
+            from models import TopicRegistration
+            TopicRegistration.query.filter_by(topic_id=topic.id).update({'status': 'rejected'})
+            
+            members = GroupMember.query.filter_by(group_id=topic.group_id).all()
+            for member in members:
+                student = User.query.get(member.student_id)
+                if student:
+                    reason_box = f"<div style='background: #fef2f2; border-left: 4px solid #ef4444; padding: 10px 14px; margin: 10px 0; border-radius: 4px; color: #991b1b; font-size: 13px;'><strong>Lý do từ chối:</strong> {reason}</div>" if reason else ""
+                    notif_content = f"""
+                    <p><strong>Giảng viên đã từ chối hướng dẫn đề tài NCKH</strong></p>
+                    <p>Giảng viên <strong>{mentor_name}</strong> đã từ chối yêu cầu hướng dẫn đề tài: <strong>{topic.title}</strong> của nhóm bạn.</p>
+                    {reason_box}
+                    <p>Nhóm bạn không cần đăng ký lại từ đầu mà có thể <strong>chọn lại Giảng viên hướng dẫn khác</strong> ngay trên hệ thống.</p>
+                    <a href='/student#s-register' class='btn btn-warning rounded-pill btn-sm mt-1'>Chọn giảng viên mới</a>
+                    """
+                    new_notif = Notification(user_id=student.id, content=notif_content)
+                    db.session.add(new_notif)
+                    
+                    if student.email:
+                        email_reason = f"<div style='background: #fef2f2; border-left: 4px solid #ef4444; padding: 12px 16px; margin: 14px 0; border-radius: 6px; color: #991b1b; font-size: 14px;'><strong>Lý do từ chối từ Giảng viên:</strong><br>{reason}</div>" if reason else ""
+                        email_content = f"""
+                        <div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>
+                            <h2 style='color: #ef4444;'>Giảng viên từ chối hướng dẫn đề tài NCKH</h2>
+                            <p>Xin chào <strong>{student.full_name}</strong>,</p>
+                            <p>Giảng viên <strong>{mentor_name}</strong> đã từ chối yêu cầu hướng dẫn cho đề tài NCKH: <strong>{topic.title}</strong> của nhóm bạn.</p>
+                            {email_reason}
+                            <p>Nhóm bạn không cần phải đăng ký lại từ đầu. Bạn có thể đăng nhập vào hệ thống để <strong>chọn lại một Giảng viên hướng dẫn khác</strong> phù hợp hơn.</p>
+                            <a href='http://127.0.0.1:5000/student#s-register' style='display: inline-block; padding: 10px 20px; background-color: #f59e0b; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px; font-weight: bold;'>Chọn Giảng viên mới</a>
+                            <br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>
+                        </div>
+                        """
+                        send_email_async(student.email, f"[HOU S-RIMS] Giảng viên từ chối hướng dẫn đề tài: {topic.title}", f"Giảng viên từ chối đề tài {topic.title}", email_content)
+
         db.session.commit()
         return jsonify({'message': 'Topic status updated successfully'}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+@topics_bp.route('/<int:topic_id>/change-mentor', methods=['POST'])
+def change_mentor(topic_id):
+    """
+    Allow student (group leader/members) to select a new mentor after rejection or update
+    """
+    from flask import session
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    from models import Topic, Group, GroupMember, User, Notification, TopicRegistration
+    topic = Topic.query.get(topic_id)
+    if not topic:
+        return jsonify({'error': 'Không tìm thấy đề tài'}), 404
+
+    group = Group.query.get(topic.group_id) if topic.group_id else None
+    if not group:
+        return jsonify({'error': 'Không tìm thấy nhóm nghiên cứu'}), 404
+
+    is_leader = (group.leader_id == user_id)
+    is_member = GroupMember.query.filter_by(group_id=group.id, student_id=user_id, status='accepted').first() is not None
+    if not (is_leader or is_member):
+        return jsonify({'error': 'Bạn không có quyền thay đổi giảng viên cho đề tài này'}), 403
+
+    if topic.status not in ['rejected', 'pending', 'waiting_for_members']:
+        return jsonify({'error': 'Chỉ có thể đổi giảng viên khi đề tài đang chờ duyệt hoặc bị từ chối'}), 400
+
+    data = request.get_json() or {}
+    new_mentor_id = data.get('mentor_id')
+    if not new_mentor_id:
+        return jsonify({'error': 'Vui lòng chọn Giảng viên hướng dẫn mới'}), 400
+
+    new_mentor = User.query.get(int(new_mentor_id))
+    if not new_mentor or (new_mentor.role or '').lower() != 'lecturer':
+        return jsonify({'error': 'Giảng viên đã chọn không hợp lệ'}), 400
+
+    try:
+        # Cập nhật thông tin mentor và trạng thái đề tài
+        topic.mentor_id = new_mentor.id
+        topic.status = 'pending' # Đưa đề tài trở lại ĐANG CHỜ GV DUYỆT
+        group.mentor_id = new_mentor.id
+        group.status = 'pending_mentor'
+
+        # Cập nhật topic_registrations
+        reg = TopicRegistration.query.filter_by(topic_id=topic.id).first()
+        if reg:
+            reg.mentor_id = new_mentor.id
+            reg.status = 'pending'
+
+        # Gửi thông báo và email cho Giảng viên mới
+        link = f"/lecturer/approve"
+        desc_html = (
+            f"<div style='background: #f8fafc; border-left: 4px solid #4f46e5; padding: 12px 16px; margin: 12px 0; border-radius: 6px; border: 1px solid #e2e8f0;'>"
+            f"<strong style='color: #4338ca; display: block; margin-bottom: 6px;'><i class='fa-solid fa-align-left me-1'></i> Mô tả đề tài / Ý tưởng từ sinh viên:</strong>"
+            f"<div class='rich-content-display' style='margin: 0; font-size: 13px; color: #334155; line-height: 1.6;'>{topic.description or ''}</div>"
+            f"</div>"
+        ) if topic.description else ""
+
+        html_content = (
+            f"<p>Xin chào <strong>{new_mentor.full_name}</strong>,</p>"
+            f"<p>Nhóm sinh viên <strong>{group.name}</strong> vừa gửi yêu cầu nhờ bạn hướng dẫn đề tài NCKH: <strong>{topic.title}</strong>.</p>"
+            f"{desc_html}"
+            f"<a href='{link}' class='btn btn-primary rounded-pill btn-sm mt-2'>Phê duyệt Đề tài</a>"
+        )
+        new_notif = Notification(user_id=new_mentor.id, content=html_content)
+        db.session.add(new_notif)
+
+        from email_utils import send_email_async
+        if new_mentor.email:
+            email_desc_html = (
+                f"<div style='background: #f1f5f9; border-left: 4px solid #4f46e5; padding: 14px 18px; margin: 14px 0; border-radius: 6px;'>"
+                f"<strong style='color: #312e81; display: block; margin-bottom: 8px;'>Mô tả đề tài / Ý tưởng nghiên cứu từ sinh viên:</strong>"
+                f"<div class='rich-content-display' style='margin: 0; font-size: 14px; color: #1e293b; line-height: 1.6;'>{topic.description or ''}</div>"
+                f"</div>"
+            ) if topic.description else ""
+
+            email_html = (
+                f"<div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>"
+                f"<h2 style='color: #4f46e5;'>Yêu cầu Hướng dẫn Đề tài NCKH</h2>"
+                f"<p>Xin chào <strong>{new_mentor.full_name}</strong>,</p>"
+                f"<p>Nhóm sinh viên <strong>{group.name}</strong> vừa gửi yêu cầu nhờ bạn hướng dẫn đề tài NCKH: <strong>{topic.title}</strong>.</p>"
+                f"{email_desc_html}"
+                f"<p>Vui lòng đăng nhập hệ thống để xem chi tiết và Quyết định Phê duyệt / Từ chối.</p>"
+                f"<a href='http://127.0.0.1:5000/lecturer/approve' style='display: inline-block; padding: 10px 20px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Phê duyệt Đề tài</a>"
+                f"<br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>"
+                f"</div>"
+            )
+            send_email_async(new_mentor.email, f"[HOU S-RIMS] Yêu cầu Hướng dẫn Đề tài NCKH", f"Yêu cầu hướng dẫn đề tài {topic.title}", email_html)
+
+        # Gửi thông báo cho toàn bộ thành viên nhóm
+        for gm in group.members:
+            st_notif = Notification(
+                user_id=gm.student_id,
+                content=f"<p>Đề tài <strong>{topic.title}</strong> đã được gửi yêu cầu hướng dẫn tới Giảng viên <strong>{new_mentor.full_name}</strong>. Đang chờ Thầy/Cô phản hồi.</p>"
+            )
+            db.session.add(st_notif)
+
+        db.session.commit()
+
+        # Build response topic object for live UI update
+        return jsonify({
+            'message': f'Đã gửi yêu cầu hướng dẫn thành công tới Giảng viên {new_mentor.full_name}',
+            'topic': {
+                'id': topic.id,
+                'title': topic.title,
+                'status': 'pending',
+                'status_label': 'ĐANG CHỜ GV DUYỆT',
+                'step': 1,
+                'pct': 0,
+                'mentor_id': new_mentor.id,
+                'mentor_name': new_mentor.full_name,
+                'group_id': group.id,
+                'group_name': group.name,
+                'description': topic.description or '',
+                'has_rejected_members': False,
+                'rejected_names': [],
+                'members': [
+                    {
+                        'student_id': gm.student_id,
+                        'full_name': gm.student.full_name if gm.student else '',
+                        'student_code': gm.student.student_id or (gm.student.username if gm.student else ''),
+                        'faculty': gm.student.faculty if gm.student else '',
+                        'status': gm.status,
+                        'is_leader': bool(gm.student_id == group.leader_id)
+                    }
+                    for gm in group.members
+                ]
+            }
+        }), 200
+    except Exception as ex:
+        db.session.rollback()
+        return jsonify({'error': str(ex)}), 500
+
 

@@ -188,13 +188,132 @@
                     </div>
                 </div>
 
-                <!-- Notes Textarea -->
+                <!-- Notes Rich Text Editor (Word-like) -->
                 <div class="mb-3">
-                    <label class="form-label small fw-bold text-muted mb-1">
-                        <i class="fa-regular fa-message me-1 text-primary"></i> GHI CHÚ / TÓM TẮT ĐIỂM MỚI
-                    </label>
-                    <textarea id="submission-notes" class="form-control bg-light border-0 small rounded-3" rows="2" 
-                              placeholder="Mô tả tóm tắt nội dung gửi, các điểm đã tiếp thu ý kiến từ giảng viên..."></textarea>
+                    <div class="d-flex align-items-center justify-content-between mb-1.5">
+                        <label class="form-label small fw-bold text-muted mb-0">
+                            <i class="fa-solid fa-file-word me-1 text-primary"></i> GHI CHÚ / TÓM TẮT ĐIỂM MỚI
+                        </label>
+                        <span class="badge bg-light text-secondary border px-2 py-0.5" style="font-size: 10px;">
+                            <i class="fa-solid fa-file-word me-1 text-primary"></i>Trình soạn thảo văn bản
+                        </span>
+                    </div>
+                    <div class="word-editor-container shadow-2xs">
+                        <!-- Toolbar kiểu Word -->
+                        <div class="word-editor-toolbar" id="submissionNotesToolbar">
+                            <!-- Font family -->
+                            <select class="tool-select" id="toolSubmissionFontFamily" onchange="formatWordDoc('fontName', this.value, 'submissionNotesEditor')" title="Kiểu chữ">
+                                <option value="inherit">Kiểu chữ: Mặc định</option>
+                                <option value="'Segoe UI', Tahoma, sans-serif">Segoe UI</option>
+                                <option value="Roboto, sans-serif">Roboto</option>
+                                <option value="Arial, sans-serif">Arial</option>
+                                <option value="'Times New Roman', serif">Times New Roman</option>
+                                <option value="Tahoma, sans-serif">Tahoma</option>
+                            </select>
+
+                            <!-- Font size -->
+                            <select class="tool-select" id="toolSubmissionFontSize" onchange="formatWordDocFontSize(this.value, 'submissionNotesEditor')" title="Cỡ chữ">
+                                <option value="">Cỡ chữ</option>
+                                <option value="12px">12px (Nhỏ)</option>
+                                <option value="13px" selected>13px (Chuẩn)</option>
+                                <option value="15px">15px (Vừa)</option>
+                                <option value="17px">17px (Lớn)</option>
+                            </select>
+
+                            <div class="tool-separator"></div>
+
+                            <!-- Định dạng cơ bản: In đậm, in nghiêng, gạch chân, gạch ngang -->
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('bold', null, 'submissionNotesEditor')" title="In đậm (Ctrl+B)">
+                                <i class="fa-solid fa-bold"></i>
+                            </button>
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('italic', null, 'submissionNotesEditor')" title="In nghiêng (Ctrl+I)">
+                                <i class="fa-solid fa-italic"></i>
+                            </button>
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('underline', null, 'submissionNotesEditor')" title="Gạch chân (Ctrl+U)">
+                                <i class="fa-solid fa-underline"></i>
+                            </button>
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('strikeThrough', null, 'submissionNotesEditor')" title="Gạch ngang chữ">
+                                <i class="fa-solid fa-strikethrough"></i>
+                            </button>
+
+                            <div class="tool-separator"></div>
+
+                            <!-- Màu chữ & Highlight màu nền -->
+                            <label class="btn-tool mb-0 cursor-pointer position-relative" title="Màu chữ">
+                                <i class="fa-solid fa-font text-danger"></i>
+                                <input type="color" id="toolSubmissionTextColor" onchange="formatWordDoc('foreColor', this.value, 'submissionNotesEditor')"
+                                    style="position: absolute; opacity: 0; width: 100%; height: 100%; top: 0; left: 0; cursor: pointer;">
+                            </label>
+                            <label class="btn-tool mb-0 cursor-pointer position-relative" title="Màu nền / Tô sáng (Highlight)">
+                                <i class="fa-solid fa-highlighter text-warning"></i>
+                                <input type="color" id="toolSubmissionBgColor" value="#ffffaa" onchange="formatWordDoc('hiliteColor', this.value, 'submissionNotesEditor')"
+                                    style="position: absolute; opacity: 0; width: 100%; height: 100%; top: 0; left: 0; cursor: pointer;">
+                            </label>
+
+                            <div class="tool-separator"></div>
+
+                            <!-- Căn lề / Chỉnh dòng -->
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('justifyLeft', null, 'submissionNotesEditor')" title="Căn lề trái">
+                                <i class="fa-solid fa-align-left"></i>
+                            </button>
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('justifyCenter', null, 'submissionNotesEditor')" title="Căn giữa">
+                                <i class="fa-solid fa-align-center"></i>
+                            </button>
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('justifyRight', null, 'submissionNotesEditor')" title="Căn lề phải">
+                                <i class="fa-solid fa-align-right"></i>
+                            </button>
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('justifyFull', null, 'submissionNotesEditor')" title="Căn đều hai bên">
+                                <i class="fa-solid fa-align-justify"></i>
+                            </button>
+
+                            <div class="tool-separator"></div>
+
+                            <!-- Danh sách & thụt lề -->
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('insertUnorderedList', null, 'submissionNotesEditor')" title="Danh sách dấu chấm">
+                                <i class="fa-solid fa-list-ul"></i>
+                            </button>
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('insertOrderedList', null, 'submissionNotesEditor')" title="Danh sách đánh số">
+                                <i class="fa-solid fa-list-ol"></i>
+                            </button>
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('outdent', null, 'submissionNotesEditor')" title="Giảm thụt lề">
+                                <i class="fa-solid fa-outdent"></i>
+                            </button>
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('indent', null, 'submissionNotesEditor')" title="Tăng thụt lề">
+                                <i class="fa-solid fa-indent"></i>
+                            </button>
+
+                            <div class="tool-separator"></div>
+
+                            <!-- Undo / Redo & Clear format -->
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('undo', null, 'submissionNotesEditor')" title="Hoàn tác (Ctrl+Z)">
+                                <i class="fa-solid fa-rotate-left"></i>
+                            </button>
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('redo', null, 'submissionNotesEditor')" title="Làm lại (Ctrl+Y)">
+                                <i class="fa-solid fa-rotate-right"></i>
+                            </button>
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('removeFormat', null, 'submissionNotesEditor')" title="Xóa toàn bộ định dạng">
+                                <i class="fa-solid fa-eraser text-secondary"></i>
+                            </button>
+                        </div>
+
+                        <!-- Khung soạn thảo văn bản -->
+                        <div id="submissionNotesEditor" class="word-editor-content" contenteditable="true"
+                            style="min-height: 120px; max-height: 220px; font-size: 13px;"
+                            data-placeholder="Mô tả tóm tắt nội dung gửi, các điểm đã tiếp thu ý kiến từ giảng viên (hỗ trợ in đậm, in nghiêng, gạch chân, căn lề, màu sắc, danh sách giống Word)..."
+                            oninput="syncSubmissionNotesFromEditor()" onblur="syncSubmissionNotesFromEditor()"></div>
+
+                        <!-- Hidden textarea cho form submission -->
+                        <textarea id="submission-notes" name="notes" style="display:none;"></textarea>
+
+                        <!-- Footer thanh trạng thái & đếm từ -->
+                        <div class="word-editor-footer py-1 px-2.5">
+                            <span class="d-flex align-items-center gap-1.5" style="font-size: 11px;">
+                                <i class="fa-regular fa-keyboard text-primary"></i>
+                                <small>Phím tắt: <strong>Ctrl+B</strong> (Đậm), <strong>Ctrl+I</strong> (Nghiêng), <strong>Ctrl+U</strong> (Gạch chân)</small>
+                            </span>
+                            <span id="submissionNotesWordCount" class="fw-medium text-muted" style="font-size: 11px;">0 từ • 0 ký tự</span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Submit Button -->

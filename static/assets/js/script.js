@@ -267,10 +267,20 @@ function switchTab(tabName, element) {
         if (tabName === 's-register' && typeof checkAndLoadMyTopic === 'function') {
             checkAndLoadMyTopic();
         }
-        if (tabName === 's-submit' && typeof window.loadSubmissionsData === 'function') {
-            window.loadSubmissionsData();
+        if (tabName === 's-mentors' && typeof hideStudentMentorDetail === 'function') {
+            hideStudentMentorDetail();
+        }
+        if (tabName === 's-submit') {
+            if (typeof window.refreshStudentViewsLive === 'function' && document.querySelector('#view-s-submit .fa-folder-open')) {
+                window.refreshStudentViewsLive();
+            } else if (typeof window.loadSubmissionsData === 'function') {
+                window.loadSubmissionsData();
+            }
         }
         if (tabName === 's-chat') {
+            if (typeof window.refreshStudentViewsLive === 'function' && document.querySelector('#groups-pane .fa-users-slash')) {
+                window.refreshStudentViewsLive();
+            }
             if (typeof initChatUI === 'function') initChatUI();
             setTimeout(() => {
                 const firstGroup = document.querySelector('#groups-pane .chat-group-item');
@@ -480,3 +490,75 @@ function addRubricCriteria() {
     
     container.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
+
+/**
+ * 5. BỘ CÔNG CỤ SOẠN THẢO VĂN BẢN KIỂU WORD (WORD-LIKE RICH TEXT EDITOR HELPERS)
+ */
+window.formatWordDoc = function (cmd, value = null, targetEditorId = 'registerTopicDescEditor') {
+    const editor = document.getElementById(targetEditorId);
+    if (editor) editor.focus();
+    document.execCommand(cmd, false, value);
+    if (targetEditorId === 'submissionNotesEditor' && typeof window.syncSubmissionNotesFromEditor === 'function') {
+        window.syncSubmissionNotesFromEditor();
+    } else if (targetEditorId === 'feedbackTextEditor' && typeof window.syncFeedbackTextFromEditor === 'function') {
+        window.syncFeedbackTextFromEditor();
+    } else if (typeof window.syncTopicDescFromEditor === 'function') {
+        window.syncTopicDescFromEditor();
+    }
+};
+
+window.formatWordDocFontSize = function (size, targetEditorId = 'registerTopicDescEditor') {
+    if (!size) return;
+    const editor = document.getElementById(targetEditorId);
+    if (editor) editor.focus();
+    
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
+        const range = selection.getRangeAt(0);
+        const span = document.createElement('span');
+        span.style.fontSize = size;
+        span.appendChild(range.extractContents());
+        range.insertNode(span);
+        selection.removeAllRanges();
+        const newRange = document.createRange();
+        newRange.selectNodeContents(span);
+        selection.addRange(newRange);
+    } else {
+        document.execCommand('fontSize', false, '3');
+    }
+
+    if (targetEditorId === 'submissionNotesEditor' && typeof window.syncSubmissionNotesFromEditor === 'function') {
+        window.syncSubmissionNotesFromEditor();
+    } else if (targetEditorId === 'feedbackTextEditor' && typeof window.syncFeedbackTextFromEditor === 'function') {
+        window.syncFeedbackTextFromEditor();
+    } else if (typeof window.syncTopicDescFromEditor === 'function') {
+        window.syncTopicDescFromEditor();
+    }
+};
+
+window.formatDoc = function (cmd, value = null) {
+    window.formatWordDoc(cmd, value, 'registerTopicDescEditor');
+};
+
+window.formatDocFontSize = function (size) {
+    window.formatWordDocFontSize(size, 'registerTopicDescEditor');
+};
+
+document.addEventListener('keydown', function (e) {
+    const active = document.activeElement;
+    if (!active || !active.classList.contains('word-editor-content')) return;
+    if (e.ctrlKey || e.metaKey) {
+        const k = e.key.toLowerCase();
+        const targetId = active.id;
+        if (k === 'b') {
+            e.preventDefault();
+            window.formatWordDoc('bold', null, targetId);
+        } else if (k === 'i') {
+            e.preventDefault();
+            window.formatWordDoc('italic', null, targetId);
+        } else if (k === 'u') {
+            e.preventDefault();
+            window.formatWordDoc('underline', null, targetId);
+        }
+    }
+});

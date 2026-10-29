@@ -27,22 +27,41 @@
                     <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg p-0 mt-3" style="width: 320px; border-radius: 12px; overflow: hidden;">
                         <li class="p-3 bg-white border-bottom d-flex justify-content-between align-items-center">
                             <h6 class="fw-bold mb-0 text-dark">Thông báo</h6>
-                            <a href="#" class="small text-primary fw-bold text-decoration-none" onclick="showAllNotifications()">Xem tất cả</a>
+                            <a href="javascript:void(0)" class="small text-primary fw-bold text-decoration-none" onclick="event.preventDefault(); window.showAllNotifications()">Xem tất cả</a>
                         </li>
                         <div style="max-height: 360px; overflow-y: auto;">
                             {% if notifications %}
                                 {% for notif in notifications %}
+                                {% set is_faculty_approved = 'Khoa' in notif.content and ('phê duyệt' in notif.content or 'ĐÃ PHÊ DUYỆT' in notif.content) %}
+                                {% set is_faculty_revision = 'Khoa' in notif.content and ('chỉnh sửa' in notif.content or 'YÊU CẦU' in notif.content) %}
+                                {% set is_lecturer_review = 'Giảng viên' in notif.content or 'GV' in notif.content or 'đánh giá' in notif.content or 'hướng dẫn' in notif.content %}
                                 <li>
-                                    <a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start {% if not notif.is_read %}bg-light{% endif %}" href="#" onclick="readNotification({{ notif.id }}, decodeURIComponent('{{ notif.content | urlencode }}'), false)">
-                                        <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;"><i class="fa-regular fa-bell"></i></div>
-                                        <div>
-                                            <div class="fw-bold small text-dark mb-1 d-flex align-items-center justify-content-between">
-                                                <span>Thông báo hệ thống</span>
+                                    <a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start notif-dropdown-item {% if not notif.is_read %}bg-light{% endif %}" 
+                                       href="javascript:void(0)" 
+                                       data-notif-id="{{ notif.id }}" 
+                                       data-notif-content="{{ notif.content | e }}" 
+                                       onclick="event.preventDefault(); window.handleNotifItemClick(this, event)">
+                                        <div class="{% if is_faculty_approved %}bg-success-subtle text-success{% elif is_faculty_revision %}bg-danger-subtle text-danger{% elif is_lecturer_review %}bg-primary-subtle text-primary{% else %}bg-secondary-subtle text-secondary{% endif %} rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;">
+                                            <i class="{% if is_faculty_approved %}fa-solid fa-stamp{% elif is_faculty_revision %}fa-solid fa-triangle-exclamation{% elif is_lecturer_review %}fa-solid fa-chalkboard-user{% else %}fa-regular fa-bell{% endif %}"></i>
+                                        </div>
+                                        <div class="flex-grow-1" style="min-width: 0;">
+                                            <div class="fw-bold small mb-1 d-flex align-items-center justify-content-between">
+                                                <span class="{% if is_faculty_approved %}text-success{% elif is_faculty_revision %}text-danger{% elif is_lecturer_review %}text-primary{% else %}text-dark{% endif %}">
+                                                    {% if is_faculty_approved %}
+                                                        <i class="fa-solid fa-circle-check me-1"></i>Khoa đã phê duyệt
+                                                    {% elif is_faculty_revision %}
+                                                        <i class="fa-solid fa-triangle-exclamation me-1"></i>Khoa yêu cầu sửa
+                                                    {% elif is_lecturer_review %}
+                                                        <i class="fa-solid fa-user-tie me-1"></i>Đánh giá bài nộp
+                                                    {% else %}
+                                                        Thông báo hệ thống
+                                                    {% endif %}
+                                                </span>
                                                 {% if not notif.is_read %}
                                                     <span class="badge bg-danger rounded-circle p-1" style="width:8px; height:8px;"></span>
                                                 {% endif %}
                                             </div>
-                                            <div class="small text-muted mb-1" style="line-height: 1.4; white-space: normal;">{{ notif.content.split('|||')[0] | striptags | truncate(80) }}</div>
+                                            <div class="small text-muted mb-1" style="line-height: 1.4; white-space: normal;">{{ notif.content.split('|||')[0] | striptags | replace('\n', ' ') | truncate(85) }}</div>
                                             <div class="text-muted" style="font-size: 10px;">{{ notif.created_at.strftime('%d/%m/%Y %H:%M') if notif.created_at else '' }}</div>
                                         </div>
                                     </a>
@@ -53,8 +72,8 @@
                             {% endif %}
                         </div>
                         <li class="p-2 bg-light text-center border-top d-flex justify-content-between px-3">
-                            <a href="#" class="small text-muted fw-bold text-decoration-none" style="font-size: 11px;" onclick="showAllNotifications()">Xem tất cả</a>
-                            <a href="#" class="small text-danger fw-bold text-decoration-none" style="font-size: 11px;" onclick="deleteAllReadNotifications()"><i class="fa-solid fa-trash me-1"></i> Xóa thư đã đọc</a>
+                            <a href="javascript:void(0)" class="small text-muted fw-bold text-decoration-none" style="font-size: 11px;" onclick="event.preventDefault(); window.showAllNotifications()">Xem tất cả</a>
+                            <a href="javascript:void(0)" class="small text-danger fw-bold text-decoration-none" style="font-size: 11px;" onclick="event.preventDefault(); window.deleteAllReadNotifications()"><i class="fa-solid fa-trash me-1"></i> Xóa thư đã đọc</a>
                         </li>
                     </ul>
                 </div>
@@ -213,8 +232,11 @@
                         <input type="text" id="editTopicTitle" class="form-control" readonly>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Mô tả tóm tắt</label>
-                        <textarea id="editTopicDesc" class="form-control" rows="3" readonly></textarea>
+                        <label class="form-label fw-semibold text-dark">Mô tả tóm tắt</label>
+                        <div id="editTopicDescDisplay" class="bg-light p-3 rounded-3 border rich-content-display text-dark small" style="min-height: 80px; max-height: 200px; overflow-y: auto; line-height: 1.6;">
+                            (Chưa có mô tả)
+                        </div>
+                        <input type="hidden" id="editTopicDesc">
                     </div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">

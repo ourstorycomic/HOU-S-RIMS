@@ -114,6 +114,41 @@ def view_profile(identifier):
     
     return render_template('profile.html', profile_user=user, skills=skills, achievements=achievements, experiences=experiences, **context)
 
+@app.route('/static/uploads/<path:filename>')
+def serve_static_uploads_fallback(filename):
+    base_uploads = os.path.join(app.root_path, 'static', 'uploads')
+    
+    # 1. Exact match under static/uploads
+    direct_path = os.path.join(base_uploads, filename)
+    if os.path.isfile(direct_path):
+        return send_from_directory(base_uploads, filename)
+        
+    # Extract only the base name if filename had subfolder prefix
+    basename = os.path.basename(filename)
+
+    # 2. Check in static/uploads/batches
+    batch_file = os.path.join(base_uploads, 'batches', basename)
+    if os.path.isfile(batch_file):
+        return send_from_directory(os.path.join(base_uploads, 'batches'), basename)
+
+    # 3. Check in static/uploads/submissions
+    sub_file = os.path.join(base_uploads, 'submissions', basename)
+    if os.path.isfile(sub_file):
+        return send_from_directory(os.path.join(base_uploads, 'submissions'), basename)
+
+    # 4. Check in static/uploads/chat
+    chat_file = os.path.join(base_uploads, 'chat', basename)
+    if os.path.isfile(chat_file):
+        return send_from_directory(os.path.join(base_uploads, 'chat'), basename)
+
+    # 5. Check in root uploads
+    root_uploads = os.path.join(app.root_path, 'uploads')
+    if os.path.isfile(os.path.join(root_uploads, basename)):
+        return send_from_directory(root_uploads, basename)
+
+    from flask import abort
+    abort(404)
+
 @app.route('/<path:filename>')
 def serve_static(filename): return send_from_directory('Models', filename)
 

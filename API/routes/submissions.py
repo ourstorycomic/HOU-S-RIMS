@@ -3,7 +3,7 @@ import time
 from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify, send_file, session
 from werkzeug.utils import secure_filename
-from models import db, Submission, Topic, User, Notification, GroupMember, Group, Message
+from models import db, Submission, Topic, User, Notification, GroupMember, Group, Message, Milestone
 from email_utils import send_email_async
 
 submissions_bp = Blueprint('submissions_api', __name__, url_prefix='/api/submissions')
@@ -64,13 +64,63 @@ def upload_file():
         latest_prev = Submission.query.filter_by(topic_id=topic.id, type=sub_type).order_by(Submission.version.desc()).first()
         version = (latest_prev.version + 1) if latest_prev and latest_prev.version else 1
 
+        # Xử lý an toàn cột mốc tiến độ (Milestone)
+        assigned_milestone_id = None
+        if sub_type == 'progress':
+            actual_milestone = None
+            if milestone_id and str(milestone_id).strip() not in ('', 'null', 'none', '0'):
+                try:
+                    ms_int = int(milestone_id)
+                    actual_milestone = Milestone.query.filter_by(id=ms_int, topic_id=topic.id).first()
+                    if not actual_milestone:
+                        topic_milestones = Milestone.query.filter_by(topic_id=topic.id).order_by(Milestone.id.asc()).all()
+                        if 1 <= ms_int <= len(topic_milestones):
+                            actual_milestone = topic_milestones[ms_int - 1]
+                except (ValueError, TypeError):
+                    actual_milestone = None
+
+            # Nếu đề tài chưa có mốc nào trong DB, tự động khởi tạo 4 mốc chuẩn
+            existing_count = Milestone.query.filter_by(topic_id=topic.id).count()
+            if existing_count == 0:
+                default_names = [
+                    "Đợt 1: Khảo sát tài liệu & Đề cương sơ bộ",
+                    "Đợt 2: Thiết kế hệ thống & Thực nghiệm bước đầu",
+                    "Đợt 3: Thu thập dữ liệu & Đánh giá kết quả",
+                    "Đợt 4: Hoàn thiện bản thảo báo cáo toàn văn"
+                ]
+                created_ms = []
+                for idx, m_name in enumerate(default_names):
+                    dl = datetime.utcnow() + timedelta(days=30 * (idx + 1))
+                    m_item = Milestone(
+                        topic_id=topic.id,
+                        name=m_name,
+                        deadline=dl,
+                        status='completed' if idx == 0 else ('in_progress' if idx == 1 else 'pending')
+                    )
+                    db.session.add(m_item)
+                    created_ms.append(m_item)
+                db.session.commit()
+
+                # Gán milestone theo lựa chọn
+                try:
+                    c_idx = int(milestone_id) - 1 if milestone_id else 0
+                    if 0 <= c_idx < len(created_ms):
+                        actual_milestone = created_ms[c_idx]
+                    else:
+                        actual_milestone = created_ms[0]
+                except Exception:
+                    actual_milestone = created_ms[0]
+
+            if actual_milestone:
+                assigned_milestone_id = actual_milestone.id
+
         new_submission = Submission(
             topic_id=topic.id,
             uploader_id=int(uploader_id) if uploader_id else user_id,
             file_url=web_file_url,
             file_name=original_filename,
             type=sub_type,
-            milestone_id=int(milestone_id) if milestone_id and milestone_id != 'null' else None,
+            milestone_id=assigned_milestone_id,
             external_link=external_link if external_link else None,
             notes=notes if notes else None,
             status='submitted',
@@ -188,6 +238,21 @@ def review_submission(sub_id):
         return jsonify({"success": False, "message": "Không có quyền thực hiện."}), 403
 
     sub = Submission.query.get_or_404(sub_id)
+
+    # Kiểm tra nếu sinh viên đã nộp bản mới hơn thì không cho phép chỉnh sửa/đánh giá bản cũ
+    newer_sub = Submission.query.filter(
+        Submission.topic_id == sub.topic_id,
+        Submission.type == sub.type,
+        Submission.milestone_id == sub.milestone_id,
+        Submission.id != sub.id,
+        (Submission.version > (sub.version or 1)) | (Submission.submitted_at > sub.submitted_at)
+    ).first()
+    if newer_sub:
+        return jsonify({
+            "success": False,
+            "message": f"Không thể chỉnh sửa đánh giá bản nộp cũ (v{sub.version or 1}). Sinh viên đã nộp lại bản mới hơn (v{newer_sub.version or 'mới'}). Vui lòng nhận xét và đánh giá trên bản nộp mới nhất."
+        }), 400
+
     data = request.get_json() or {}
     
     new_status = data.get('status') # 'approved', 'revision_required'
@@ -214,20 +279,38 @@ def review_submission(sub_id):
     reviewer = User.query.get(user_id)
     reviewer_name = reviewer.full_name if reviewer else "Giảng viên hướng dẫn"
     
-    status_label = "ĐÃ DUYỆT (ĐẠT)" if new_status == 'approved' else "YÊU CẦU CHỈNH SỬA"
-    status_color = "success" if new_status == 'approved' else "warning"
+    if new_status == 'approved':
+        status_label = "GVHD ĐÃ PHÊ DUYỆT (ĐẠT)"
+        status_color = "success"
+        notif_header = f"🎉 {reviewer_name} đã phê duyệt {type_name}"
+    else:
+        status_label = "GVHD YÊU CẦU CHỈNH SỬA"
+        status_color = "warning"
+        notif_header = f"⚠️ {reviewer_name} yêu cầu chỉnh sửa {type_name}"
+
     type_name = TYPE_LABELS.get(sub.type, 'Báo cáo/Tài liệu')
     
     if topic and topic.group_id:
-        members = GroupMember.query.filter_by(group_id=topic.group_id, status='accepted').all()
-        for m in members:
+        group = Group.query.get(topic.group_id)
+        member_ids = set()
+        if group:
+            if group.leader_id:
+                member_ids.add(group.leader_id)
+            for m in group.members:
+                if m.status in ['accepted', 'joined'] or not m.status:
+                    member_ids.add(m.student_id)
+        if sub.uploader_id:
+            member_ids.add(sub.uploader_id)
+
+        for s_id in member_ids:
             notif_content = f"""
-            <p><strong>{reviewer_name} đã đánh giá {type_name}</strong></p>
+            <p><strong>{notif_header}</strong></p>
+            <p>Đề tài: <strong>{topic.title}</strong> (v{sub.version} - {sub.file_name})</p>
             <p>Kết quả: <span class="badge bg-{status_color}">{status_label}</span></p>
             {f'<p class="small text-muted">Ghi chú: {feedback_text}</p>' if feedback_text else ''}
             <a href="/student#s-submit" class="btn btn-outline-primary btn-sm rounded-pill mt-1">Xem Chi tiết</a>
             """
-            db.session.add(Notification(user_id=m.student_id, content=notif_content))
+            db.session.add(Notification(user_id=s_id, content=notif_content))
         db.session.commit()
 
     return jsonify({
@@ -248,6 +331,21 @@ def add_feedback(sub_id):
         return jsonify({"success": False, "message": "Không có quyền thực hiện."}), 403
 
     sub = Submission.query.get_or_404(sub_id)
+
+    # Kiểm tra nếu sinh viên đã nộp bản mới hơn thì khóa chỉnh sửa bản cũ
+    newer_sub = Submission.query.filter(
+        Submission.topic_id == sub.topic_id,
+        Submission.type == sub.type,
+        Submission.milestone_id == sub.milestone_id,
+        Submission.id != sub.id,
+        (Submission.version > (sub.version or 1)) | (Submission.submitted_at > sub.submitted_at)
+    ).first()
+    if newer_sub:
+        return jsonify({
+            "success": False,
+            "message": f"Không thể chỉnh sửa ghi chú bản nộp cũ (v{sub.version or 1}). Sinh viên đã nộp lại bản mới hơn (v{newer_sub.version or 'mới'}). Vui lòng nhận xét trên bản nộp mới nhất."
+        }), 400
+
     data = request.get_json() or {}
     new_note = (data.get('feedback') or '').strip()
     status_update = data.get('status')
@@ -329,13 +427,14 @@ def faculty_review_submission(sub_id):
 
     if new_status == 'approved':
         status_label = "KHOA ĐÃ PHÊ DUYỆT ĐẠT YÊU CẦU"
-        status_color = "primary"
+        status_color = "success"
         status_bg = "#ecfdf5"
         status_fg = "#065f46"
         status_badge_text = "✔ ĐẠT YÊU CẦU (Khoa đã phê duyệt)"
         feedback_bg = "#eff6ff"
         feedback_border = "#3b82f6"
         feedback_header = "#1e40af"
+        notif_header = f"🎉 Khoa CNTT đã phê duyệt {type_name}"
     else:
         status_label = "KHOA YÊU CẦU CHỈNH SỬA / HOÀN THIỆN"
         status_color = "danger"
@@ -345,12 +444,13 @@ def faculty_review_submission(sub_id):
         feedback_bg = "#fffbeb"
         feedback_border = "#f59e0b"
         feedback_header = "#b45309"
+        notif_header = f"⚠️ Khoa CNTT yêu cầu chỉnh sửa {type_name}"
 
     # 1. Notify & Email Mentor
     mentor = User.query.get(topic.mentor_id) if (topic and topic.mentor_id) else None
     if mentor:
         mentor_notif = f"""
-        <p><strong>{faculty_name} đã đánh giá {type_name}</strong></p>
+        <p><strong>{notif_header}</strong></p>
         <p>Đề tài: <strong>{topic.title}</strong> (v{sub.version} - {sub.file_name})</p>
         <p>Quyết định cấp Khoa: <span class="badge bg-{status_color}">{status_label}</span></p>
         {f'<p class="small text-muted"><strong>Ý kiến chỉ đạo từ Khoa:</strong> {feedback_text}</p>' if feedback_text else ''}
@@ -397,10 +497,11 @@ def faculty_review_submission(sub_id):
     student_ids = set()
     if sub.uploader_id:
         student_ids.add(sub.uploader_id)
-    if topic and topic.group:
-        if topic.group.leader_id:
-            student_ids.add(topic.group.leader_id)
-        for m in topic.group.members:
+    group = Group.query.get(topic.group_id) if (topic and topic.group_id) else (topic.group if topic else None)
+    if group:
+        if group.leader_id:
+            student_ids.add(group.leader_id)
+        for m in group.members:
             if m.status in ['accepted', 'joined'] or not m.status:
                 student_ids.add(m.student_id)
 
@@ -408,7 +509,7 @@ def faculty_review_submission(sub_id):
         stu = User.query.get(s_id)
         if stu:
             student_notif = f"""
-            <p><strong>{faculty_name} đã đánh giá {type_name}</strong></p>
+            <p><strong>{notif_header}</strong></p>
             <p>Đề tài: <strong>{topic.title}</strong> (v{sub.version} - {sub.file_name})</p>
             <p>Kết quả cấp Khoa: <span class="badge bg-{status_color}">{status_label}</span></p>
             {f'<p class="small text-muted"><strong>Ý kiến chỉ đạo của Khoa:</strong> {feedback_text}</p>' if feedback_text else ''}

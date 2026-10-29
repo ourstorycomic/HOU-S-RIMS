@@ -59,7 +59,7 @@ def delete_read_notifications():
 @notifications_bp.route('/sync', methods=['GET'])
 def sync_notifications():
     """
-    Real-time synchronization endpoint for notifications, invitations, and group status
+    Real-time synchronization endpoint for notifications, invitations, topic status, and role counters
     """
     user_id = session.get('user_id')
     if not user_id:
@@ -67,10 +67,13 @@ def sync_notifications():
 
     from models import Notification, GroupMember, Topic, Group, User
     
+    current_u = User.query.get(user_id)
+    user_role = (current_u.role if current_u else '').lower()
+    
     # 1. Notifications
     notifs = Notification.query.filter_by(user_id=user_id).order_by(
         Notification.is_read.asc(), Notification.created_at.desc()
-    ).limit(25).all()
+    ).limit(30).all()
     
     unread_notifs_count = sum(1 for n in notifs if not n.is_read)
     
@@ -92,11 +95,12 @@ def sync_notifications():
     pending_inv_count = sum(1 for inv in received_invitations if inv['status'] in ['pending', 'invited'])
     total_badge_count = unread_notifs_count + pending_inv_count
     
-    # 3. Group and topic status (for live member acceptance update on leader's screen)
+    # 3. Group and topic status (for live member acceptance & topic progress updates)
     group_data = None
+    sent_pending_invitations = []
     led_group = Group.query.filter_by(leader_id=user_id).order_by(Group.id.desc()).first()
     if not led_group and memberships:
-        # Check any group user is member of (chỉ lấy khi đã chính thức đồng ý tham gia)
+        # Check any group user is member of (khi đã chính thức đồng ý tham gia)
         accepted_m = [m for m in memberships if m.status in ['accepted', 'joined']]
         if accepted_m:
             first_m = accepted_m[0]
@@ -118,6 +122,21 @@ def sync_notifications():
             'pending': 'ĐANG CHỜ GV DUYỆT'
         }
         
+        # Check rejected members in group
+        rejected_members = [gm for gm in led_group.members if gm.status in ['rejected', 'declined']]
+        has_rejected = len(rejected_members) > 0
+        rejected_names = [gm.student.full_name if gm.student else f"SV {gm.student_id}" for gm in rejected_members]
+
+        # Check pending invitations sent by leader
+        if led_group.leader_id == user_id:
+            for gm in led_group.members:
+                if gm.student_id != user_id and gm.status in ['pending', 'invited']:
+                    sent_pending_invitations.append({
+                        'student_id': gm.student_id,
+                        'full_name': gm.student.full_name if gm.student else '',
+                        'student_code': gm.student.student_id or (gm.student.username if gm.student else '')
+                    })
+
         group_data = {
             'group_id': led_group.id,
             'group_name': led_group.name,
@@ -128,7 +147,25 @@ def sync_notifications():
                 'status': g_topic.status if g_topic else '',
                 'status_label': status_labels.get(g_topic.status, 'ĐANG CHỜ GV DUYỆT') if g_topic else '',
                 'step': step,
-                'pct': pct
+                'pct': pct,
+                'mentor_id': g_topic.mentor_id if g_topic else None,
+                'mentor_name': g_topic.mentor.full_name if (g_topic and g_topic.mentor) else 'Chưa có',
+                'group_id': led_group.id,
+                'group_name': led_group.name,
+                'description': g_topic.description or '' if g_topic else '',
+                'has_rejected_members': has_rejected,
+                'rejected_names': rejected_names,
+                'members': [
+                    {
+                        'student_id': gm.student_id,
+                        'full_name': gm.student.full_name if gm.student else '',
+                        'student_code': gm.student.student_id or (gm.student.username if gm.student else ''),
+                        'faculty': gm.student.faculty if gm.student else '',
+                        'status': gm.status,
+                        'is_leader': bool(gm.student_id == led_group.leader_id)
+                    }
+                    for gm in led_group.members
+                ]
             } if g_topic else None,
             'members': [
                 {
@@ -142,11 +179,42 @@ def sync_notifications():
             ]
         }
 
+    # 4. Role-specific counts and system state hash (Lecturer, Faculty & Admin)
+    lecturer_pending_count = 0
+    faculty_pending_count = 0
+    if user_role == 'lecturer':
+        lecturer_pending_count = Topic.query.filter_by(mentor_id=user_id, status='pending').count()
+    elif user_role in ['faculty', 'admin']:
+        faculty_pending_count = Topic.query.filter_by(status='faculty_pending').count()
+
+    # Tính toán dấu vết dữ liệu hệ thống (data fingerprint) để đồng bộ tự động thời gian thực cho Khoa và Admin
+    system_state_hash = ""
+    try:
+        from models import Submission, Batch
+        latest_sub = Submission.query.order_by(Submission.id.desc()).first()
+        latest_sub_id = latest_sub.id if latest_sub else 0
+        latest_sub_status = latest_sub.status if latest_sub else ''
+        latest_sub_fac = latest_sub.faculty_status if latest_sub else ''
+        
+        latest_topic = Topic.query.order_by(Topic.id.desc()).first()
+        latest_topic_id = latest_topic.id if latest_topic else 0
+        latest_topic_status = latest_topic.status if latest_topic else ''
+        
+        sub_count = Submission.query.count()
+        topic_count = Topic.query.count()
+        batch_count = Batch.query.count()
+        approved_sub_count = Submission.query.filter_by(status='approved').count()
+        
+        system_state_hash = f"{faculty_pending_count}_{topic_count}_{sub_count}_{approved_sub_count}_{latest_sub_id}_{latest_sub_status}_{latest_sub_fac}_{latest_topic_id}_{latest_topic_status}_{batch_count}"
+    except Exception:
+        system_state_hash = f"{faculty_pending_count}_{lecturer_pending_count}"
+
     return jsonify({
         'total_badge_count': total_badge_count,
         'unread_notifs_count': unread_notifs_count,
         'pending_invitations_count': pending_inv_count,
         'invitations': received_invitations,
+        'sent_pending_invitations': sent_pending_invitations,
         'notifications': [
             {
                 'id': n.id,
@@ -156,5 +224,9 @@ def sync_notifications():
             }
             for n in notifs
         ],
-        'group_data': group_data
+        'group_data': group_data,
+        'user_role': user_role,
+        'lecturer_pending_count': lecturer_pending_count,
+        'faculty_pending_count': faculty_pending_count,
+        'system_state_hash': system_state_hash
     }), 200

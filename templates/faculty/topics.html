@@ -42,8 +42,8 @@
                                         <td>
                                             <div class="fw-bold text-dark">{{ t.title }}</div>
                                             {% if t.description %}
-                                            <div class="small text-secondary bg-light p-2 rounded-2 border mt-1 mb-1" style="max-width: 450px; word-break: break-word;">
-                                                <i class="fa-solid fa-align-left text-primary me-1"></i><strong>Mô tả:</strong> {{ t.description }}
+                                            <div class="small text-secondary bg-light p-2 rounded-2 border mt-1 mb-1 rich-content-display" style="max-width: 500px; word-break: break-word; max-height: 120px; overflow-y: auto;">
+                                                <i class="fa-solid fa-align-left text-primary me-1"></i><strong>Mô tả:</strong> {{ t.description | safe }}
                                             </div>
                                             {% endif %}
                                             <small class="text-muted">Nhóm ID: {{ t.group_id }}</small>
@@ -53,15 +53,40 @@
                                             {% if not t.mentor_id %}Chưa phân công{% endif %}
                                         </td>
                                         <td>
+                                            {% if t.approved_submission_types and t.approved_submission_types|length > 0 %}
+                                            <div class="d-flex flex-column align-items-start gap-2 py-1" style="gap: 8px !important;">
+                                                {% for item in t.approved_submission_types %}
+                                                <button type="button" class="btn btn-sm rounded-pill px-3 py-1.5 fw-bold shadow-2xs d-inline-flex align-items-center text-nowrap" 
+                                                        style="background: {{ item.bg }}; color: {{ item.color }}; border: 1px solid {{ item.border }}; font-size: 12px; transition: transform 0.15s ease;"
+                                                        title="Xem chi tiết &amp; phê duyệt"
+                                                        onclick="openFacultySubmissionsModal({{ t.id }}, '{{ t.title|replace('\'', '\\\'') }}', '{{ t.status }}')">
+                                                    <i class="fa-solid {{ item.icon }} me-2"></i>
+                                                    <span>{{ item.label }}</span>
+                                                    {% if item.faculty_status == 'approved' %}
+                                                    <span class="badge bg-primary text-white ms-2 rounded-pill" style="font-size: 9px; padding: 2px 6px;">
+                                                        <i class="fa-solid fa-stamp me-0.5"></i>Khoa duyệt
+                                                    </span>
+                                                    {% elif item.faculty_status == 'revision_required' %}
+                                                    <span class="badge bg-danger text-white ms-2 rounded-pill" style="font-size: 9px; padding: 2px 6px;">
+                                                        <i class="fa-solid fa-triangle-exclamation me-0.5"></i>Khoa yêu cầu sửa
+                                                    </span>
+                                                    {% endif %}
+                                                </button>
+                                                {% endfor %}
+                                            </div>
+                                            {% elif t.submissions and (t.submissions|selectattr('status', 'equalto', 'approved')|list)|length > 0 %}
                                             {% set approved_subs = t.submissions|selectattr('status', 'equalto', 'approved')|list %}
-                                            {% if approved_subs|length > 0 %}
-                                            <button type="button" class="btn btn-sm btn-success rounded-pill px-3 fw-bold shadow-xs" 
-                                                    style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;"
+                                            <button type="button" class="btn btn-sm rounded-pill px-3 py-1.5 fw-bold shadow-2xs d-inline-flex align-items-center text-nowrap" 
+                                                    style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 12px;"
                                                     onclick="openFacultySubmissionsModal({{ t.id }}, '{{ t.title|replace('\'', '\\\'') }}', '{{ t.status }}')">
-                                                <i class="fa-solid fa-circle-check me-1"></i> {{ approved_subs|length }} bản đạt yêu cầu
+                                                <i class="fa-solid fa-book-bookmark text-primary me-2"></i>
+                                                <span>Tài liệu: {% if approved_subs[0].type == 'outline' %}Đề cương chi tiết{% elif approved_subs[0].type == 'progress' %}Báo cáo tiến độ{% elif approved_subs[0].type == 'final' %}Báo cáo tổng kết{% elif approved_subs[0].type == 'slide' %}Slide &amp; Phụ lục{% else %}{{ approved_subs[0].type }}{% endif %}</span>
                                             </button>
                                             {% else %}
-                                            <span class="text-muted small"><i class="fa-regular fa-clock me-1"></i>Chưa có bản đạt</span>
+                                            <span class="text-muted small d-inline-flex align-items-center gap-2">
+                                                <i class="fa-regular fa-clock text-muted"></i>
+                                                <span>Chưa có bản đạt</span>
+                                            </span>
                                             {% endif %}
                                         </td>
                                         <td>
@@ -164,6 +189,7 @@
                 }
             }
         }
+        window.applyTopicFiltering = applyTopicFiltering;
 
         async function facultyApprove(topicId) {
             try {
@@ -424,7 +450,7 @@
                                         <i class="fa-solid fa-pen-to-square me-1"></i>Chỉnh sửa ý kiến
                                     </button>
                                 </div>
-                                <div class="text-dark small" id="faculty-view-text-${s.id}" style="white-space: pre-wrap; line-height: 1.5;">${s.faculty_feedback || 'Khoa CNTT đã phê duyệt thông qua báo cáo/đề cương này.'}</div>
+                                <div class="text-dark small rich-content-display" id="faculty-view-text-${s.id}" style="line-height: 1.6;">${s.faculty_feedback || 'Khoa CNTT đã phê duyệt thông qua báo cáo/đề cương này.'}</div>
                                 ${s.faculty_reviewed_at ? `<div class="text-muted mt-1.5" style="font-size: 10.5px;"><i class="fa-regular fa-clock me-1"></i>Thời gian phê duyệt: ${s.faculty_reviewed_at}</div>` : ''}
 
                                 <!-- Inline Edit Box (hidden by default) -->
@@ -437,10 +463,17 @@
                                         </select>
                                     </div>
                                     <div class="mb-2">
-                                        <label class="form-label small fw-bold text-muted">Ý KIẾN / CHỈ ĐẠO CỦA KHOA</label>
-                                        <textarea id="faculty-feedback-input-${s.id}" class="form-control form-control-sm" rows="3" placeholder="Nhập ý kiến chỉ đạo của Khoa...">${s.faculty_feedback || ''}</textarea>
+                                        <div class="d-flex align-items-center justify-content-between mb-1">
+                                            <label class="form-label small fw-bold text-muted mb-0">
+                                                <i class="fa-solid fa-file-word text-primary me-1"></i> Ý KIẾN / CHỈ ĐẠO CỦA KHOA
+                                            </label>
+                                            <span class="badge bg-light text-secondary border px-2 py-0.5" style="font-size: 10px;">
+                                                <i class="fa-solid fa-file-word text-primary me-1"></i>Trình soạn thảo văn bản
+                                            </span>
+                                        </div>
+                                        ${renderFacultyWordEditorHtml(s.id, s.faculty_feedback || '', true)}
                                     </div>
-                                    <div class="d-flex justify-content-end gap-2">
+                                    <div class="d-flex justify-content-end gap-2 pt-2">
                                         <button type="button" class="btn btn-sm btn-light rounded-pill px-3" onclick="toggleFacultyEditBox(${s.id})">Hủy</button>
                                         <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold shadow-sm" onclick="submitFacultyReviewInline(${s.id}, ${topicId}, '${(topicTitle || '').replace(/'/g, "\\'")}', '${topicStatus}')">
                                             <i class="fa-solid fa-check me-1"></i> Lưu thay đổi
@@ -460,7 +493,7 @@
                                     <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill">Chờ duyệt</span>
                                 </div>
 
-                                <div class="mb-2">
+                                <div class="mb-2.5">
                                     <label class="form-label small fw-bold text-muted">QUYẾT ĐỊNH CỦA KHOA <span class="text-danger">*</span></label>
                                     <select id="faculty-status-${s.id}" class="form-select form-select-sm">
                                         <option value="approved" selected>✔ Khoa phê duyệt ĐẠT (Chính thức thông qua đề cương/báo cáo)</option>
@@ -468,13 +501,19 @@
                                     </select>
                                 </div>
 
-                                <div class="mb-2">
-                                    <label class="form-label small fw-bold text-muted">Ý KIẾN / CHỈ ĐẠO CỦA KHOA</label>
-                                    <textarea id="faculty-feedback-input-${s.id}" class="form-control form-control-sm" rows="3" 
-                                              placeholder="Ví dụ: Khoa đồng ý thông qua đề cương chi tiết, cho phép nhóm tiếp tục triển khai nghiên cứu..."></textarea>
+                                <div class="mb-2.5">
+                                    <div class="d-flex align-items-center justify-content-between mb-1">
+                                        <label class="form-label small fw-bold text-muted mb-0">
+                                            <i class="fa-solid fa-file-word text-primary me-1"></i> Ý KIẾN / CHỈ ĐẠO CỦA KHOA
+                                        </label>
+                                        <span class="badge bg-light text-secondary border px-2 py-0.5" style="font-size: 10px;">
+                                            <i class="fa-solid fa-file-word text-primary me-1"></i>Trình soạn thảo văn bản
+                                        </span>
+                                    </div>
+                                    ${renderFacultyWordEditorHtml(s.id, '', false)}
                                 </div>
 
-                                <div class="d-flex justify-content-end gap-2 pt-1">
+                                <div class="d-flex justify-content-end gap-2 pt-2">
                                     <button type="button" class="btn btn-sm btn-primary rounded-pill px-4 py-1.5 fw-bold shadow-sm" 
                                             onclick="submitFacultyReviewInline(${s.id}, ${topicId}, '${(topicTitle || '').replace(/'/g, "\\'")}', '${topicStatus}')">
                                         <i class="fa-solid fa-stamp me-1.5"></i> Xác nhận phê duyệt cấp Khoa
@@ -531,8 +570,155 @@
             }
         }
 
+        function renderFacultyWordEditorHtml(subId, initialContent = '', isEdit = false) {
+            const editorId = isEdit ? `faculty-edit-editor-${subId}` : `faculty-feedback-editor-${subId}`;
+            const hiddenInputId = `faculty-feedback-input-${subId}`;
+            const wordCountId = isEdit ? `faculty-edit-wordcount-${subId}` : `faculty-feedback-wordcount-${subId}`;
+
+            return `
+                <div class="word-editor-container shadow-2xs mt-1">
+                    <div class="word-editor-toolbar py-1 px-2 d-flex flex-wrap align-items-center gap-1 bg-light border-bottom">
+                        <!-- Kiểu chữ -->
+                        <select class="tool-select" onchange="window.formatWordDoc('fontName', this.value, '${editorId}')" title="Kiểu chữ">
+                            <option value="inherit">Kiểu chữ: Mặc định</option>
+                            <option value="'Segoe UI', Tahoma, sans-serif">Segoe UI</option>
+                            <option value="Roboto, sans-serif">Roboto</option>
+                            <option value="Arial, sans-serif">Arial</option>
+                            <option value="'Times New Roman', serif">Times New Roman</option>
+                        </select>
+
+                        <!-- Cỡ chữ -->
+                        <select class="tool-select" onchange="window.formatWordDocFontSize(this.value, '${editorId}')" title="Cỡ chữ">
+                            <option value="">Cỡ chữ</option>
+                            <option value="12px">12px (Nhỏ)</option>
+                            <option value="13px" selected>13px (Chuẩn)</option>
+                            <option value="15px">15px (Vừa)</option>
+                            <option value="17px">17px (Lớn)</option>
+                        </select>
+
+                        <div class="tool-separator"></div>
+
+                        <!-- In đậm, nghiêng, gạch chân, gạch ngang -->
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('bold', null, '${editorId}')" title="In đậm (Ctrl+B)">
+                            <i class="fa-solid fa-bold"></i>
+                        </button>
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('italic', null, '${editorId}')" title="In nghiêng (Ctrl+I)">
+                            <i class="fa-solid fa-italic"></i>
+                        </button>
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('underline', null, '${editorId}')" title="Gạch chân (Ctrl+U)">
+                            <i class="fa-solid fa-underline"></i>
+                        </button>
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('strikeThrough', null, '${editorId}')" title="Gạch ngang chữ">
+                            <i class="fa-solid fa-strikethrough"></i>
+                        </button>
+
+                        <div class="tool-separator"></div>
+
+                        <!-- Màu chữ & Highlight màu nền -->
+                        <label class="btn-tool mb-0 cursor-pointer position-relative" title="Màu chữ">
+                            <i class="fa-solid fa-font text-danger"></i>
+                            <input type="color" onchange="window.formatWordDoc('foreColor', this.value, '${editorId}')"
+                                style="position: absolute; opacity: 0; width: 100%; height: 100%; top: 0; left: 0; cursor: pointer;">
+                        </label>
+                        <label class="btn-tool mb-0 cursor-pointer position-relative" title="Màu nền / Tô sáng (Highlight)">
+                            <i class="fa-solid fa-highlighter text-warning"></i>
+                            <input type="color" value="#ffffaa" onchange="window.formatWordDoc('hiliteColor', this.value, '${editorId}')"
+                                style="position: absolute; opacity: 0; width: 100%; height: 100%; top: 0; left: 0; cursor: pointer;">
+                        </label>
+
+                        <div class="tool-separator"></div>
+
+                        <!-- Căn lề -->
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('justifyLeft', null, '${editorId}')" title="Căn lề trái">
+                            <i class="fa-solid fa-align-left"></i>
+                        </button>
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('justifyCenter', null, '${editorId}')" title="Căn giữa">
+                            <i class="fa-solid fa-align-center"></i>
+                        </button>
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('justifyRight', null, '${editorId}')" title="Căn lề phải">
+                            <i class="fa-solid fa-align-right"></i>
+                        </button>
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('justifyFull', null, '${editorId}')" title="Căn đều hai bên">
+                            <i class="fa-solid fa-align-justify"></i>
+                        </button>
+
+                        <div class="tool-separator"></div>
+
+                        <!-- Danh sách -->
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('insertUnorderedList', null, '${editorId}')" title="Danh sách dấu chấm">
+                            <i class="fa-solid fa-list-ul"></i>
+                        </button>
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('insertOrderedList', null, '${editorId}')" title="Danh sách đánh số">
+                            <i class="fa-solid fa-list-ol"></i>
+                        </button>
+
+                        <div class="tool-separator"></div>
+
+                        <!-- Hoàn tác / Làm lại -->
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('undo', null, '${editorId}')" title="Hoàn tác (Ctrl+Z)">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </button>
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('redo', null, '${editorId}')" title="Làm lại (Ctrl+Y)">
+                            <i class="fa-solid fa-rotate-right"></i>
+                        </button>
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('removeFormat', null, '${editorId}')" title="Xóa định dạng">
+                            <i class="fa-solid fa-eraser text-secondary"></i>
+                        </button>
+                    </div>
+
+                    <!-- Khung soạn thảo văn bản contenteditable -->
+                    <div id="${editorId}" class="word-editor-content p-3 bg-white" contenteditable="true"
+                        style="min-height: 110px; max-height: 220px; font-size: 13.5px; line-height: 1.6; outline: none;"
+                        data-placeholder="Ví dụ: Khoa đồng ý thông qua đề cương chi tiết, cho phép nhóm tiếp tục triển khai nghiên cứu..."
+                        oninput="syncFacultyFeedbackFromEditor('${subId}', '${editorId}', '${hiddenInputId}', '${wordCountId}')"
+                        onblur="syncFacultyFeedbackFromEditor('${subId}', '${editorId}', '${hiddenInputId}', '${wordCountId}')">${initialContent}</div>
+
+                    <!-- Hidden textarea lưu trữ nội dung khi submit -->
+                    <textarea id="${hiddenInputId}" class="d-none">${initialContent}</textarea>
+
+                    <!-- Footer đếm từ & phím tắt -->
+                    <div class="word-editor-footer py-1 px-3 d-flex justify-content-between align-items-center bg-light border-top" style="font-size: 11px;">
+                        <span class="d-flex align-items-center gap-1.5 text-muted">
+                            <i class="fa-regular fa-keyboard text-primary"></i>
+                            <small>Phím tắt: <strong>Ctrl+B</strong> (Đậm), <strong>Ctrl+I</strong> (Nghiêng), <strong>Ctrl+U</strong> (Gạch chân)</small>
+                        </span>
+                        <span id="${wordCountId}" class="fw-medium text-muted">0 từ • 0 ký tự</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function syncFacultyFeedbackFromEditor(subId, editorId, hiddenInputId, wordCountId) {
+            const editor = document.getElementById(editorId);
+            const hiddenInput = document.getElementById(hiddenInputId);
+            const countEl = document.getElementById(wordCountId);
+            if (!editor || !hiddenInput) return;
+
+            const htmlContent = editor.innerHTML;
+            const textContent = editor.innerText || editor.textContent || '';
+            hiddenInput.value = htmlContent.trim() === '<br>' ? '' : htmlContent;
+
+            if (countEl) {
+                const text = textContent.trim();
+                const chars = text.length;
+                const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
+                countEl.textContent = `${words} từ • ${chars} ký tự`;
+            }
+        }
+
         async function submitFacultyReviewInline(subId, topicId, topicTitle, topicStatus) {
             const statusEl = document.getElementById(`faculty-status-${subId}`);
+            
+            // Đồng bộ nội dung từ editor tương ứng trước khi đọc
+            const newEditor = document.getElementById(`faculty-feedback-editor-${subId}`);
+            const editEditor = document.getElementById(`faculty-edit-editor-${subId}`);
+            if (newEditor) {
+                syncFacultyFeedbackFromEditor(subId, `faculty-feedback-editor-${subId}`, `faculty-feedback-input-${subId}`, `faculty-feedback-wordcount-${subId}`);
+            }
+            if (editEditor) {
+                syncFacultyFeedbackFromEditor(subId, `faculty-edit-editor-${subId}`, `faculty-feedback-input-${subId}`, `faculty-edit-wordcount-${subId}`);
+            }
+
             const feedbackEl = document.getElementById(`faculty-feedback-input-${subId}`);
             
             const faculty_status = statusEl ? statusEl.value : 'approved';

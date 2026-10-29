@@ -95,6 +95,68 @@ def topics():
     current_year = get_effective_academic_year()
     all_topics = Topic.query.join(Batch).filter(Batch.academic_year == current_year, Batch.status != 'hidden').all()
     mentors = User.query.filter(func.lower(User.role) == 'lecturer').all()
+
+    TYPE_CONFIG = {
+        'outline': {
+            'label': 'Tài liệu: Đề cương chi tiết',
+            'short_label': 'Đề cương chi tiết',
+            'icon': 'fa-book-bookmark',
+            'bg': '#eff6ff',
+            'color': '#1d4ed8',
+            'border': '#bfdbfe'
+        },
+        'progress': {
+            'label': 'Tài liệu: Báo cáo tiến độ',
+            'short_label': 'Báo cáo tiến độ',
+            'icon': 'fa-chart-line',
+            'bg': '#f0f9ff',
+            'color': '#0369a1',
+            'border': '#bae6fd'
+        },
+        'final': {
+            'label': 'Tài liệu: Báo cáo tổng kết',
+            'short_label': 'Báo cáo tổng kết',
+            'icon': 'fa-award',
+            'bg': '#ecfdf5',
+            'color': '#047857',
+            'border': '#a7f3d0'
+        },
+        'slide': {
+            'label': 'Tài liệu: Slide & Phụ lục',
+            'short_label': 'Slide & Phụ lục',
+            'icon': 'fa-file-powerpoint',
+            'bg': '#fffbeb',
+            'color': '#b45309',
+            'border': '#fde68a'
+        }
+    }
+
+    for t in all_topics:
+        approved = [s for s in t.submissions if s.status == 'approved']
+        seen = {}
+        for s in sorted(approved, key=lambda x: (x.submitted_at or datetime.min, x.version or 1), reverse=True):
+            if s.type not in seen:
+                cfg = TYPE_CONFIG.get(s.type, {
+                    'label': f'Tài liệu: {s.type}',
+                    'short_label': s.type,
+                    'icon': 'fa-file-lines',
+                    'bg': '#f8fafc',
+                    'color': '#334155',
+                    'border': '#cbd5e1'
+                })
+                seen[s.type] = {
+                    'type': s.type,
+                    'label': cfg['label'],
+                    'short_label': cfg['short_label'],
+                    'icon': cfg['icon'],
+                    'bg': cfg['bg'],
+                    'color': cfg['color'],
+                    'border': cfg['border'],
+                    'faculty_status': s.faculty_status,
+                    'sub_id': s.id
+                }
+        t.approved_submission_types = list(seen.values())
+
     return render_template('faculty/topics.html', topics=all_topics, mentors=mentors)
 
 @faculty_bp.route('/lecturers')

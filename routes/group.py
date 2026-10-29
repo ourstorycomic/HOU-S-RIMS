@@ -144,7 +144,7 @@ def invite_member(group_id):
             return jsonify({'success': False, 'error': 'Chỉ trưởng nhóm mới có quyền mời thành viên!'}), 403
         
         data = request.get_json(silent=True) or {}
-        raw_student_id = data.get('student_id', '').strip()
+        raw_student_id = (data.get('student_id') or data.get('student_code') or '').strip()
         
         if not raw_student_id:
             return jsonify({'success': False, 'error': 'Vui lòng nhập Mã Sinh Viên!'}), 400
@@ -247,13 +247,19 @@ def select_mentor(group_id):
         group.mentor_id = mentor.id
         group.status = 'pending_mentor'
         
-        # Gửi thông báo đến Mentor
+        # Gửi thông báo đến Mentor (Chỉ gửi nếu nhóm không có thành viên nào đang chờ xác nhận)
         try:
-            notif = Notification(
-                user_id=mentor.id,
-                content=f"Nhóm NCKH của sinh viên {current_user.full_name} ({current_user.student_id or ''}) đã gửi lời mời bạn làm Giảng viên Hướng dẫn."
-            )
-            db.session.add(notif)
+            pending_members_cnt = GroupMember.query.filter(
+                GroupMember.group_id == group_id,
+                GroupMember.student_id != current_user.id,
+                GroupMember.status.in_(['pending', 'invited'])
+            ).count()
+            if pending_members_cnt == 0:
+                notif = Notification(
+                    user_id=mentor.id,
+                    content=f"Nhóm NCKH của sinh viên {current_user.full_name} ({current_user.student_id or ''}) đã gửi lời mời bạn làm Giảng viên Hướng dẫn."
+                )
+                db.session.add(notif)
         except Exception:
             pass
             

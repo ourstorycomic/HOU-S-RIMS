@@ -137,6 +137,14 @@ function clearSubmissionFile() {
     if (preview) preview.classList.add('d-none');
     if (dropzoneContent) dropzoneContent.classList.remove('d-none');
     if (filenameDisplay) filenameDisplay.innerHTML = `Kéo thả tệp hoặc <span class="text-primary text-decoration-underline" style="pointer-events: auto;">nhấn để chọn</span>`;
+
+    // Clear Word-like editor content
+    const notesEditor = document.getElementById('submissionNotesEditor');
+    if (notesEditor) notesEditor.innerHTML = '';
+    const notesInput = document.getElementById('submission-notes');
+    if (notesInput) notesInput.value = '';
+    const wordCount = document.getElementById('submissionNotesWordCount');
+    if (wordCount) wordCount.textContent = '0 từ • 0 ký tự';
 }
 
 async function submitCurrentReport() {
@@ -156,6 +164,11 @@ async function submitCurrentReport() {
     const milestoneSelect = document.getElementById('submission-milestone-select');
     const milestoneId = (currentSubmissionType === 'progress' && milestoneSelect) ? milestoneSelect.value : '';
     const externalLink = (document.getElementById('submission-external-link')?.value || '').trim();
+    
+    // Đồng bộ nội dung ghi chú phong phú từ Word editor
+    if (typeof syncSubmissionNotesFromEditor === 'function') {
+        syncSubmissionNotesFromEditor();
+    }
     const notes = (document.getElementById('submission-notes')?.value || '').trim();
 
     const config = SUBMISSION_TYPE_CONFIG[currentSubmissionType] || {};
@@ -339,8 +352,13 @@ async function renderSubmissionHistory(topicId, filterType = null) {
                     </div>` : ''}
 
                     ${sub.notes ? `
-                    <div class="small text-muted mb-2 bg-white p-2 rounded border border-dashed" style="font-size: 11.5px;">
-                        <strong>Ghi chú:</strong> ${sub.notes}
+                    <div class="small text-muted mb-2 bg-white p-2.5 rounded-3 border border-dashed" style="font-size: 12px;">
+                        <div class="d-flex align-items-center gap-1.5 fw-bold text-dark mb-1 pb-1 border-bottom" style="font-size: 11px;">
+                            <i class="fa-solid fa-file-word text-primary"></i> Ghi chú & tóm tắt từ nhóm:
+                        </div>
+                        <div class="ql-editor p-0 rich-content-display" style="min-height: auto; font-size: 12px; line-height: 1.5; color: #334155;">
+                            ${sub.notes}
+                        </div>
                     </div>` : ''}
 
                     <div class="d-flex justify-content-between align-items-center text-muted mb-1" style="font-size: 11px;">
@@ -528,8 +546,10 @@ function initSubmissionsUI() {
         });
     }
 
-    // Default select outline
-    selectSubmissionType(currentSubmissionType || 'outline');
+    // Chỉ kích hoạt loại mặc định nếu chưa có loại nào được chọn
+    if (!document.querySelector('.submission-type-pill.active, [data-type].active')) {
+        selectSubmissionType(currentSubmissionType || 'outline');
+    }
 }
 
 window.loadSubmissionsData = function() {
