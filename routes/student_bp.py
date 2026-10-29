@@ -15,7 +15,7 @@ def require_student():
 def inject_common_data():
     user_id = session.get('user_id')
     current_user = User.query.get(user_id) if user_id else None
-    notifications = Notification.query.filter_by(user_id=user_id).order_by(Notification.is_read.asc(), Notification.created_at.desc()).all() if user_id else []
+    notifications = Notification.query.filter_by(user_id=user_id).order_by(Notification.created_at.desc()).all() if user_id else []
     current_year = session.get('academic_year', '2025-2026')
     active_batch = Batch.query.filter_by(academic_year=current_year, status='active').first()
     if not active_batch:

@@ -278,6 +278,7 @@ def review_submission(sub_id):
     topic = Topic.query.get(sub.topic_id)
     reviewer = User.query.get(user_id)
     reviewer_name = reviewer.full_name if reviewer else "Giảng viên hướng dẫn"
+    type_name = TYPE_LABELS.get(sub.type, 'Báo cáo/Tài liệu')
     
     if new_status == 'approved':
         status_label = "GVHD ĐÃ PHÊ DUYỆT (ĐẠT)"
@@ -287,8 +288,6 @@ def review_submission(sub_id):
         status_label = "GVHD YÊU CẦU CHỈNH SỬA"
         status_color = "warning"
         notif_header = f"⚠️ {reviewer_name} yêu cầu chỉnh sửa {type_name}"
-
-    type_name = TYPE_LABELS.get(sub.type, 'Báo cáo/Tài liệu')
     
     if topic and topic.group_id:
         group = Group.query.get(topic.group_id)

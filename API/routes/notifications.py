@@ -18,7 +18,7 @@ def get_notifications():
     if not user_id:
         return jsonify({'error': 'Unauthorized'}), 401
 
-    notifs = Notification.query.filter_by(user_id=user_id).order_by(Notification.is_read.asc(), Notification.created_at.desc()).all()
+    notifs = Notification.query.filter_by(user_id=user_id).order_by(Notification.created_at.desc()).all()
     result = [
         {
             'id': n.id,
@@ -72,7 +72,7 @@ def sync_notifications():
     
     # 1. Notifications
     notifs = Notification.query.filter_by(user_id=user_id).order_by(
-        Notification.is_read.asc(), Notification.created_at.desc()
+        Notification.created_at.desc()
     ).limit(30).all()
     
     unread_notifs_count = sum(1 for n in notifs if not n.is_read)
@@ -81,7 +81,7 @@ def sync_notifications():
     received_invitations = []
     memberships = GroupMember.query.filter_by(student_id=user_id).all()
     for m in memberships:
-        if m.group and m.group.leader_id != user_id:
+        if m.group and m.group.leader_id != user_id and m.status in ['pending', 'invited']:
             topic = m.group.topics[0] if (m.group.topics and len(m.group.topics) > 0) else None
             received_invitations.append({
                 'id': m.id,

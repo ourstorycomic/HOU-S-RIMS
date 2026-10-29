@@ -42,9 +42,9 @@
                 </li>
 
                 <div id="notifDropdownList" style="max-height: 360px; overflow-y: auto;">
-                    {% for inv in received_invitations %}
+                    {% for inv in received_invitations if inv.status in ['pending', 'invited'] %}
                     {% set topic = inv.group.topics[0] if inv.group and inv.group.topics else None %}
-                    {% set is_pending = inv.status in ['pending', 'invited'] %}
+                    {% set is_pending = true %}
                     {% set is_accepted = inv.status in ['accepted', 'joined'] %}
                     <li>
                         <div class="dropdown-item p-3 border-bottom {% if is_pending %}bg-warning-subtle{% else %}bg-white{% endif %}">

@@ -39,7 +39,7 @@ def inject_common_data():
     current_user = User.query.get(user_id) if user_id else None
     current_year = get_effective_academic_year()
     global_topic_count = Topic.query.join(Batch).filter(Batch.academic_year == current_year, Batch.status != 'hidden').count()
-    notifications = Notification.query.filter_by(user_id=user_id).order_by(Notification.is_read.asc(), Notification.created_at.desc()).all() if user_id else []
+    notifications = Notification.query.filter_by(user_id=user_id).order_by(Notification.created_at.desc()).all() if user_id else []
     
     # Query distinct academic years from non-hidden batches
     available_years = [r[0] for r in db.session.query(Batch.academic_year).filter(Batch.status != 'hidden').distinct().all() if r[0]]

@@ -1800,10 +1800,11 @@ async function syncNotificationsLive(immediate = false) {
         if (listEl && (immediate || !listEl.closest('.dropdown-menu.show'))) {
             let itemsHtml = '';
             
-            // Render invitations
+            // Render invitations (Chỉ hiển thị lời mời đang chờ phản hồi - pending)
             if (data.invitations && data.invitations.length > 0) {
                 data.invitations.forEach(inv => {
                     const isPending = inv.status === 'pending' || inv.status === 'invited';
+                    if (!isPending) return;
                     const isAccepted = inv.status === 'accepted' || inv.status === 'joined';
                     const iconClass = isAccepted ? 'fa-check' : (isPending ? 'fa-users' : 'fa-xmark');
                     const iconBg = isAccepted ? 'bg-success text-white' : (isPending ? 'bg-warning text-dark' : 'bg-secondary-subtle text-secondary');

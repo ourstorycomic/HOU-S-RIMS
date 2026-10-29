@@ -109,7 +109,7 @@ def student_page():
             faculties[fac] = []
         faculties[fac].append(m)
 
-    notifications = Notification.query.filter_by(user_id=user_id).order_by(Notification.is_read.asc(), Notification.created_at.desc()).all() if user_id else []
+    notifications = Notification.query.filter_by(user_id=user_id).order_by(Notification.created_at.desc()).all() if user_id else []
 
     # Danh sách sinh viên cho tính năng Tìm kiếm thành viên (ghép nhóm NCKH)
     all_students = User.query.filter(func.lower(User.role) == 'student').order_by(User.id.asc()).all()
