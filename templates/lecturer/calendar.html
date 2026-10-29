@@ -41,10 +41,7 @@
 
                             {% if notifications %}
                                 {% for notif in notifications[:5] %}
-                                <div class="p-3 rounded-3 mb-3 bg-primary-subtle bg-opacity-25 border border-primary-subtle cursor-pointer notif-card-item" 
-                                     data-notif-id="{{ notif.id }}" 
-                                     data-notif-content="{{ notif.content | e }}" 
-                                     onclick="window.handleNotifItemClick(this, event)">
+                                <div class="p-3 rounded-3 mb-3 bg-primary-subtle bg-opacity-25 border border-primary-subtle cursor-pointer notif-card-item" onclick="readNotification({{ notif.id }}, decodeURIComponent('{{ notif.content | urlencode }}'), false)">
                                     <div class="d-flex align-items-center gap-2 mb-1">
                                         <span class="fw-bold text-primary" style="font-size: 11px;">THÔNG BÁO</span>
                                         <span class="text-muted ms-auto" style="font-size: 10px;">{{ notif.created_at.strftime('%d/%m %H:%M') if notif.created_at else '' }}</span>
@@ -83,24 +80,69 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 <script>
+// ---------- Tiện ích ngày giờ (giờ máy người dùng, không dùng toISOString vì lệch UTC) ----------
+function calPad(n) { return String(n).padStart(2, '0'); }
+function calLocalDate(d) { return d.getFullYear() + '-' + calPad(d.getMonth() + 1) + '-' + calPad(d.getDate()); }
+function calLocalDT(d) { return calLocalDate(d) + 'T' + calPad(d.getHours()) + ':' + calPad(d.getMinutes()); }
+
+// Đổi ô "Hạn chót" từ chỉ-ngày thành ngày + giờ, và không cho chọn thời điểm đã qua
+function calUpgradeDeadlineInput() {
+    var el = document.getElementById('calendarMilestoneDeadline');
+    if (!el) return null;
+    if (el.type === 'date') el.type = 'datetime-local';
+    el.min = calLocalDT(new Date());
+    return el;
+}
+
+// Giá trị giờ mặc định khi nhấp đúp vào một ngày; trả về null nếu ngày/giờ đã qua
+function calDefaultDeadline(dateStr) {
+    var now = new Date();
+    var s = String(dateStr);
+    var day = s.substring(0, 10);
+    if (s.length > 10) {                       // bấm vào ô giờ ở dạng xem Tuần
+        var d = new Date(s);
+        if (!isNaN(d) && d > now) return calLocalDT(d);
+    }
+    var morning = day + 'T08:00';
+    if (new Date(morning) > now) return morning;
+    if (day === calLocalDate(now)) {           // hôm nay mà 8h đã qua -> giờ tròn kế tiếp
+        var n = new Date(now.getTime() + 3600000);
+        n.setMinutes(0, 0, 0);
+        if (calLocalDate(n) === day) return calLocalDT(n);
+    }
+    return null;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    calUpgradeDeadlineInput();
+    var modalEl = document.getElementById('modalCreateEvent');
+    if (modalEl) modalEl.addEventListener('show.bs.modal', calUpgradeDeadlineInput);
+});
+
 async function submitCalendarMilestone() {
     const topicId = document.getElementById('calendarMilestoneTopicId').value;
     const name = document.getElementById('calendarMilestoneName').value.trim();
-    const deadline = document.getElementById('calendarMilestoneDeadline').value;
+    const deadline = document.getElementById('calendarMilestoneDeadline').value; // YYYY-MM-DDTHH:MM
     if (!topicId || !name || !deadline) return Swal.fire('Lỗi', 'Vui lòng điền đủ thông tin', 'warning');
-    
+    if (deadline.indexOf('T') === -1) return Swal.fire('Thiếu giờ', 'Vui lòng chọn cả ngày và giờ của hạn chót.', 'warning');
+    if (new Date(deadline) <= new Date()) return Swal.fire('Thời gian không hợp lệ', 'Hạn chót phải sau thời điểm hiện tại (tính cả giờ).', 'warning');
+
     try {
         const res = await fetch(`/api/topics/${topicId}/milestones`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({name, deadline})
         });
+        const data = await res.json().catch(() => ({}));
         if (res.ok) {
             Swal.fire('Thành công', 'Đã thêm cột mốc/nhắc hẹn!', 'success').then(() => location.reload());
         } else {
-            Swal.fire('Lỗi', 'Thêm thất bại', 'error');
+            Swal.fire('Lỗi', data.error || 'Thêm thất bại', 'error');
         }
-    } catch (e) { console.error(e); }
+    } catch (e) {
+        console.error(e);
+        Swal.fire('Lỗi kết nối', e.message, 'error');
+    }
 }
 document.addEventListener('DOMContentLoaded', function() {
     var calendarEl = document.getElementById('calendar');
@@ -126,7 +168,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 clearTimeout(window.clickTimer);
                 window.clickTimer = null;
                 // Double click action
-                document.getElementById('calendarMilestoneDeadline').value = info.dateStr;
+                var dl = calUpgradeDeadlineInput();
+                var preset = calDefaultDeadline(info.dateStr);
+                if (preset === null) {
+                    Swal.fire('Ngày không hợp lệ', 'Không thể tạo nhắc hẹn trong quá khứ (hoặc đã hết ngày hôm nay).', 'warning');
+                    return;
+                }
+                if (dl) dl.value = preset;
                 var myModal = new bootstrap.Modal(document.getElementById('modalCreateEvent'));
                 myModal.show();
             } else {

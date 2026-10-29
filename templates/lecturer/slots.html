@@ -78,8 +78,12 @@
 const pickedDates = new Set();
 const fmtVN = d => d.split('-').reverse().join('/');
 
+const pad = n => String(n).padStart(2, '0');
+const todayStr = (() => { const t = new Date(); return `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}`; })();
+
 function addDate() {
   const v = document.getElementById('slotDatePicker').value;
+  if (v && v < todayStr) return Swal.fire('Ngày không hợp lệ', 'Không thể tạo lịch trong quá khứ', 'warning');
   if (v) pickedDates.add(v);
   renderDates();
 }
@@ -96,8 +100,15 @@ function updatePreview() {
   const step = +document.getElementById('slotMinutes').value;
   const el = document.getElementById('slotPreview');
   if (!pickedDates.size || !s || !e || toMin(e) <= toMin(s)) { el.textContent = 'Chưa chọn đủ ngày/giờ hợp lệ.'; return; }
-  const per = Math.floor((toMin(e) - toMin(s)) / step);
-  el.textContent = `Mỗi ngày ${per} khung × ${pickedDates.size} ngày = ${per * pickedDates.size} khung giờ.`;
+  const now = new Date();
+  let ok = 0, past = 0;
+  pickedDates.forEach(d => {
+    for (let m = toMin(s); m + step <= toMin(e); m += step) {
+      const start = new Date(`${d}T${pad(Math.floor(m / 60))}:${pad(m % 60)}:00`);
+      if (start <= now) past++; else ok++;
+    }
+  });
+  el.textContent = `Sẽ tạo ${ok} khung giờ` + (past ? ` (bỏ qua ${past} khung đã qua giờ hiện tại)` : '') + '.';
 }
 ['slotStart', 'slotEnd', 'slotMinutes'].forEach(id => document.addEventListener('change', e => { if (e.target.id === id) updatePreview(); }));
 
@@ -160,6 +171,7 @@ async function loadSlots() {
       : `<span class="slot-chip open">${s.start}-${s.end} <i class="fa-solid fa-xmark x" title="Xóa" onclick="deleteSlot(${s.id}, false)"></i></span>`).join('') + '</div></div>';
   }).join('');
 }
-document.addEventListener('DOMContentLoaded', () => { updatePreview(); loadSlots(); });
+document.addEventListener('DOMContentLoaded', () => { updatePreview(); loadSlots();
+document.getElementById('slotDatePicker').min = todayStr; });
 </script>
 {% endblock %}

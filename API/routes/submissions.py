@@ -253,10 +253,27 @@ def review_submission(sub_id):
             "message": f"Không thể chỉnh sửa đánh giá bản nộp cũ (v{sub.version or 1}). Sinh viên đã nộp lại bản mới hơn (v{newer_sub.version or 'mới'}). Vui lòng nhận xét và đánh giá trên bản nộp mới nhất."
         }), 400
 
-    data = request.get_json() or {}
+    if request.is_json:
+        data = request.get_json() or {}
+    else:
+        data = request.form or {}
     
     new_status = data.get('status') # 'approved', 'revision_required'
     feedback_text = (data.get('feedback') or '').strip()
+    
+    # Xử lý đính kèm file nhận xét / bài sửa của Giảng viên nếu có
+    feedback_file = request.files.get('feedback_file') or request.files.get('file')
+    if feedback_file and feedback_file.filename != '':
+        from werkzeug.utils import secure_filename
+        filename = secure_filename(feedback_file.filename)
+        upload_dir = os.path.join(request.environ.get('FLASK_APP_DIR', '.'), 'static', 'uploads', 'submissions', 'feedback')
+        os.makedirs(upload_dir, exist_ok=True)
+        ts = int(datetime.utcnow().timestamp())
+        unique_name = f"feedback_{sub.id}_{ts}_{filename}"
+        save_path = os.path.join(upload_dir, unique_name)
+        feedback_file.save(save_path)
+        sub.feedback_file_url = f"uploads/submissions/feedback/{unique_name}"
+        sub.feedback_file_name = filename
     
     if new_status not in ['approved', 'revision_required', 'submitted']:
         return jsonify({"success": False, "message": "Trạng thái đánh giá không hợp lệ."}), 400
@@ -307,6 +324,7 @@ def review_submission(sub_id):
             <p>Đề tài: <strong>{topic.title}</strong> (v{sub.version} - {sub.file_name})</p>
             <p>Kết quả: <span class="badge bg-{status_color}">{status_label}</span></p>
             {f'<p class="small text-muted">Ghi chú: {feedback_text}</p>' if feedback_text else ''}
+            {f'<p class="small text-primary"><i class="fa-solid fa-paperclip me-1"></i><strong>Giảng viên đã đính kèm tài liệu góp ý:</strong> <a href="/static/{sub.feedback_file_url}" target="_blank">{sub.feedback_file_name}</a></p>' if sub.feedback_file_url else ''}
             <a href="/student#s-submit" class="btn btn-outline-primary btn-sm rounded-pill mt-1">Xem Chi tiết</a>
             """
             db.session.add(Notification(user_id=s_id, content=notif_content))
@@ -573,3 +591,13 @@ def faculty_review_submission(sub_id):
         "message": f"Khoa đã cập nhật phê duyệt: {status_label}",
         "submission": sub.to_dict()
     }), 200
+
+@submissions_bp.route('/<int:sub_id>/feedback-file', methods=['GET'])
+def download_feedback_file(sub_id):
+    sub = Submission.query.get_or_404(sub_id)
+    if not sub.feedback_file_url:
+        return jsonify({"error": "Không có file đính kèm phản hồi"}), 404
+    file_path = os.path.join('static', sub.feedback_file_url)
+    if not os.path.exists(file_path):
+        return jsonify({"error": "File không tồn tại trên hệ thống"}), 404
+    return send_file(os.path.abspath(file_path), as_attachment=True, download_name=sub.feedback_file_name or os.path.basename(file_path))

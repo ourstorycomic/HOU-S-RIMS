@@ -24,7 +24,7 @@
                         </span>
                         {% endif %}
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg p-0 mt-3" style="width: 320px; border-radius: 12px; overflow: hidden;">
+                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg p-0 mt-3" style="width: 380px; max-width: 92vw; border-radius: 16px; overflow: hidden;">
                         <li class="p-3 bg-white border-bottom d-flex justify-content-between align-items-center">
                             <h6 class="fw-bold mb-0 text-dark">Thông báo</h6>
                             <a href="javascript:void(0)" class="small text-primary fw-bold text-decoration-none" onclick="event.preventDefault(); window.showAllNotifications()">Xem tất cả</a>
@@ -113,18 +113,98 @@
 </div> <!-- Close content-area -->
 <div class="modal fade" id="modalEditProfile" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content border-0 shadow-lg rounded-4">
-                <div class="modal-header bg-dark text-white"><h5 class="modal-title fw-bold">Cập nhật Hồ sơ Giảng viên</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
-                <div class="modal-body p-4">
-                    <div class="row g-3 mb-3"><div class="col-md-6"><label class="form-label">Họ và Tên</label><input type="text" class="form-control" value="Nguyễn Văn A"></div><div class="col-md-6"><label class="form-label">Học hàm/Học vị</label><select class="form-select"><option selected>Tiến sĩ</option><option>PGS.TS</option></select></div></div>
-                    <div class="mb-3"><label class="form-label">Hướng nghiên cứu (Phân cách bằng dấu phẩy)</label><input type="text" class="form-control" value="Học máy, NLP, EdTech, Data Mining"></div>
-                    <div class="mb-3"><label class="form-label">Link Google Scholar</label><input type="url" class="form-control" value="https://scholar.google.com/..."></div>
-                    <div class="mb-0"><label class="form-label">Giới thiệu bản thân (Bio)</label><textarea class="form-control" rows="3">Giảng viên Khoa CNTT với 10 năm kinh nghiệm...</textarea></div>
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="modal-header bg-primary text-white py-3 px-4">
+                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-id-card me-2"></i>Cập nhật Hồ sơ Khoa học & Chuyên môn</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-dark w-100 fw-bold" onclick="showToast('Đã cập nhật hồ sơ thành công!')" data-bs-dismiss="modal">Lưu thay đổi</button></div>
+                <div class="modal-body p-4">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-dark">Họ và Tên</label>
+                            <input type="text" class="form-control rounded-3" id="profFullName" value="{{ current_user.full_name if current_user else '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-dark">Bộ môn trực thuộc</label>
+                            <select class="form-select rounded-3" id="profFaculty">
+                                <option value="Công nghệ phần mềm" {% if current_user and 'phần mềm' in (current_user.faculty or '').lower() %}selected{% endif %}>Bộ môn Công nghệ phần mềm</option>
+                                <option value="Khoa học máy tính" {% if current_user and 'khoa học máy tính' in (current_user.faculty or '').lower() %}selected{% endif %}>Bộ môn Khoa học máy tính</option>
+                                <option value="Hệ thống thông tin" {% if current_user and 'hệ thống thông tin' in (current_user.faculty or '').lower() %}selected{% endif %}>Bộ môn Hệ thống thông tin</option>
+                                <option value="Mạng máy tính" {% if current_user and 'mạng' in (current_user.faculty or '').lower() %}selected{% endif %}>Bộ môn Mạng máy tính & ATTT</option>
+                                <option value="Khoa Công nghệ thông tin" {% if current_user and (not current_user.faculty or current_user.faculty == 'Khoa Công nghệ thông tin') %}selected{% endif %}>Khoa Công nghệ thông tin</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-dark">Email công vụ</label>
+                            <input type="email" class="form-control rounded-3 bg-light" id="profEmail" value="{{ current_user.email if current_user else '' }}" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-dark">Số điện thoại liên hệ</label>
+                            <input type="text" class="form-control rounded-3" id="profPhone" value="{{ current_user.phone or '' }}" placeholder="Ví dụ: 0912345678">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-dark">Hướng nghiên cứu chuyên sâu (Phân cách bằng dấu phẩy)</label>
+                        <input type="text" class="form-control rounded-3" id="profBio" value="{{ current_user.bio or '' }}" placeholder="Ví dụ: Trí tuệ nhân tạo, Học máy, NLP, Xử lý ảnh, IoT, An toàn thông tin...">
+                        <small class="text-muted"><i class="fa-solid fa-circle-info me-1"></i>Hệ thống sẽ dựa vào các từ khóa này để tự động gợi ý giảng viên phù hợp cho sinh viên khi đăng ký đề tài.</small>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm" onclick="saveLecturerProfile({{ current_user.id if current_user else 0 }})">
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Lưu thay đổi & Đồng bộ
+                    </button>
+                </div>
             </div>
         </div>
     </div>
+
+    <script>
+        async function saveLecturerProfile(userId) {
+            if (!userId) return;
+            const fullName = document.getElementById('profFullName')?.value.trim();
+            const faculty = document.getElementById('profFaculty')?.value.trim();
+            const phone = document.getElementById('profPhone')?.value.trim();
+            const bio = document.getElementById('profBio')?.value.trim();
+
+            if (!fullName) {
+                return Swal.fire('Lỗi', 'Họ và tên giảng viên không được để trống!', 'warning');
+            }
+
+            try {
+                Swal.fire({ title: 'Đang lưu hồ sơ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                const res = await fetch(`/api/profile/${userId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        full_name: fullName,
+                        faculty: faculty,
+                        phone: phone,
+                        bio: bio
+                    })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('modalEditProfile'))?.hide();
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Thành công!',
+                        text: 'Đã cập nhật hồ sơ giảng viên và đồng bộ thành công!',
+                        timer: 1800,
+                        showConfirmButton: false
+                    });
+                    window.location.reload();
+                } else {
+                    Swal.fire('Lỗi', data.error || 'Không thể lưu hồ sơ', 'error');
+                }
+            } catch (err) {
+                Swal.fire('Lỗi kết nối', err.message, 'error');
+            }
+        }
+    </script>
 
     <div class="modal fade" id="modalConfirmGuide" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">

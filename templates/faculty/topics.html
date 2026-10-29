@@ -94,8 +94,10 @@
                                         </td>
                                         <td class="text-end pe-4">
                                             {% if t.status == 'faculty_pending' %}
-                                            <button class="btn btn-sm btn-success fw-bold me-1" onclick="facultyApprove({{ t.id }})">Duyệt</button>
-                                            <button class="btn btn-sm btn-danger fw-bold me-2" onclick="facultyReject({{ t.id }})">Hủy</button>
+                                            <button class="btn btn-sm btn-success fw-bold me-1" onclick="facultyApprove({{ t.id }})"><i class="fa-solid fa-check me-1"></i> Duyệt</button>
+                                            <button class="btn btn-sm btn-outline-primary fw-bold me-2" onclick="openTopicReassignModalFromBtn(this)" data-topic-id="{{ t.id }}" data-topic-title="{{ t.title|e }}" data-mentor-id="{{ t.mentor_id or '' }}" data-mentor-name="{{ (t.mentor.full_name if t.mentor else 'Chưa phân công')|e }}"><i class="fa-solid fa-shuffle me-1"></i> Chuyển GV</button>
+                                            {% elif t.status == 'approved' %}
+                                            <button class="btn btn-sm btn-outline-secondary fw-bold me-2" onclick="openTopicReassignModalFromBtn(this)" data-topic-id="{{ t.id }}" data-topic-title="{{ t.title|e }}" data-mentor-id="{{ t.mentor_id or '' }}" data-mentor-name="{{ (t.mentor.full_name if t.mentor else 'Chưa phân công')|e }}"><i class="fa-solid fa-shuffle me-1"></i> Chuyển GV</button>
                                             {% endif %}
                                             <button class="btn btn-sm text-primary" onclick="openEditTopicModal({{ t.id }}, '{{ t.title|replace('\'', '\\\'') }}', '{{ t.description|replace('\'', '\\\'') }}', '{{ t.mentor_id or '' }}', '{{ t.batch_id or '' }}', '{{ t.status }}')"><i class="fa-solid fa-pen-to-square"></i></button>
                                         </td>
@@ -798,4 +800,192 @@
             </div>
         </div>
     </div>
+    <!-- Modal Điều chuyển Giảng viên Hướng dẫn -->
+    <div class="modal fade" id="modalTopicReassign" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+            <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+                <div class="modal-header bg-primary text-white py-3 px-4">
+                    <h5 class="fw-bold mb-0"><i class="fa-solid fa-shuffle me-2"></i>ĐIỀU CHUYỂN GIẢNG VIÊN HƯỚNG DẪN</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-info py-2 px-3 small border-0 mb-3 rounded-3" id="reassignTopicInfo">
+                        <!-- Loaded dynamically -->
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="fw-bold text-dark small" id="reassignSuggestTitle">
+                            <i class="fa-solid fa-sparkles text-warning me-1"></i> Giảng viên cùng chuyên môn & bộ môn
+                        </div>
+                        <div class="form-check form-switch small">
+                            <input class="form-check-input" type="checkbox" id="reassignShowAll">
+                            <label class="form-check-label" for="reassignShowAll">Hiện tất cả giảng viên</label>
+                        </div>
+                    </div>
+                    <div id="reassignSuggestList" style="max-height: 380px; overflow-y: auto;">
+                        <div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-2"></i> Đang tải danh sách GV...</div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label small fw-bold text-dark">Lý do điều chuyển (sẽ ghi vào thông báo gửi GV và SV):</label>
+                        <input type="text" id="reassignReasonInput" class="form-control form-control-sm rounded-3" maxlength="300" placeholder="Ví dụ: Giảng viên đã đủ chỉ tiêu, điều phối giảng viên cùng chuyên môn...">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light fw-bold px-4 rounded-pill" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-primary fw-bold px-4 rounded-pill shadow-sm" id="btnConfirmTopicReassign" disabled onclick="executeTopicReassign()">
+                        <i class="fa-solid fa-paper-plane me-1"></i> Xác nhận chuyển
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentReassignTopic = { id: null, title: '', mentorId: null, mentorName: '' };
+        let currentSelectedNewMentor = null;
+        let reassignSuggestions = [];
+
+        function openTopicReassignModalFromBtn(btn) {
+            const topicId = parseInt(btn.getAttribute('data-topic-id'), 10);
+            const topicTitle = btn.getAttribute('data-topic-title') || '';
+            const mentorId = btn.getAttribute('data-mentor-id') ? parseInt(btn.getAttribute('data-mentor-id'), 10) : null;
+            const mentorName = btn.getAttribute('data-mentor-name') || 'Chưa phân công';
+            openTopicReassignModal(topicId, topicTitle, mentorId, mentorName);
+        }
+
+        function openTopicReassignModal(topicId, topicTitle, currentMentorId, currentMentorName) {
+            currentReassignTopic = { id: topicId, title: topicTitle, mentorId: currentMentorId, mentorName: currentMentorName };
+            currentSelectedNewMentor = null;
+
+            document.getElementById('reassignTopicInfo').innerHTML = `
+                Đề tài: <strong>${topicTitle}</strong><br>
+                Giảng viên hiện tại: <strong>${currentMentorName || 'Chưa phân công'}</strong>
+            `;
+            document.getElementById('reassignReasonInput').value = '';
+            document.getElementById('reassignShowAll').checked = false;
+            document.getElementById('btnConfirmTopicReassign').disabled = true;
+
+            const modalEl = document.getElementById('modalTopicReassign');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+
+            loadReassignSuggestions();
+        }
+
+        async function loadReassignSuggestions() {
+            const box = document.getElementById('reassignSuggestList');
+            box.innerHTML = '<div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-2"></i> Đang tìm giảng viên phù hợp...</div>';
+            document.getElementById('btnConfirmTopicReassign').disabled = true;
+            currentSelectedNewMentor = null;
+
+            const isAll = document.getElementById('reassignShowAll').checked ? 1 : 0;
+            document.getElementById('reassignSuggestTitle').innerHTML = isAll 
+                ? '<i class="fa-solid fa-users text-primary me-1"></i> Tất cả giảng viên' 
+                : '<i class="fa-solid fa-wand-magic-sparkles text-warning me-1"></i> Giảng viên cùng chuyên môn & bộ môn';
+
+            try {
+                const res = await fetch(`/api/assignment/suggest?topic_id=${currentReassignTopic.id}&all=${isAll}`);
+                if (!res.ok) throw new Error('Không thể tải danh sách gợi ý');
+                const data = await res.json();
+                reassignSuggestions = data.suggestions || [];
+
+                if (!reassignSuggestions.length) {
+                    box.innerHTML = '<div class="text-muted text-center py-4">Không tìm thấy giảng viên cùng bộ môn. Hãy bật "Hiện tất cả giảng viên" để chọn.</div>';
+                    return;
+                }
+
+                box.innerHTML = reassignSuggestions.map((s, idx) => {
+                    const isCurrent = s.id === currentReassignTopic.mentorId;
+                    const pct = Math.min(100, Math.round((s.current_topics / s.quota) * 100));
+                    const color = pct >= 100 ? 'danger' : (pct >= 60 ? 'warning' : 'primary');
+                    const badges = (s.matched_keywords || []).map(k => `<span class="badge bg-primary-subtle text-primary border me-1">${k}</span>`).join('');
+
+                    return `
+                        <label class="d-flex gap-3 align-items-start border rounded-3 p-3 mb-2 ${isCurrent ? 'bg-light opacity-50' : 'bg-white'}" style="cursor: ${isCurrent ? 'not-allowed' : 'pointer'};">
+                            <input type="radio" name="reassignRadio" class="form-check-input mt-1" value="${idx}" ${isCurrent ? 'disabled' : ''} onchange="onSelectNewMentor(${idx})">
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold text-dark">${s.full_name} ${isCurrent ? '<span class="badge bg-secondary ms-1">Hiện tại</span>' : ''}</span>
+                                    <span>${s.available ? '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Còn chỗ</span>' : '<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">Đã đủ</span>'}</span>
+                                </div>
+                                <div class="small text-muted">${s.faculty || 'Khoa CNTT'} ${s.same_department ? '· <span class="text-primary fw-bold">Cùng bộ môn</span>' : ''}</div>
+                                ${badges ? `<div class="mt-1">${badges}</div>` : ''}
+                                <div class="mt-2">
+                                    <div class="progress" style="height: 5px;">
+                                        <div class="progress-bar bg-${color}" style="width: ${pct}%"></div>
+                                    </div>
+                                    <div class="small text-muted mt-1">Đang hướng dẫn ${s.current_topics}/${s.quota} đề tài (${s.approved} đã duyệt, ${s.pending} đang chờ)</div>
+                                </div>
+                            </div>
+                        </label>
+                    `;
+                }).join('');
+            } catch (err) {
+                box.innerHTML = `<div class="text-danger text-center py-4">Lỗi: ${err.message}</div>`;
+            }
+        }
+
+        function onSelectNewMentor(idx) {
+            currentSelectedNewMentor = reassignSuggestions[idx];
+            document.getElementById('btnConfirmTopicReassign').disabled = !currentSelectedNewMentor;
+        }
+
+        document.getElementById('reassignShowAll')?.addEventListener('change', loadReassignSuggestions);
+
+        async function executeTopicReassign() {
+            if (!currentSelectedNewMentor || !currentReassignTopic.id) return;
+
+            const isFull = !currentSelectedNewMentor.available;
+            const reason = document.getElementById('reassignReasonInput').value.trim();
+
+            let confirmHtml = `Xác nhận điều chuyển đề tài <strong>"${currentReassignTopic.title}"</strong> sang Thầy/Cô <strong>${currentSelectedNewMentor.full_name}</strong>?<br><br>
+                <small class="text-muted"><i class="fa-solid fa-bell me-1"></i>Hệ thống sẽ gửi thông báo đến Sinh viên, Giảng viên cũ và Giảng viên mới, đồng thời tự động cập nhật nhóm chat.</small>`;
+
+            if (isFull) {
+                confirmHtml = `<div class="text-danger small mb-2"><i class="fa-solid fa-triangle-exclamation me-1"></i>Cảnh báo: Thầy/Cô ${currentSelectedNewMentor.full_name} hiện đã giữ ${currentSelectedNewMentor.current_topics}/${currentSelectedNewMentor.quota} đề tài (đủ quota). Bạn đang thực hiện đặc cách chuyển.</div>` + confirmHtml;
+            }
+
+            const c = await Swal.fire({
+                title: 'Xác nhận điều chuyển?',
+                html: confirmHtml,
+                icon: isFull ? 'warning' : 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Xác nhận chuyển',
+                cancelButtonText: 'Hủy'
+            });
+
+            if (!c.isConfirmed) return;
+
+            try {
+                Swal.fire({ title: 'Đang xử lý...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                const res = await fetch('/api/assignment/reassign', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        topic_id: currentReassignTopic.id,
+                        new_mentor_id: currentSelectedNewMentor.id,
+                        reason: reason,
+                        force: isFull,
+                        confirm_approved: true
+                    })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('modalTopicReassign'))?.hide();
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Thành công!',
+                        text: data.message || 'Đã điều chuyển giảng viên hướng dẫn thành công!',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    window.location.reload();
+                } else {
+                    Swal.fire('Lỗi', data.error || 'Không thể điều chuyển', 'error');
+                }
+            } catch (err) {
+                Swal.fire('Lỗi kết nối', err.message, 'error');
+            }
+        }
+    </script>
 {% endblock %}

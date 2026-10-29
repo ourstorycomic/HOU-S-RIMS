@@ -33,6 +33,7 @@ instance/
 
 # Environment variables
 .env
+.env.backup
 .env.local
 .env.*.local
 

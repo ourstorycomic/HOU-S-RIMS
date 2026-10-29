@@ -137,30 +137,30 @@ def _on_mentor_reassigned(topic_id, old_mentor_id, new_mentor_id, reason='', rel
     if reason:
         extra.append(f'Lý do: <em>{_esc(reason)}</em>')
 
+    old_name = old_m.full_name if old_m else "Chưa phân công"
+    new_name = new_m.full_name if new_m else "Giảng viên mới"
+
     if new_m:
-        msgs.append(_msg(new_m, '[HOU S-RIMS] Bạn được phân công hướng dẫn đề tài mới',
+        msgs.append(_msg(new_m, '[HOU S-RIMS] Phân công hướng dẫn đề tài mới',
                          'Khoa phân công bạn hướng dẫn đề tài', '#4f46e5',
-                         [f'Khoa vừa phân công bạn hướng dẫn đề tài NCKH {_b(title)}.',
-                          'Vui lòng xem chi tiết và xác nhận đồng ý hướng dẫn.'] + _group_line(topic.group_id) + extra,
-                         '/lecturer/approve', 'Xem & xác nhận'))
+                         [f'Khoa vừa phân công bạn làm Giảng viên hướng dẫn đề tài NCKH {_b(title)} (điều chuyển từ Thầy/Cô {_b(old_name)}).',
+                          'Đề tài đã được duyệt chính thức và nhóm chat nghiên cứu đã được kích hoạt.'] + _group_line(topic.group_id) + extra,
+                         '/lecturer/progress', 'Xem tiến độ & Nhóm'))
     if old_m and old_m.id != new_mentor_id:
-        text = [f'Đề tài NCKH {_b(title)} đã được Khoa chuyển cho giảng viên {_b(new_m.full_name if new_m else "")} hướng dẫn.']
+        text = [f'Đề tài NCKH {_b(title)} đã được Khoa điều chuyển từ bạn sang Thầy/Cô {_b(new_name)} hướng dẫn.']
         if released_slots:
             text.append(f'{released_slots} lịch báo cáo tiến độ nhóm đã đặt với bạn cho đề tài này đã được hủy.')
-        msgs.append(_msg(old_m, '[HOU S-RIMS] Đề tài đã được chuyển giảng viên khác',
+        msgs.append(_msg(old_m, '[HOU S-RIMS] Đề tài đã được điều chuyển sang giảng viên khác',
                          'Đề tài được chuyển cho giảng viên khác', '#f59e0b',
                          text + _group_line(topic.group_id) + extra,
                          '/lecturer/progress'))
     for s in _group_students(topic.group_id):
-        name = mentor_display_name(new_m, s)
-        text = [f'Giảng viên hướng dẫn đề tài {_b(title)} của nhóm bạn đã được Khoa phân công lại.']
-        if name != HIDDEN_MENTOR_LABEL:
-            text.append(f'Giảng viên mới: {_b(name)}.')
-        text.append('Đề tài đang chờ giảng viên mới xác nhận.')
+        text = [f'Khoa đã điều chuyển Giảng viên hướng dẫn đề tài {_b(title)} của nhóm bạn từ Thầy/Cô {_b(old_name)} sang Thầy/Cô {_b(new_name)}.',
+                'Đề tài đã sẵn sàng, bạn có thể trao đổi với Thầy/Cô mới qua mục Chatgroups và theo dõi tiến độ.']
         if released_slots:
-            text.append(f'{released_slots} lịch báo cáo tiến độ đã đặt trước đó bị hủy, vui lòng đặt lại.')
-        msgs.append(_msg(s, '[HOU S-RIMS] Thay đổi giảng viên hướng dẫn', 'Đổi giảng viên hướng dẫn',
-                         '#f59e0b', text))
+            text.append(f'{released_slots} lịch báo cáo tiến độ đã đặt trước đó với GV cũ bị hủy, vui lòng đặt lại lịch mới nếu cần.')
+        msgs.append(_msg(s, '[HOU S-RIMS] Thông báo điều chuyển Giảng viên hướng dẫn', 'Điều chuyển Giảng viên hướng dẫn',
+                         '#4f46e5', text, '/student#s-chat', 'Vào Chatgroup'))
     return msgs
 
 

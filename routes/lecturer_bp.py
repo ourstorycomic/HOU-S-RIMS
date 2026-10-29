@@ -15,9 +15,11 @@ def inject_common_data():
     current_user = User.query.get(user_id) if user_id else None
     current_year = session.get('academic_year', '2025-2026')
     active_batch = Batch.query.filter_by(academic_year=current_year, status='active').first()
+    if not active_batch:
+        active_batch = Batch.query.filter_by(status='active').order_by(Batch.id.desc()).first()
     
-    global_pending_topics_count = Topic.query.join(Batch).filter(Topic.mentor_id == user_id, Topic.status == 'pending', Batch.status == 'active').count() if user_id else 0
-    global_my_groups_count = Topic.query.join(Batch).filter(Topic.mentor_id == user_id, Topic.status == 'approved', Topic.group_id.isnot(None), Batch.status == 'active').count() if user_id else 0
+    global_pending_topics_count = Topic.query.filter(Topic.mentor_id == user_id, Topic.status == 'pending', Topic.batch_id == active_batch.id).count() if (user_id and active_batch) else 0
+    global_my_groups_count = Topic.query.filter(Topic.mentor_id == user_id, Topic.status == 'approved', Topic.group_id.isnot(None), Topic.batch_id == active_batch.id).count() if (user_id and active_batch) else 0
     
     from models import Notification
     notifications = Notification.query.filter_by(user_id=user_id).order_by(Notification.created_at.desc()).all() if user_id else []
@@ -35,14 +37,26 @@ def dashboard():
 @lecturer_bp.route('/approve')
 def approve():
     user_id = session.get('user_id')
-    pending_topics = Topic.query.join(Batch).filter(Topic.mentor_id == user_id, Topic.status == 'pending', Batch.status == 'active').all()
-    approved_topics = Topic.query.join(Batch).filter(Topic.mentor_id == user_id, Topic.status.in_(['faculty_pending', 'approved']), Batch.status == 'active').all()
+    current_year = session.get('academic_year', '2025-2026')
+    active_batch = Batch.query.filter_by(academic_year=current_year, status='active').first()
+    if not active_batch:
+        active_batch = Batch.query.filter_by(status='active').order_by(Batch.id.desc()).first()
+    active_batch_id = active_batch.id if active_batch else None
+
+    pending_topics = Topic.query.filter(Topic.mentor_id == user_id, Topic.status == 'pending', Topic.batch_id == active_batch_id).all() if active_batch_id else []
+    approved_topics = Topic.query.filter(Topic.mentor_id == user_id, Topic.status.in_(['faculty_pending', 'approved']), Topic.batch_id == active_batch_id).all() if active_batch_id else []
     return render_template('lecturer/approve.html', pending_topics=pending_topics, approved_topics=approved_topics)
 
 @lecturer_bp.route('/progress')
 def progress():
     user_id = session.get('user_id')
-    my_topics = Topic.query.filter(Topic.mentor_id == user_id, Topic.status.in_(['faculty_pending', 'approved'])).order_by(Topic.id.desc()).all()
+    current_year = session.get('academic_year', '2025-2026')
+    active_batch = Batch.query.filter_by(academic_year=current_year, status='active').first()
+    if not active_batch:
+        active_batch = Batch.query.filter_by(status='active').order_by(Batch.id.desc()).first()
+    active_batch_id = active_batch.id if active_batch else None
+
+    my_topics = Topic.query.filter(Topic.mentor_id == user_id, Topic.status.in_(['faculty_pending', 'approved']), Topic.batch_id == active_batch_id).order_by(Topic.id.desc()).all() if active_batch_id else []
     all_milestones = []
     
     if my_topics:
@@ -157,4 +171,6 @@ def council():
     memberships = CouncilMember.query.filter_by(mentor_id=user_id).all()
     council_ids = [m.council_id for m in memberships]
     my_councils = Council.query.filter(Council.id.in_(council_ids)).all() if council_ids else []
-    return render_template('lecturer/council.html', my_councils=my_councils)
+    from models import Rubric
+    active_rubric = Rubric.query.first()
+    return render_template('lecturer/council.html', my_councils=my_councils, active_rubric=active_rubric)

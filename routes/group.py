@@ -28,9 +28,22 @@ def get_my_group():
     if not current_user:
         return jsonify({'success': False, 'error': 'Vui lòng đăng nhập!'}), 401
     
-    active_group = Group.query.filter_by(leader_id=current_user.id).order_by(Group.id.desc()).first()
+    active_batch = Batch.query.filter_by(status='active').order_by(Batch.id.desc()).first()
+    if not active_batch:
+        return jsonify({'success': True, 'group': None}), 200
+        
+    active_batch_id = active_batch.id
+    
+    active_group = Group.query.filter_by(
+        leader_id=current_user.id,
+        batch_id=active_batch_id
+    ).order_by(Group.id.desc()).first()
+    
     if not active_group:
-        membership = GroupMember.query.filter_by(student_id=current_user.id).order_by(GroupMember.id.desc()).first()
+        membership = GroupMember.query.join(Group).filter(
+            GroupMember.student_id == current_user.id,
+            Group.batch_id == active_batch_id
+        ).order_by(GroupMember.id.desc()).first()
         if membership:
             active_group = Group.query.get(membership.group_id)
             
@@ -86,8 +99,28 @@ def create_group():
         active_batch = Batch.query.filter_by(status='active').order_by(Batch.id.desc()).first()
         batch_id = active_batch.id if active_batch else None
         
+        # Kiểm tra xem sinh viên đã tham gia nhóm nào chưa trong đợt này
+        existing_membership = None
+        if batch_id:
+            existing_membership = GroupMember.query.join(Group).filter(
+                GroupMember.student_id == current_user.id,
+                Group.batch_id == batch_id,
+                GroupMember.status.in_(['joined', 'accepted'])
+            ).first()
+        else:
+            existing_membership = GroupMember.query.filter(
+                GroupMember.student_id == current_user.id,
+                GroupMember.status.in_(['joined', 'accepted'])
+            ).first()
+            
+        if existing_membership:
+            return jsonify({
+                'success': False,
+                'error': 'Bạn đã là thành viên của một nhóm nghiên cứu! Mỗi sinh viên chỉ được tham gia 1 nhóm trong một đợt.'
+            }), 400
+        
         # Tên nhóm mặc định nếu không truyền
-        group_name = data.get('name') or f"Nhóm NCKH - {current_user.full_name}"
+        group_name = (data.get('name') or '').strip() or f"Nhóm NCKH - {current_user.full_name}"
         
         # Tạo nhóm mới
         new_group = Group(
@@ -171,6 +204,33 @@ def invite_member(group_id):
                 'success': False,
                 'error': 'Bạn là Trưởng nhóm, đã có tên trong danh sách thành viên!'
             }), 400
+
+        # Kiểm tra số lượng thành viên tối đa (tối đa 5 người/nhóm)
+        current_members_cnt = GroupMember.query.filter(
+            GroupMember.group_id == group.id,
+            GroupMember.status.in_(['joined', 'accepted', 'invited', 'pending'])
+        ).count()
+        if current_members_cnt >= 5:
+            return jsonify({
+                'success': False,
+                'error': 'Nhóm nghiên cứu đã đạt số lượng tối đa (tối đa 5 thành viên/nhóm)!'
+            }), 400
+
+        # Kiểm tra xem sinh viên được mời đã là thành viên chính thức của nhóm khác trong đợt này chưa
+        other_membership_query = GroupMember.query.join(Group).filter(
+            GroupMember.student_id == target_student.id,
+            GroupMember.group_id != group.id,
+            GroupMember.status.in_(['joined', 'accepted'])
+        )
+        if group.batch_id:
+            other_membership_query = other_membership_query.filter(Group.batch_id == group.batch_id)
+            
+        other_membership = other_membership_query.first()
+        if other_membership:
+            return jsonify({
+                'success': False,
+                'error': f'Sinh viên {target_student.full_name} ({target_student.student_id or target_student.username}) hiện đã là thành viên chính thức của nhóm nghiên cứu khác trong đợt này!'
+            }), 400
             
         # Kiểm tra xem sinh viên này đã có trong nhóm chưa
         existing_member = GroupMember.query.filter_by(group_id=group.id, student_id=target_student.id).first()
@@ -242,6 +302,20 @@ def select_mentor(group_id):
         mentor = User.query.get(mentor_id)
         if not mentor or mentor.role.lower() != 'lecturer':
             return jsonify({'success': False, 'error': 'Giảng viên đã chọn không hợp lệ trong hệ thống!'}), 400
+
+        # Kiểm tra giới hạn chỉ tiêu hướng dẫn tối đa của Mentor trong đợt này (tối đa 5 đề tài/đợt)
+        topics_query = Topic.query.filter(
+            Topic.mentor_id == mentor.id,
+            Topic.status.in_(['approved', 'faculty_pending', 'pending'])
+        )
+        if group.batch_id:
+            topics_query = topics_query.filter(Topic.batch_id == group.batch_id)
+        approved_topics_cnt = topics_query.count()
+        if approved_topics_cnt >= 5:
+            return jsonify({
+                'success': False,
+                'error': f'Thầy/Cô {mentor.full_name} đã đạt chỉ tiêu hướng dẫn tối đa trong đợt này ({approved_topics_cnt}/5 đề tài). Vui lòng chọn Giảng viên khác!'
+            }), 400
             
         # Gán mentor_id và cập nhật trạng thái nhóm
         group.mentor_id = mentor.id

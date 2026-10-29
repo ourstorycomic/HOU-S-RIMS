@@ -84,14 +84,24 @@ def _fmt(slot):
 
 
 def _student_groups(student_id):
-    """Cac nhom ma sinh vien la truong nhom hoac thanh vien da chap nhan."""
-    member_ids = [m.group_id for m in GroupMember.query.filter(
+    """Cac nhom ma sinh vien la truong nhom hoac thanh vien da chap nhan trong dot active."""
+    from models import Batch
+    active_batch = Batch.query.filter_by(status='active').order_by(Batch.id.desc()).first()
+    
+    member_q = GroupMember.query.filter(
         GroupMember.student_id == student_id,
-        GroupMember.status.in_(ACCEPTED_MEMBER_STATUSES)).all()]
+        GroupMember.status.in_(ACCEPTED_MEMBER_STATUSES))
+    if active_batch:
+        member_q = member_q.join(Group).filter(Group.batch_id == active_batch.id)
+    member_ids = [m.group_id for m in member_q.all()]
+    
     cond = Group.leader_id == student_id
     if member_ids:
         cond = cond | Group.id.in_(member_ids)
-    return Group.query.filter(cond).all()
+    q = Group.query.filter(cond)
+    if active_batch:
+        q = q.filter(Group.batch_id == active_batch.id)
+    return q.all()
 
 
 def _group_mentor_ids(group):

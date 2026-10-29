@@ -70,23 +70,39 @@ def get_my_topic():
     if not user_id:
         return jsonify({'error': 'Unauthorized'}), 401
     
-    # Chỉ lấy các nhóm mà sinh viên là Trưởng nhóm hoặc ĐÃ CHẤP NHẬN tham gia
-    member_group_ids = [m.group_id for m in GroupMember.query.filter(
+    # Lấy đợt NCKH đang active hiện tại
+    active_batch = Batch.query.filter_by(status='active').order_by(Batch.id.desc()).first()
+    if not active_batch:
+        return jsonify({'has_topic': False, 'topic': None}), 200
+
+    active_batch_id = active_batch.id
+    
+    # Chỉ lấy các nhóm thuộc đợt active mà sinh viên là Trưởng nhóm hoặc ĐÃ CHẤP NHẬN tham gia
+    member_group_ids = [m.group_id for m in GroupMember.query.join(Group).filter(
         GroupMember.student_id == user_id,
-        GroupMember.status.in_(['accepted', 'joined'])
+        GroupMember.status.in_(['accepted', 'joined']),
+        Group.batch_id == active_batch_id
     ).all()]
     
-    my_led_groups = Group.query.filter_by(leader_id=user_id).all()
+    my_led_groups = Group.query.filter_by(leader_id=user_id, batch_id=active_batch_id).all()
     groups = Group.query.filter(
+        Group.batch_id == active_batch_id,
         (Group.leader_id == user_id) | (Group.id.in_(member_group_ids))
     ).all() if (member_group_ids or my_led_groups) else []
     
     topic = None
     if groups:
         group_ids = [g.id for g in groups]
-        topic = Topic.query.filter(Topic.group_id.in_(group_ids)).order_by(Topic.id.desc()).first()
+        topic = Topic.query.filter(
+            Topic.batch_id == active_batch_id,
+            Topic.group_id.in_(group_ids)
+        ).order_by(Topic.id.desc()).first()
     else:
-        topic = Topic.query.join(Group).filter(Group.leader_id == user_id).order_by(Topic.id.desc()).first()
+        topic = Topic.query.join(Group).filter(
+            Group.leader_id == user_id,
+            Group.batch_id == active_batch_id,
+            Topic.batch_id == active_batch_id
+        ).order_by(Topic.id.desc()).first()
         
     if not topic:
         return jsonify({'has_topic': False, 'topic': None}), 200

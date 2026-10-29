@@ -1,40 +1,118 @@
 {% extends "layouts/faculty_layout.html" %}
 
 {% block faculty_content %}
-<div id="view-f-lecturers" class="fade-in ">
-                <div class="bg-white p-4 rounded-4 shadow-sm mb-4 d-flex justify-content-between align-items-center">
-                    <h5 class="fw-bold mb-0">DANH SÁCH GIẢNG VIÊN THAM GIA HD NCKH</h5>
-                    <button class="btn btn-primary fw-bold rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalAddLecturer"><i class="fa-solid fa-user-plus me-2"></i> THÊM GIẢNG VIÊN</button>
-                </div>
-                <div class="row g-4">
-                    {% if mentors %}
-                        {% for m in mentors %}
-                        <div class="col-md-4">
-                            <div class="card border-0 shadow-sm p-3 rounded-4 h-100 d-flex flex-row align-items-center gap-3 lecturer-card position-relative">
-                                <div class="avatar-letter bg-primary-subtle text-primary rounded-3" style="width: 60px; height: 60px;">{{ m.full_name[0] if m.full_name else 'G' }}</div>
-                                <div>
-                                    <div class="fw-bold">{{ m.full_name }}</div>
-                                    <div class="small text-muted fw-bold text-uppercase mb-1">{{ m.faculty or 'CNTT' }}</div>
-                                    <div class="small text-muted fst-italic mb-2">{{ m.email }}</div>
-                                    <span class="badge bg-dark text-white rounded-pill px-2">HD: {{ topics | selectattr('mentor_id', 'equalto', m.id) | list | length }} ĐỀ TÀI</span>
-                                </div>
-                                <div class="position-absolute top-0 end-0 p-3">
-                                    <div class="dropdown">
-                                        <a class="text-muted" href="#" data-bs-toggle="dropdown"><i class="fa-solid fa-ellipsis-vertical"></i></a>
-                                        <ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm">
-                                            <li><a class="dropdown-item fw-bold text-primary" href="#" onclick="openEditLecturer({{ m.id }}, '{{ m.full_name }}', '{{ m.email }}', '{{ m.faculty }}', '{{ m.phone or '' }}', `{{ m.bio or '' }}`)"><i class="fa-solid fa-pen-to-square me-2"></i> Sửa thông tin</a></li>
-                                            <li><a class="dropdown-item fw-bold text-danger" href="#" onclick="deleteLecturer({{ m.id }})"><i class="fa-solid fa-trash me-2"></i> Xóa</a></li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="col-12 text-center text-muted py-4">Chưa có giảng viên nào</div>
-                    {% endif %}
-                </div>
+<div id="view-f-lecturers" class="fade-in">
+    <div class="bg-white p-4 rounded-4 shadow-sm mb-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+            <div>
+                <h5 class="fw-bold mb-1 text-primary"><i class="fa-solid fa-users me-2"></i>DANH SÁCH GIẢNG VIÊN HƯỚNG DẪN NCKH</h5>
+                <p class="text-muted small mb-0">Quản lý danh sách, phân trang hiển thị mượt mà và cập nhật hồ sơ chuyên môn giảng viên</p>
+            </div>
+            <button class="btn btn-primary fw-bold rounded-pill px-4 shadow-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#modalAddLecturer">
+                <i class="fa-solid fa-user-plus me-2"></i> THÊM GIẢNG VIÊN
+            </button>
         </div>
+
+        <!-- Thanh Tìm kiếm và Lọc theo Bộ môn -->
+        <div class="row g-2 align-items-center pt-2 border-top">
+            <div class="col-md-6 col-12">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light border-end-0 rounded-start-pill ps-3"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                    <input type="text" id="lecSearchInput" class="form-control bg-light border-start-0 rounded-end-pill py-2" placeholder="Tìm theo tên giảng viên, email, hướng nghiên cứu..." oninput="onLecFilterChange()">
+                </div>
+            </div>
+            <div class="col-md-4 col-8">
+                <select id="lecFpuFilter" class="form-select form-select-sm rounded-pill py-2" onchange="onLecFilterChange()">
+                    <option value="all">-- Tất cả bộ môn --</option>
+                    <option value="Công nghệ phần mềm">Bộ môn Công nghệ phần mềm</option>
+                    <option value="Khoa học máy tính">Bộ môn Khoa học máy tính</option>
+                    <option value="Hệ thống thông tin">Bộ môn Hệ thống thông tin</option>
+                    <option value="Mạng máy tính">Bộ môn Mạng & ATTT</option>
+                </select>
+            </div>
+            <div class="col-md-2 col-4 text-end">
+                <span class="badge bg-light text-dark border px-3 py-2 rounded-pill small fw-bold" id="lecResultCount">
+                    {{ mentors|length if mentors else 0 }} giảng viên
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Danh sách thẻ Giảng viên (phân trang mượt mà) -->
+    <div class="row g-4" id="lecCardsContainer">
+        {% if mentors %}
+            {% for m in mentors %}
+            <div class="col-md-4 col-sm-6 col-12 lecturer-col-item"
+                 data-name="{{ (m.full_name or '')|lower }}"
+                 data-email="{{ (m.email or '')|lower }}"
+                 data-faculty="{{ (m.faculty or '') }}"
+                 data-bio="{{ (m.bio or '')|lower }}">
+                <div class="card border-0 shadow-sm p-3 rounded-4 h-100 d-flex flex-row align-items-center gap-3 lecturer-card position-relative bg-white hover-shadow transition-all">
+                    <div class="avatar-letter bg-primary-subtle text-primary rounded-4 d-flex align-items-center justify-content-center fw-bold fs-4 flex-shrink-0" style="width: 58px; height: 58px;">
+                        {{ m.full_name[0] if m.full_name else 'G' }}
+                    </div>
+                    <div class="overflow-hidden flex-grow-1">
+                        <div class="fw-bold text-dark text-truncate fs-6" title="{{ m.full_name }}">{{ m.full_name }}</div>
+                        <div class="small text-primary fw-bold text-uppercase mb-1 text-truncate" style="font-size: 11px;">
+                            <i class="fa-solid fa-building me-1"></i>{{ m.faculty or 'Khoa CNTT' }}
+                        </div>
+                        <div class="small text-muted fst-italic mb-2 text-truncate" style="font-size: 11px;" title="{{ m.email }}">
+                            <i class="fa-regular fa-envelope me-1"></i>{{ m.email }}
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1" style="font-size: 11px;">
+                                HD: {{ topics | selectattr('mentor_id', 'equalto', m.id) | list | length }} đề tài
+                            </span>
+                        </div>
+                    </div>
+                    <div class="position-absolute top-0 end-0 p-2.5">
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-light border-0 rounded-circle text-muted p-1" style="width: 28px; height: 28px;" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fa-solid fa-ellipsis-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end border-0 shadow-sm rounded-3">
+                                <li>
+                                    <a class="dropdown-item fw-bold text-primary py-2" href="javascript:void(0)" onclick="openEditLecturerFromBtn(this)" data-id="{{ m.id }}" data-name="{{ m.full_name|e }}" data-email="{{ m.email|e }}" data-faculty="{{ (m.faculty or '')|e }}" data-phone="{{ (m.phone or '')|e }}" data-bio="{{ (m.bio or '')|e }}">
+                                        <i class="fa-solid fa-pen-to-square me-2"></i> Sửa thông tin
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item fw-bold text-danger py-2" href="javascript:void(0)" onclick="deleteLecturer({{ m.id }})">
+                                        <i class="fa-solid fa-trash me-2"></i> Xóa
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12 text-center text-muted py-5">
+                <i class="fa-solid fa-user-xmark fs-1 text-muted mb-2 d-block opacity-25"></i>
+                Chưa có giảng viên nào trong hệ thống
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Thông báo khi lọc không thấy -->
+    <div id="noLecFoundRow" class="text-center text-muted py-5 d-none">
+        <i class="fa-solid fa-magnifying-glass fs-1 text-muted mb-2 d-block opacity-25"></i>
+        Không tìm thấy giảng viên nào phù hợp với bộ lọc tìm kiếm.
+    </div>
+
+    <!-- Thanh phân trang (Pagination) -->
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center mt-4 pt-3 border-top gap-3" id="lecPaginationWrap">
+        <div class="small text-muted" id="lecPageInfo">
+            Đang hiển thị trang 1
+        </div>
+        <nav aria-label="Lecturers navigation">
+            <ul class="pagination pagination-sm mb-0 rounded-pill shadow-sm" id="lecPaginationNav">
+                <!-- Loaded dynamically by JS -->
+            </ul>
+        </nav>
+    </div>
+</div>
         
     <!-- Modal Sửa Giảng viên -->
     <div class="modal fade" id="modalEditLecturer" tabindex="-1">
@@ -72,6 +150,134 @@
 
 {% block extra_js %}
 <script>
+    // ==========================================
+    // PHÂN TRANG DANH SÁCH GIẢNG VIÊN
+    // ==========================================
+    const LEC_PER_PAGE = 6; // 6 giảng viên mỗi trang để mượt và đẹp mắt
+    let currentLecPage = 1;
+    let filteredLecItems = [];
+
+    function initLecPagination() {
+        const allItems = Array.from(document.querySelectorAll('.lecturer-col-item'));
+        filteredLecItems = allItems;
+        renderLecPage(1);
+    }
+
+    function onLecFilterChange() {
+        const query = (document.getElementById('lecSearchInput')?.value || '').trim().toLowerCase();
+        const faculty = document.getElementById('lecFpuFilter')?.value || 'all';
+        const allItems = Array.from(document.querySelectorAll('.lecturer-col-item'));
+
+        filteredLecItems = allItems.filter(item => {
+            const name = item.getAttribute('data-name') || '';
+            const email = item.getAttribute('data-email') || '';
+            const itemFaculty = item.getAttribute('data-faculty') || '';
+            const bio = item.getAttribute('data-bio') || '';
+
+            const matchQuery = !query || name.includes(query) || email.includes(query) || bio.includes(query);
+            const matchFaculty = (faculty === 'all') || itemFaculty.includes(faculty);
+            return matchQuery && matchFaculty;
+        });
+
+        // Cập nhật số lượng đếm
+        const countBadge = document.getElementById('lecResultCount');
+        if (countBadge) countBadge.textContent = `${filteredLecItems.length} giảng viên`;
+
+        // Reset về trang 1
+        renderLecPage(1);
+    }
+
+    function renderLecPage(page) {
+        currentLecPage = page;
+        const totalItems = filteredLecItems.length;
+        const totalPages = Math.ceil(totalItems / LEC_PER_PAGE) || 1;
+        if (currentLecPage > totalPages) currentLecPage = totalPages;
+        if (currentLecPage < 1) currentLecPage = 1;
+
+        // Ẩn tất cả items
+        document.querySelectorAll('.lecturer-col-item').forEach(item => {
+            item.classList.add('d-none');
+            item.classList.remove('d-block');
+        });
+
+        // Hiển thị items của trang hiện tại
+        const startIdx = (currentLecPage - 1) * LEC_PER_PAGE;
+        const endIdx = startIdx + LEC_PER_PAGE;
+        const pageItems = filteredLecItems.slice(startIdx, endIdx);
+
+        pageItems.forEach(item => {
+            item.classList.remove('d-none');
+            item.classList.add('d-block');
+        });
+
+        // Empty state
+        const emptyRow = document.getElementById('noLecFoundRow');
+        const paginationWrap = document.getElementById('lecPaginationWrap');
+        if (emptyRow) {
+            if (totalItems === 0) {
+                emptyRow.classList.remove('d-none');
+                if (paginationWrap) paginationWrap.classList.add('d-none');
+            } else {
+                emptyRow.classList.add('d-none');
+                if (paginationWrap) paginationWrap.classList.remove('d-none');
+            }
+        }
+
+        // Cập nhật thông tin phân trang
+        const pageInfo = document.getElementById('lecPageInfo');
+        if (pageInfo) {
+            const from = totalItems === 0 ? 0 : startIdx + 1;
+            const to = Math.min(endIdx, totalItems);
+            pageInfo.innerHTML = `Hiển thị <strong>${from} - ${to}</strong> trong tổng số <strong>${totalItems}</strong> giảng viên (Trang ${currentLecPage}/${totalPages})`;
+        }
+
+        // Dựng thanh nút phân trang
+        const nav = document.getElementById('lecPaginationNav');
+        if (!nav) return;
+
+        let navHtml = `
+            <li class="page-item ${currentLecPage === 1 ? 'disabled' : ''}">
+                <a class="page-link" href="javascript:void(0)" onclick="renderLecPage(${currentLecPage - 1})" aria-label="Trước">
+                    <i class="fa-solid fa-chevron-left small"></i>
+                </a>
+            </li>
+        `;
+
+        for (let p = 1; p <= totalPages; p++) {
+            if (p === 1 || p === totalPages || (p >= currentLecPage - 1 && p <= currentLecPage + 1)) {
+                navHtml += `
+                    <li class="page-item ${p === currentLecPage ? 'active' : ''}">
+                        <a class="page-link fw-bold" href="javascript:void(0)" onclick="renderLecPage(${p})">${p}</a>
+                    </li>
+                `;
+            } else if (p === currentLecPage - 2 || p === currentLecPage + 2) {
+                navHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+        }
+
+        navHtml += `
+            <li class="page-item ${currentLecPage === totalPages ? 'disabled' : ''}">
+                <a class="page-link" href="javascript:void(0)" onclick="renderLecPage(${currentLecPage + 1})" aria-label="Sau">
+                    <i class="fa-solid fa-chevron-right small"></i>
+                </a>
+            </li>
+        `;
+
+        nav.innerHTML = navHtml;
+    }
+
+    document.addEventListener('DOMContentLoaded', initLecPagination);
+
+    function openEditLecturerFromBtn(el) {
+        const id = el.getAttribute('data-id');
+        const name = el.getAttribute('data-name');
+        const email = el.getAttribute('data-email');
+        const faculty = el.getAttribute('data-faculty');
+        const phone = el.getAttribute('data-phone');
+        const bio = el.getAttribute('data-bio');
+        openEditLecturer(id, name, email, faculty, phone, bio);
+    }
+
     function openEditLecturer(id, name, email, faculty, phone, bio) {
         document.getElementById('editLecId').value = id;
         document.getElementById('editLecName').value = name;

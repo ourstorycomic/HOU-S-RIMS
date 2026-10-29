@@ -1036,8 +1036,9 @@ async function submitCreateBatch() {
     const year = document.getElementById('createBatchYear').value;
     const type = document.getElementById('createBatchType').value;
     const startDate = document.getElementById('createBatchStart').value;
-    const submitDeadline = document.getElementById('createBatchSubmitDeadline').value;
     const endDate = document.getElementById('createBatchEnd').value;
+    const submitDeadlineEl = document.getElementById('createBatchSubmitDeadline');
+    const submitDeadline = (submitDeadlineEl && submitDeadlineEl.value) ? submitDeadlineEl.value : endDate;
     const desc = document.getElementById('createBatchDesc').value.trim();
     const docPath = document.getElementById('createBatchDoc').value;
     const docName = docPath ? docPath.split('\\').pop() : '';
@@ -1086,8 +1087,9 @@ async function submitEditBatch() {
     const year = document.getElementById('editBatchYear').value;
     const type = document.getElementById('editBatchType').value;
     const startDate = document.getElementById('editBatchStart').value;
-    const submitDeadline = document.getElementById('editBatchSubmitDeadline').value;
     const endDate = document.getElementById('editBatchEnd').value;
+    const submitDeadlineEl = document.getElementById('editBatchSubmitDeadline');
+    const submitDeadline = (submitDeadlineEl && submitDeadlineEl.value) ? submitDeadlineEl.value : endDate;
     const status = document.getElementById('editBatchStatus').value;
     const desc = document.getElementById('editBatchDesc').value.trim();
     const docPath = document.getElementById('editBatchDoc').value;
@@ -1288,7 +1290,7 @@ function buildModernNotificationHtml(id, content, fromAll) {
     const isTopicWaitingFaculty = textContent.includes('Đề tài mới chờ Khoa phê duyệt') || (textContent.includes('chờ Hội đồng Khoa') && textContent.includes('thẩm định'));
     const isGroupInvitation = textContent.includes('Lời mời tham gia') || textContent.includes('mời vào nhóm') || textContent.includes('mời tham gia nhóm');
     const isTopicApproval = textContent.includes('phê duyệt đề tài') || (textContent.includes('Đề tài NCKH') && textContent.includes('chính thức phê duyệt'));
-    const isBatchAnnouncement = textContent.includes('Đợt NCKH:') || textContent.includes('NCKH 20') || textContent.includes('Kế hoạch NCKH');
+    const isBatchAnnouncement = textContent.includes('Đợt NCKH:') || textContent.includes('NCKH 20') || textContent.includes('Kế hoạch NCKH') || mainHtml.includes('Đợt NCKH:');
     const isCalendarMeeting = textContent.includes('Lịch hẹn') || textContent.includes('lịch hẹn');
     const isCouncil = textContent.includes('Hội đồng') || textContent.includes('hội đồng');
 
@@ -1362,46 +1364,6 @@ function buildModernNotificationHtml(id, content, fromAll) {
         theme.headline = 'Phân công Hội đồng đánh giá NCKH';
     }
 
-    // 3. Phân tách các trường dữ liệu chi tiết
-    let topicTitle = '';
-    let docVersionFile = '';
-    let statusLabel = '';
-    let feedbackText = '';
-
-    // Tìm tên Đề tài & Tệp
-    const topicRegex = /Đề tài:\s*(?:<strong>)?(.*?)(?:<\/strong>)?(?:\s*\((.*?)\))?(?:<\/p>|<br>|[\r\n]|$)/i;
-    const topicMatch = mainHtml.match(topicRegex) 
-                    || mainHtml.match(/đề tài\s*(?:NCKH)?(?:\s*<strong>)?:\s*(.*?)(?:<\/strong>)?(?:<\/p>|<br>|[\r\n]|$)/i)
-                    || mainHtml.match(/đề tài\s*(?:<strong>)?["'“]?([^"'”<]+)["'”]?/i);
-    if (topicMatch) {
-        topicTitle = topicMatch[1] ? topicMatch[1].replace(/<\/?[^>]+(>|$)/g, "").trim() : '';
-        if (topicMatch[2]) {
-            docVersionFile = topicMatch[2].replace(/<\/?[^>]+(>|$)/g, "").trim();
-        }
-    }
-
-    // Tìm kết quả thẩm định
-    const badgeMatch = mainHtml.match(/<span class="badge[^"]*">(.*?)<\/span>/i);
-    if (badgeMatch) {
-        statusLabel = badgeMatch[1].replace(/<\/?[^>]+(>|$)/g, "").trim();
-    }
-
-    // Tìm ý kiến chỉ đạo / ghi chú / mô tả
-    const feedbackRegex = /(?:Ý kiến chỉ đạo(?: của Khoa| từ Khoa)?:?|Ghi chú(?: từ GV)?:?|Nhận xét(?: của Giảng viên)?:?|Lý do(?: từ chối)?:?|Mô tả(?:\s*\/\s*Ý tưởng nghiên cứu)?:?)\s*(?:<\/strong>)?\s*([\s\S]*?)(?:<\/p>|<a |$)/i;
-    const feedbackMatch = mainHtml.match(feedbackRegex);
-    if (feedbackMatch) {
-        feedbackText = feedbackMatch[1].replace(/<\/?[^>]+(>|$)/g, "").trim();
-    }
-
-    // Tìm dòng tiêu đề đầu tiên nếu có
-    const strongHeaderMatch = mainHtml.match(/<p>\s*<strong>(.*?)<\/strong>\s*<\/p>/i) || mainHtml.match(/<strong>(.*?)<\/strong>/i);
-    if (strongHeaderMatch) {
-        const hText = strongHeaderMatch[1].replace(/<\/?[^>]+(>|$)/g, "").trim();
-        if (hText.length > 5 && !hText.includes('Đề tài:') && !hText.includes('Kết quả') && !hText.includes('Ý kiến') && !hText.includes('Mô tả')) {
-            theme.headline = hText;
-        }
-    }
-
     // Tinh chỉnh nút hành động và icon
     if (actionUrl) {
         if (actionUrl.includes('submit')) {
@@ -1425,103 +1387,232 @@ function buildModernNotificationHtml(id, content, fromAll) {
         }
     }
 
-    // 4. Xây dựng khối HTML giao diện hiện đại
+    // 3. Xây dựng khối HTML giao diện hiện đại
     let bodyCardsHtml = '';
 
-    if (topicTitle || statusLabel || feedbackText) {
-        // Cấu trúc dạng thẻ bài nộp / đề tài
-        if (topicTitle) {
-            bodyCardsHtml += `
-                <!-- Khối thông tin Đề tài & Bài nộp -->
-                <div class="p-3.5 rounded-4 bg-white border border-slate-200 shadow-xs mb-3">
-                    <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-1">
-                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fw-bold" style="font-size: 11px;">
-                            <i class="fa-solid fa-book-bookmark me-1"></i> Đề tài NCKH
-                        </span>
-                        ${docVersionFile ? `<span class="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 11px;"><i class="fa-solid fa-file-lines me-1"></i> ${docVersionFile}</span>` : ''}
-                    </div>
-                    <div class="fw-bold text-dark fs-6" style="line-height: 1.45;">
-                        ${topicTitle}
-                    </div>
-                </div>
-            `;
+    if (isBatchAnnouncement) {
+        // Trích xuất tên đợt
+        let batchName = '';
+        const h5Match = mainHtml.match(/<h5[^>]*>(?:Đợt NCKH:)?\s*(.*?)<\/h5>/i);
+        if (h5Match) {
+            batchName = h5Match[1].replace(/<\/?[^>]+(>|$)/g, '').trim();
+            theme.headline = batchName ? `Đợt NCKH: ${batchName}` : 'Thông báo Đợt Nghiên cứu khoa học';
         }
 
-        if (statusLabel) {
-            let sBg = '#ecfdf5', sBorder = '#a7f3d0', sText = '#065f46', sIcon = 'fa-solid fa-circle-check', sIconBg = '#d1fae5';
-            if (theme.isRevision || statusLabel.includes('YÊU CẦU') || statusLabel.includes('TỪ CHỐI')) {
-                sBg = '#fef2f2'; sBorder = '#fecaca'; sText = '#991b1b'; sIcon = 'fa-solid fa-triangle-exclamation'; sIconBg = '#fee2e2';
-            } else if (statusLabel.includes('CHỜ') || statusLabel.includes('ĐANG')) {
-                sBg = '#fffbeb'; sBorder = '#fde68a'; sText = '#b45309'; sIcon = 'fa-solid fa-clock'; sIconBg = '#fef3c7';
-            }
+        // Trích xuất thông tin timeline / badge nếu có
+        let timelineMatch = mainHtml.match(/<div style=['"]background:\s*#f8f9fa;[^'"]*['"]>([\s\S]*?)<\/div>/i);
+        let timelineContent = timelineMatch ? timelineMatch[1] : '';
 
-            bodyCardsHtml += `
-                <!-- Khối Quyết định thẩm định -->
-                <div class="p-3.5 rounded-4 mb-3 d-flex align-items-center gap-3 shadow-xs" style="background: ${sBg}; border: 1.5px solid ${sBorder};">
-                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px; background: ${sIconBg}; color: ${sText}; font-size: 20px;">
-                        <i class="${sIcon}"></i>
-                    </div>
-                    <div>
-                        <div class="text-uppercase fw-bold" style="font-size: 10.5px; letter-spacing: 0.5px; color: ${sText}; opacity: 0.85;">Quyết định & Kết quả thẩm định:</div>
-                        <div class="fw-bold" style="font-size: 15px; color: ${sText};">
-                            ${statusLabel}
-                        </div>
-                    </div>
+        // Trích xuất phần mô tả chi tiết
+        let descMatch = mainHtml.match(/(?:<strong>Mô tả chi tiết:<\/strong><br>|Mô tả chi tiết:)([\s\S]*?)$/i);
+        let descHtml = descMatch ? descMatch[1] : '';
+        descHtml = descHtml.replace(/<\/div>\s*$/, '').trim();
+
+        // Thẻ 1: Kế hoạch & Thời gian
+        bodyCardsHtml += `
+            <div class="p-4 rounded-4 bg-white border border-slate-200 shadow-sm mb-3">
+                <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold" style="font-size: 11.5px;">
+                        <i class="fa-solid fa-bullhorn me-1"></i> Kế hoạch NCKH
+                    </span>
+                    <span class="badge bg-light text-secondary border rounded-pill px-3 py-1.5 fw-medium" style="font-size: 11.5px;">
+                        <i class="fa-regular fa-calendar-check me-1"></i> Kế hoạch chính thức
+                    </span>
                 </div>
-            `;
-        }
-
-        if (feedbackText) {
-            bodyCardsHtml += `
-                <!-- Khối Ý kiến chỉ đạo / Nhận xét -->
-                <div class="p-3.5 rounded-4 mb-3" style="background: #fffbeb; border: 1px solid #fde68a; border-left: 5px solid #f59e0b;">
-                    <div class="fw-bold mb-1.5 d-flex align-items-center gap-1.5" style="color: #b45309; font-size: 13px;">
-                        <i class="fa-solid fa-comment-dots fs-6"></i> Ý kiến chỉ đạo / Ghi chú phản hồi:
+                <h6 class="fw-bold text-dark mb-3 fs-6" style="line-height: 1.5;">
+                    ${batchName || 'Kế hoạch triển khai Đợt Nghiên cứu khoa học'}
+                </h6>
+                ${timelineContent ? `
+                    <div class="p-3 rounded-3 bg-light border d-flex align-items-center flex-wrap gap-2" style="font-size: 13px;">
+                        ${timelineContent}
                     </div>
-                    <div style="font-size: 13.5px; color: #334155; line-height: 1.55; white-space: pre-wrap;">
-                        ${feedbackText}
+                ` : ''}
+            </div>
+        `;
+
+        // Thẻ 2: Nội dung & Hướng dẫn (nếu có mô tả)
+        if (descHtml) {
+            bodyCardsHtml += `
+                <div class="p-4 rounded-4 bg-white border border-slate-200 shadow-sm mb-3">
+                    <div class="fw-bold text-dark mb-3 d-flex align-items-center gap-2" style="font-size: 13.5px;">
+                        <i class="fa-solid fa-file-lines text-primary"></i> Nội dung & Hướng dẫn chi tiết:
+                    </div>
+                    <div class="rich-content-display text-secondary" style="font-size: 13.5px; line-height: 1.7; padding: 2px 2px;">
+                        ${descHtml}
                     </div>
                 </div>
             `;
         }
     } else {
-        // Thông báo văn bản tự do / đợt nckh / lịch hẹn
-        bodyCardsHtml += `
-            <div class="p-3.5 rounded-4 bg-white border border-slate-200 shadow-xs mb-3">
-                <div class="ql-editor rich-content-display p-0" style="font-size: 13.5px; line-height: 1.6; color: #1e293b;">
-                    ${cleanHtml}
+        // Phân tách dữ liệu cho bài nộp / thẩm định đề tài
+        let topicTitle = '';
+        let docVersionFile = '';
+        let statusLabel = '';
+        let feedbackText = '';
+
+        const topicRegex = /Đề tài:\s*(?:<strong>)?(.*?)(?:<\/strong>)?(?:\s*\((.*?)\))?(?:<\/p>|<br>|[\r\n]|$)/i;
+        const topicMatch = mainHtml.match(topicRegex) 
+                        || mainHtml.match(/đề tài\s*(?:NCKH)?(?:\s*<strong>)?:\s*(.*?)(?:<\/strong>)?(?:<\/p>|<br>|[\r\n]|$)/i)
+                        || mainHtml.match(/đề tài\s*(?:<strong>)?["'“]?([^"'”<]+)["'”]?/i);
+        if (topicMatch) {
+            topicTitle = topicMatch[1] ? topicMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim() : '';
+            if (topicMatch[2]) {
+                docVersionFile = topicMatch[2].replace(/<\/?[^>]+(>|$)/g, '').trim();
+            }
+        }
+
+        const badgeMatch = mainHtml.match(/<span class="badge[^"]*">(.*?)<\/span>/i);
+        if (badgeMatch) {
+            statusLabel = badgeMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim();
+        }
+
+        const feedbackRegex = /(?:Ý kiến chỉ đạo(?: của Khoa| từ Khoa)?:?|Ghi chú(?: từ GV)?:?|Nhận xét(?: của Giảng viên)?:?|Lý do(?: từ chối)?:?)\s*(?:<\/strong>)?\s*([\s\S]*?)(?:<\/p>|<a |$)/i;
+        const feedbackMatch = mainHtml.match(feedbackRegex);
+        if (feedbackMatch) {
+            feedbackText = feedbackMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim();
+        }
+
+        const strongHeaderMatch = mainHtml.match(/<p>\s*<strong>(.*?)<\/strong>\s*<\/p>/i) || mainHtml.match(/<strong>(.*?)<\/strong>/i);
+        if (strongHeaderMatch) {
+            const hText = strongHeaderMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim();
+            if (hText.length > 5 && !hText.includes('Đề tài:') && !hText.includes('Kết quả') && !hText.includes('Ý kiến')) {
+                theme.headline = hText;
+            }
+        }
+
+        const isEvaluationType = isFacultyApproval || isFacultyRevision || isLecturerApproved || isLecturerRevision || isLecturerReview || topicTitle || statusLabel;
+
+        if (isEvaluationType && (topicTitle || statusLabel || feedbackText)) {
+            if (topicTitle) {
+                bodyCardsHtml += `
+                    <!-- Khối thông tin Đề tài & Bài nộp -->
+                    <div class="p-4 rounded-4 bg-white border border-slate-200 shadow-sm mb-3">
+                        <div class="d-flex align-items-center justify-content-between mb-2.5 flex-wrap gap-2">
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1 fw-bold" style="font-size: 11px;">
+                                <i class="fa-solid fa-book-bookmark me-1"></i> Đề tài NCKH
+                            </span>
+                            ${docVersionFile ? `<span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-1 fw-semibold" style="font-size: 11px;"><i class="fa-solid fa-file-lines me-1"></i> ${docVersionFile}</span>` : ''}
+                        </div>
+                        <div class="fw-bold text-dark fs-6" style="line-height: 1.55;">
+                            ${topicTitle}
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (statusLabel) {
+                let sBg = '#ecfdf5', sBorder = '#a7f3d0', sText = '#065f46', sIcon = 'fa-solid fa-circle-check', sIconBg = '#d1fae5';
+                if (theme.isRevision || statusLabel.includes('YÊU CẦU') || statusLabel.includes('TỪ CHỐI')) {
+                    sBg = '#fef2f2'; sBorder = '#fecaca'; sText = '#991b1b'; sIcon = 'fa-solid fa-triangle-exclamation'; sIconBg = '#fee2e2';
+                } else if (statusLabel.includes('CHỜ') || statusLabel.includes('ĐANG')) {
+                    sBg = '#fffbeb'; sBorder = '#fde68a'; sText = '#b45309'; sIcon = 'fa-solid fa-clock'; sIconBg = '#fef3c7';
+                }
+
+                bodyCardsHtml += `
+                    <!-- Khối Quyết định thẩm định -->
+                    <div class="p-4 rounded-4 mb-3 d-flex align-items-center gap-3 shadow-sm" style="background: ${sBg}; border: 1.5px solid ${sBorder};">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px; background: ${sIconBg}; color: ${sText}; font-size: 20px;">
+                            <i class="${sIcon}"></i>
+                        </div>
+                        <div>
+                            <div class="text-uppercase fw-bold mb-1" style="font-size: 11px; letter-spacing: 0.5px; color: ${sText}; opacity: 0.85;">Quyết định & Kết quả thẩm định:</div>
+                            <div class="fw-bold" style="font-size: 15.5px; color: ${sText}; line-height: 1.4;">
+                                ${statusLabel}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (feedbackText) {
+                bodyCardsHtml += `
+                    <!-- Khối Ý kiến chỉ đạo / Nhận xét -->
+                    <div class="p-4 rounded-4 mb-3 shadow-sm" style="background: #fffbeb; border: 1px solid #fde68a; border-left: 5px solid #f59e0b;">
+                        <div class="fw-bold mb-2 d-flex align-items-center gap-2" style="color: #b45309; font-size: 13.5px;">
+                            <i class="fa-solid fa-comment-dots fs-6"></i> Ý kiến chỉ đạo / Ghi chú phản hồi:
+                        </div>
+                        <div style="font-size: 13.5px; color: #334155; line-height: 1.6; white-space: pre-wrap; padding-left: 2px;">
+                            ${feedbackText}
+                        </div>
+                    </div>
+                `;
+            }
+        } else {
+            // Thông báo văn bản tự do / lịch hẹn / lời mời
+            bodyCardsHtml += `
+                <div class="p-4 rounded-4 bg-white border border-slate-200 shadow-sm mb-3">
+                    <div class="rich-content-display" style="font-size: 13.5px; line-height: 1.65; color: #1e293b; padding: 4px 6px;">
+                        ${cleanHtml}
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        }
     }
 
-    // Khối tệp đính kèm (nếu có)
+    // 4. Khối tệp đính kèm (nếu có)
     let attachmentsHtml = '';
     if (attachments.length > 0) {
         attachmentsHtml = `
-            <div class="p-3.5 rounded-4 bg-white border border-slate-200 shadow-xs mb-3">
-                <div class="small fw-bold text-dark mb-2.5 d-flex align-items-center gap-1.5">
-                    <i class="fa-solid fa-paperclip text-primary"></i> Tài liệu đính kèm (${attachments.length}):
+            <div class="notif-attachment-box shadow-sm mb-3">
+                <div class="fw-bold text-dark mb-3 d-flex align-items-center gap-2" style="font-size: 13.5px;">
+                    <i class="fa-solid fa-paperclip text-primary fs-6"></i>
+                    <span>Tài liệu đính kèm (${attachments.length}):</span>
                 </div>
                 <div class="d-flex flex-column gap-2">
-                    ${attachments.map(f => `
-                        <a href="/static/uploads/batches/${encodeURIComponent(f)}" target="_blank" class="btn btn-outline-primary rounded-pill d-flex align-items-center justify-content-between p-2.5 px-3.5 text-decoration-none fw-bold small text-start">
-                            <span class="text-truncate me-2"><i class="fa-solid fa-file-pdf me-2 text-danger"></i>${f}</span>
-                            <span class="badge bg-primary text-white rounded-pill px-2.5 py-1"><i class="fa-solid fa-download me-1"></i> Tải về</span>
-                        </a>
-                    `).join('')}
+                    ${attachments.map(f => {
+                        const ext = (f.split('.').pop() || '').toLowerCase();
+                        let fileIcon = 'fa-solid fa-file text-secondary';
+                        let fileTypeBg = '#f1f5f9';
+                        if (ext === 'pdf') {
+                            fileIcon = 'fa-solid fa-file-pdf text-danger';
+                            fileTypeBg = '#fee2e2';
+                        } else if (['doc', 'docx'].includes(ext)) {
+                            fileIcon = 'fa-solid fa-file-word text-primary';
+                            fileTypeBg = '#dbeafe';
+                        } else if (['xls', 'xlsx'].includes(ext)) {
+                            fileIcon = 'fa-solid fa-file-excel text-success';
+                            fileTypeBg = '#dcfce7';
+                        } else if (['ppt', 'pptx'].includes(ext)) {
+                            fileIcon = 'fa-solid fa-file-powerpoint text-warning';
+                            fileTypeBg = '#fef3c7';
+                        } else if (['zip', 'rar', '7z'].includes(ext)) {
+                            fileIcon = 'fa-solid fa-file-zipper text-secondary';
+                            fileTypeBg = '#f1f5f9';
+                        }
+
+                        let fileUrl = `/static/uploads/batches/${encodeURIComponent(f)}`;
+                        if (f.startsWith('sub_') || f.includes('submission')) {
+                            fileUrl = `/static/uploads/submissions/${encodeURIComponent(f)}`;
+                        }
+
+                        return `
+                            <a href="${fileUrl}" target="_blank" class="notif-attachment-pill text-decoration-none">
+                                <div class="d-flex align-items-center gap-2.5 overflow-hidden me-2" style="min-width: 0;">
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px; background: ${fileTypeBg};">
+                                        <i class="${fileIcon} fs-6"></i>
+                                    </div>
+                                    <div class="text-truncate fw-semibold text-dark" style="font-size: 13px;" title="${f}">
+                                        ${f}
+                                    </div>
+                                </div>
+                                <span class="badge bg-primary text-white rounded-pill px-3 py-1.5 flex-shrink-0 d-inline-flex align-items-center gap-1 shadow-sm" style="font-size: 11.5px;">
+                                    <i class="fa-solid fa-download"></i> Tải về
+                                </span>
+                            </a>
+                        `;
+                    }).join('')}
                 </div>
             </div>
         `;
     }
 
-    // Khối nút hành động đáy (Footer Action Bar)
+    // 5. Khối nút hành động đáy (Footer Action Bar)
     const backBtn = fromAll ? `
-        <button type="button" class="btn btn-outline-secondary rounded-pill px-3.5 py-2 fw-bold small d-inline-flex align-items-center gap-1.5" onclick="window.goBackToAllNotifications()">
+        <button type="button" class="btn btn-outline-secondary rounded-pill px-3 py-2 fw-bold small d-inline-flex align-items-center gap-2 shadow-none" onclick="window.goBackToAllNotifications()">
             <i class="fa-solid fa-arrow-left"></i> Quay lại danh sách
         </button>
     ` : `
-        <span class="badge bg-light text-secondary border rounded-pill px-3 py-1.5 small fw-semibold" style="font-size: 11px;">
+        <span class="badge bg-light text-secondary border rounded-pill px-3 py-2 small fw-semibold" style="font-size: 11.5px;">
             <i class="fa-solid fa-shield-halved text-primary me-1"></i> HOU S-RIMS
         </span>
     `;
@@ -1548,7 +1639,7 @@ function buildModernNotificationHtml(id, content, fromAll) {
             </div>
 
             <!-- Body Content -->
-            <div class="p-3.5 p-md-4" style="background: #f8fafc; max-height: 60vh; overflow-y: auto;">
+            <div class="notif-modal-body" style="max-height: 65vh; overflow-y: auto;">
                 ${bodyCardsHtml}
                 ${attachmentsHtml}
             </div>
@@ -1557,7 +1648,7 @@ function buildModernNotificationHtml(id, content, fromAll) {
             <div class="p-3 px-4 bg-white border-top d-flex align-items-center justify-content-between" style="border-radius: 0 0 18px 18px;">
                 <div>${backBtn}</div>
                 <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="btn btn-light rounded-pill px-3.5 py-2 fw-bold text-secondary border small" onclick="Swal.close()">
+                    <button type="button" class="btn btn-light rounded-pill px-4 py-2 fw-bold text-secondary border small shadow-none" onclick="Swal.close()">
                         Đóng
                     </button>
                     ${actionBtn}

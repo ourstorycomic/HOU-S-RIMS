@@ -1,19 +1,228 @@
 {% extends "layouts/faculty_layout.html" %}
 
 {% block faculty_content %}
-<div id="view-f-rubric" class="fade-in ">
-                <div class="rubric-banner-purple text-white p-4 rounded-4 shadow-sm mb-4 d-flex align-items-center justify-content-between">
-                    <div><h4 class="fw-bold mb-1">HỆ THỐNG NGHIỆM THU RUBRIC</h4><p class="mb-0 small opacity-75">Thiết lập bộ tiêu chuẩn đánh giá đa chiều.</p></div>
-                    <i class="fa-solid fa-gear fa-3x opacity-25"></i>
-                </div>
-                <div class="card border-0 shadow-sm rounded-4 p-4">
-                    <h6 class="fw-bold text-muted text-uppercase mb-4">CÁC TIÊU CHÍ ĐÁNH GIÁ (RUBRIC)</h6>
-                    <div id="rubricContainer">
-                        <div class="d-flex align-items-center justify-content-between bg-light p-3 rounded-3 mb-3 border-start border-4 border-primary">
-                            <div class="d-flex align-items-center gap-3"><div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px;">1</div><div><div class="fw-bold text-dark">Tính mới và sáng tạo</div><small class="text-primary fw-bold" style="font-size: 10px;">TRỌNG SỐ: 30%</small></div></div><div class="fw-bold text-muted h5 mb-0">/ 3.0</div>
-                        </div>
-                    </div>
-                    <div class="text-center mt-3 p-3 border border-dashed rounded-3 text-muted fw-bold" style="cursor: pointer;" onclick="addRubricCriteria()">+ THÊM TIÊU CHÍ MỚI</div>
-                </div>
+<div id="view-f-rubric" class="fade-in">
+    <div class="rubric-banner-purple text-white p-4 rounded-4 shadow-sm mb-4 d-flex align-items-center justify-content-between" style="background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);">
+        <div>
+            <h4 class="fw-bold mb-1"><i class="fa-solid fa-sliders me-2"></i> HỆ THỐNG CẤU HÌNH TIÊU CHÍ RUBRIC CHẤM ĐIỂM</h4>
+            <p class="mb-0 small opacity-75">Thiết lập bộ tiêu chuẩn đánh giá định lượng cho Hội đồng chấm đề cương và nghiệm thu đề tài NCKH.</p>
         </div>
+        <i class="fa-solid fa-award fa-3x opacity-25"></i>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h6 class="fw-bold text-dark text-uppercase mb-1"><i class="fa-solid fa-list-check text-primary me-2"></i> DANH SÁCH TIÊU CHÍ ĐÁNH GIÁ (RUBRIC)</h6>
+                <small class="text-muted">Các tiêu chí này sẽ xuất hiện trên Phiếu chấm điểm độc lập của từng thành viên Hội đồng</small>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-primary fw-bold rounded-pill px-3 btn-sm" onclick="addRubricCriteriaRow()">
+                    <i class="fa-solid fa-plus me-1"></i> Thêm tiêu chí
+                </button>
+                <button type="button" class="btn btn-primary fw-bold rounded-pill px-4 btn-sm shadow-sm" onclick="saveRubricConfig()">
+                    <i class="fa-solid fa-floppy-disk me-1"></i> Lưu cấu hình Rubric
+                </button>
+            </div>
+        </div>
+
+        <!-- Tên bộ Rubric & Thống kê -->
+        <div class="row g-3 mb-4 p-3 bg-light rounded-4 border">
+            <div class="col-md-6">
+                <label class="form-label fw-bold small text-muted">TÊN BỘ TIÊU CHÍ RUBRIC</label>
+                <input type="text" id="rubricNameInput" class="form-control fw-bold text-primary" value="{{ active_rubric.name if active_rubric else 'Bộ tiêu chí đánh giá Nghiệm thu NCKH Sinh viên' }}">
+                <input type="hidden" id="rubricIdInput" value="{{ active_rubric.id if active_rubric else '' }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold small text-muted">TỔNG TRỌNG SỐ (%)</label>
+                <div class="h5 mb-0 fw-bold d-flex align-items-center gap-2">
+                    <span id="totalWeightDisplay" class="text-success">100%</span>
+                    <small id="weightWarning" class="badge bg-danger-subtle text-danger" style="display: none;">Chưa đủ 100%</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold small text-muted">THANG ĐIỂM TỐI ĐA</label>
+                <div class="h5 mb-0 fw-bold text-primary" id="totalScoreDisplay">10.0 điểm</div>
+            </div>
+        </div>
+
+        <!-- Bảng danh sách tiêu chí -->
+        <div id="criteriaListContainer" class="space-y-3">
+            <!-- Render động bằng JS -->
+        </div>
+
+        <div class="text-center mt-4 p-3 border border-dashed rounded-4 text-primary fw-bold" style="cursor: pointer; background: #fafbff;" onclick="addRubricCriteriaRow()">
+            <i class="fa-solid fa-circle-plus me-2"></i> + THÊM TIÊU CHÍ ĐÁNH GIÁ MỚI
+        </div>
+    </div>
+</div>
+
+<script>
+// Load criteria from active_rubric
+let criteriaData = [];
+
+{% if active_rubric and active_rubric.criteria_json %}
+    try {
+        criteriaData = {{ active_rubric.criteria_json|safe }};
+        if (typeof criteriaData === 'string') {
+            criteriaData = JSON.parse(criteriaData);
+        }
+    } catch (e) {
+        criteriaData = [];
+    }
+{% endif %}
+
+if (!criteriaData || criteriaData.length === 0) {
+    criteriaData = [
+        { id: 1, name: 'Tính cấp thiết, tổng quan & mục tiêu đề tài', weight: 20, max_score: 2.0, desc: 'Đánh giá tính cấp thiết, rõ ràng của bài toán và đối tượng nghiên cứu' },
+        { id: 2, name: 'Phương pháp nghiên cứu & tính khoa học', weight: 30, max_score: 3.0, desc: 'Đánh giá mô hình lý thuyết, công nghệ và quy trình thực hiện' },
+        { id: 3, name: 'Sản phẩm đề tài & tính ứng dụng thực tiễn', weight: 30, max_score: 3.0, desc: 'Đánh giá sản phẩm phần mềm/hệ thống thực nghiệm và giá trị thực tế' },
+        { id: 4, name: 'Kỹ năng thuyết trình & trả lời phản biện', weight: 20, max_score: 2.0, desc: 'Đánh giá độ tự tin, rõ ràng và khả năng bảo vệ quan điểm khoa học' }
+    ];
+}
+
+function renderCriteria() {
+    const container = document.getElementById('criteriaListContainer');
+    container.innerHTML = '';
+
+    let totalWeight = 0;
+    let totalScore = 0;
+
+    criteriaData.forEach((c, idx) => {
+        totalWeight += parseFloat(c.weight || 0);
+        totalScore += parseFloat(c.max_score || 0);
+
+        const card = document.createElement('div');
+        card.className = 'border rounded-4 p-3 mb-3 bg-white shadow-xs';
+        card.innerHTML = `
+            <div class="row g-3 align-items-center">
+                <div class="col-auto">
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 36px; height: 36px;">
+                        ${idx + 1}
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label small fw-bold text-muted mb-1">Tên tiêu chí</label>
+                    <input type="text" class="form-control form-control-sm fw-semibold" value="${c.name || ''}" onchange="updateCritField(${idx}, 'name', this.value)" placeholder="Tên tiêu chí...">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold text-muted mb-1">Trọng số (%)</label>
+                    <div class="input-group input-group-sm">
+                        <input type="number" class="form-control" value="${c.weight || 0}" min="1" max="100" onchange="updateCritField(${idx}, 'weight', parseFloat(this.value) || 0)">
+                        <span class="input-group-text">%</span>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold text-muted mb-1">Điểm tối đa</label>
+                    <div class="input-group input-group-sm">
+                        <input type="number" step="0.5" class="form-control" value="${c.max_score || 0}" min="0.5" max="10" onchange="updateCritField(${idx}, 'max_score', parseFloat(this.value) || 0)">
+                        <span class="input-group-text">đ</span>
+                    </div>
+                </div>
+                <div class="col-md-2 text-end">
+                    <label class="form-label small fw-bold text-muted mb-1 d-block">&nbsp;</label>
+                    <button type="button" class="btn btn-sm btn-outline-danger border-0 rounded-circle" onclick="removeCriteria(${idx})" title="Xóa tiêu chí">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+                <div class="col-12 mt-2">
+                    <label class="form-label small fw-bold text-muted mb-1">Mô tả hướng dẫn chấm chi tiết</label>
+                    <input type="text" class="form-control form-control-sm text-muted" value="${c.desc || ''}" onchange="updateCritField(${idx}, 'desc', this.value)" placeholder="Ví dụ: Đạt tối đa nếu đề tài có sản phẩm chạy thực nghiệm hoàn chỉnh...">
+                </div>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+
+    // Update totals
+    const weightEl = document.getElementById('totalWeightDisplay');
+    const warningEl = document.getElementById('weightWarning');
+    weightEl.textContent = `${totalWeight}%`;
+    if (totalWeight !== 100) {
+        weightEl.className = 'text-danger fw-bold';
+        warningEl.style.display = 'inline-block';
+        warningEl.textContent = `Tổng hiện tại: ${totalWeight}% (Phải bằng 100%)`;
+    } else {
+        weightEl.className = 'text-success fw-bold';
+        warningEl.style.display = 'none';
+    }
+
+    document.getElementById('totalScoreDisplay').textContent = `${totalScore.toFixed(1)} điểm`;
+}
+
+function updateCritField(idx, field, val) {
+    if (criteriaData[idx]) {
+        criteriaData[idx][field] = val;
+        if (field === 'weight') {
+            // Tự động tính điểm tối đa tương ứng thang 10
+            criteriaData[idx]['max_score'] = parseFloat((val / 10).toFixed(1));
+        }
+        renderCriteria();
+    }
+}
+
+function addRubricCriteriaRow() {
+    criteriaData.push({
+        id: criteriaData.length + 1,
+        name: 'Tiêu chí đánh giá mới',
+        weight: 10,
+        max_score: 1.0,
+        desc: 'Mô tả tiêu chí đánh giá...'
+    });
+    renderCriteria();
+}
+
+function removeCriteria(idx) {
+    if (criteriaData.length <= 1) {
+        return Swal.fire('Cảnh báo', 'Hệ thống Rubric cần có ít nhất 1 tiêu chí đánh giá!', 'warning');
+    }
+    criteriaData.splice(idx, 1);
+    renderCriteria();
+}
+
+async function saveRubricConfig() {
+    const name = document.getElementById('rubricNameInput').value.trim();
+    const rubricId = document.getElementById('rubricIdInput').value;
+
+    if (!name) return Swal.fire('Lỗi', 'Vui lòng nhập tên bộ tiêu chí Rubric', 'warning');
+
+    let totalWeight = criteriaData.reduce((sum, c) => sum + parseFloat(c.weight || 0), 0);
+    if (totalWeight !== 100) {
+        const confirm = await Swal.fire({
+            title: 'Cảnh báo trọng số!',
+            text: `Tổng trọng số hiện tại là ${totalWeight}%, chuẩn nên là 100%. Bạn có chắc chắn muốn lưu?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Vẫn lưu',
+            cancelButtonText: 'Sửa lại'
+        });
+        if (!confirm.isConfirmed) return;
+    }
+
+    let totalScore = criteriaData.reduce((sum, c) => sum + parseFloat(c.max_score || 0), 0);
+
+    try {
+        const res = await fetch('/api/rubrics', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                id: rubricId ? parseInt(rubricId) : null,
+                name: name,
+                criteria_json: criteriaData,
+                total_score: totalScore
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            Swal.fire('Thành công', 'Đã lưu cấu hình Rubric chấm điểm thành công!', 'success').then(() => location.reload());
+        } else {
+            Swal.fire('Lỗi', data.error || 'Có lỗi xảy ra', 'error');
+        }
+    } catch (e) {
+        Swal.fire('Lỗi', 'Không thể kết nối máy chủ', 'error');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', renderCriteria);
+</script>
 {% endblock %}

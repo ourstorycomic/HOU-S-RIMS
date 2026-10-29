@@ -81,6 +81,18 @@
                                         </div>
                                     </div>
                                     {% endif %}
+
+                                    {% if sub.feedback_file_url %}
+                                    <div class="mt-2 p-2.5 rounded-3 bg-white border border-primary-subtle d-flex align-items-center justify-content-between shadow-2xs">
+                                        <div class="small text-primary fw-bold d-flex align-items-center gap-2">
+                                            <i class="fa-solid fa-paperclip fs-6"></i>
+                                            <span>Bản sửa / Tài liệu đính kèm từ GVHD: <span class="text-dark fw-normal">({{ sub.feedback_file_name or 'Tài liệu hướng dẫn' }})</span></span>
+                                        </div>
+                                        <a href="{{ url_for('static', filename=sub.feedback_file_url) }}" target="_blank" download class="btn btn-xs btn-primary rounded-pill px-3 py-1 fw-bold text-decoration-none">
+                                            <i class="fa-solid fa-download me-1"></i> Tải về xem
+                                        </a>
+                                    </div>
+                                    {% endif %}
                                 </div>
                                 {% endfor %}
                             </div>

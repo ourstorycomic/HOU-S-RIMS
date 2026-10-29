@@ -54,26 +54,36 @@ def create_batch():
     from werkzeug.utils import secure_filename
     
     try:
-        start_date = None
-        end_date = None
-        submission_deadline = None
+        batch_name = (data.get('name') or '').strip()
+        if not batch_name or len(batch_name) < 3:
+            return jsonify({'error': 'Tên Đợt NCKH phải có ít nhất 3 ký tự!'}), 400
 
-        if data.get('start_date'):
-            try:
-                start_date = datetime.strptime(data['start_date'], '%Y-%m-%d')
-            except ValueError:
-                pass
-        if data.get('end_date'):
-            try:
-                end_date = datetime.strptime(data['end_date'], '%Y-%m-%d')
-            except ValueError:
-                pass
+        if not data.get('start_date'):
+            return jsonify({'error': 'Vui lòng chọn Ngày bắt đầu đợt NCKH!'}), 400
+        if not data.get('end_date'):
+            return jsonify({'error': 'Vui lòng chọn Ngày kết thúc đợt NCKH!'}), 400
+
+        try:
+            start_date = datetime.strptime(data['start_date'], '%Y-%m-%d')
+        except ValueError:
+            return jsonify({'error': 'Định dạng Ngày bắt đầu không hợp lệ (YYYY-MM-DD)'}), 400
+
+        try:
+            end_date = datetime.strptime(data['end_date'], '%Y-%m-%d')
+        except ValueError:
+            return jsonify({'error': 'Định dạng Ngày kết thúc không hợp lệ (YYYY-MM-DD)'}), 400
+
+        if start_date > end_date:
+            return jsonify({'error': 'Ngày bắt đầu không được lớn hơn ngày kết thúc đợt!'}), 400
+
         if data.get('submission_deadline'):
             try:
                 submission_deadline = datetime.strptime(data['submission_deadline'], '%Y-%m-%d')
             except ValueError:
-                pass
-        elif end_date:
+                return jsonify({'error': 'Định dạng Hạn nộp báo cáo không hợp lệ (YYYY-MM-DD)'}), 400
+            if submission_deadline < start_date or submission_deadline > end_date:
+                return jsonify({'error': 'Hạn nộp báo cáo phải nằm trong khoảng từ Ngày bắt đầu đến Ngày kết thúc đợt!'}), 400
+        else:
             submission_deadline = end_date
             
         doc_filenames = []
@@ -240,14 +250,43 @@ def update_batch(batch_id):
     import os
     from werkzeug.utils import secure_filename
     
-    if data.get('name'):
-        batch.name = data['name']
+    if 'name' in data:
+        name = (data.get('name') or '').strip()
+        if not name or len(name) < 3:
+            return jsonify({'error': 'Tên Đợt NCKH phải có ít nhất 3 ký tự!'}), 400
+        batch.name = name
+
+    new_start = batch.start_date
+    new_end = batch.end_date
+    new_sub = batch.submission_deadline
+
     if data.get('start_date'):
-        batch.start_date = datetime.strptime(data['start_date'], '%Y-%m-%d')
+        try:
+            new_start = datetime.strptime(data['start_date'], '%Y-%m-%d')
+        except ValueError:
+            return jsonify({'error': 'Định dạng Ngày bắt đầu không hợp lệ!'}), 400
+
     if data.get('end_date'):
-        batch.end_date = datetime.strptime(data['end_date'], '%Y-%m-%d')
+        try:
+            new_end = datetime.strptime(data['end_date'], '%Y-%m-%d')
+        except ValueError:
+            return jsonify({'error': 'Định dạng Ngày kết thúc không hợp lệ!'}), 400
+
     if data.get('submission_deadline'):
-        batch.submission_deadline = datetime.strptime(data['submission_deadline'], '%Y-%m-%d')
+        try:
+            new_sub = datetime.strptime(data['submission_deadline'], '%Y-%m-%d')
+        except ValueError:
+            return jsonify({'error': 'Định dạng Hạn nộp không hợp lệ!'}), 400
+
+    if new_start and new_end and new_start > new_end:
+        return jsonify({'error': 'Ngày bắt đầu không được lớn hơn ngày kết thúc đợt!'}), 400
+
+    if new_sub and new_start and new_end and (new_sub < new_start or new_sub > new_end):
+        return jsonify({'error': 'Hạn nộp báo cáo phải nằm trong khoảng từ Ngày bắt đầu đến Ngày kết thúc!'}), 400
+
+    batch.start_date = new_start
+    batch.end_date = new_end
+    batch.submission_deadline = new_sub
     if data.get('status'):
         batch.status = data['status']
     if 'description' in data:
@@ -275,31 +314,108 @@ def update_batch(batch_id):
     db.session.commit()
     return jsonify({'message': 'Batch updated successfully'}), 200
 
+def cascade_delete_batch_data(batch_id):
+    """
+    Xóa triệt để toàn bộ dữ liệu thuộc đợt NCKH:
+    - Đề tài (Topic), bài nộp (Submission), cột mốc (Milestone), tiến trình (Progress), lịch họp (Meeting)
+    - Nhóm nghiên cứu (Group), thành viên nhóm (GroupMember), tin nhắn nội bộ (Message), lời mời (invitations)
+    - Hội đồng chấm điểm (Council), thành viên HĐ (CouncilMember), điểm đánh giá (Evaluation)
+    - Giải phóng các slot lịch hẹn (AvailabilitySlot)
+    """
+    from models import (
+        Council, CouncilMember, Topic, Group, GroupMember,
+        Message, Submission, Milestone, Progress, Meeting,
+        TopicRegistration, Evaluation, AvailabilitySlot
+    )
+    
+    # 1. Lấy danh sách đề tài và nhóm thuộc đợt
+    topics = Topic.query.filter_by(batch_id=batch_id).all()
+    topic_ids = [t.id for t in topics]
+    
+    groups = Group.query.filter_by(batch_id=batch_id).all()
+    group_ids = [g.id for g in groups]
+    for t in topics:
+        if t.group_id and t.group_id not in group_ids:
+            group_ids.append(t.group_id)
+
+    # 2. Xóa các Hội đồng và điểm đánh giá
+    councils = Council.query.filter_by(batch_id=batch_id).all()
+    council_ids = [c.id for c in councils]
+    
+    if topic_ids:
+        Evaluation.query.filter(Evaluation.topic_id.in_(topic_ids)).delete(synchronize_session=False)
+    if council_ids:
+        Evaluation.query.filter(Evaluation.council_id.in_(council_ids)).delete(synchronize_session=False)
+        CouncilMember.query.filter(CouncilMember.council_id.in_(council_ids)).delete(synchronize_session=False)
+        for c in councils:
+            db.session.delete(c)
+
+    # 3. Xóa dữ liệu của các đề tài: bài nộp, cột mốc, tiến trình, lịch họp, đăng ký
+    if topic_ids:
+        Submission.query.filter(Submission.topic_id.in_(topic_ids)).delete(synchronize_session=False)
+        
+        milestones = Milestone.query.filter(Milestone.topic_id.in_(topic_ids)).all()
+        milestone_ids = [m.id for m in milestones]
+        if milestone_ids:
+            Progress.query.filter(Progress.milestone_id.in_(milestone_ids)).delete(synchronize_session=False)
+            Milestone.query.filter(Milestone.id.in_(milestone_ids)).delete(synchronize_session=False)
+            
+        meetings = Meeting.query.filter(Meeting.topic_id.in_(topic_ids)).all()
+        meeting_ids = [m.id for m in meetings]
+        if meeting_ids:
+            AvailabilitySlot.query.filter(AvailabilitySlot.meeting_id.in_(meeting_ids)).update({
+                'meeting_id': None,
+                'status': 'open',
+                'group_id': None,
+                'booked_by_id': None,
+                'booked_at': None
+            }, synchronize_session=False)
+            Meeting.query.filter(Meeting.id.in_(meeting_ids)).delete(synchronize_session=False)
+            
+        TopicRegistration.query.filter(TopicRegistration.topic_id.in_(topic_ids)).delete(synchronize_session=False)
+
+    if group_ids:
+        TopicRegistration.query.filter(TopicRegistration.group_id.in_(group_ids)).delete(synchronize_session=False)
+
+    # 4. Xóa đề tài trước (vì bảng topics có foreign key constraint topics_group_id_fkey trỏ vào groups)
+    if topic_ids:
+        Topic.query.filter(Topic.id.in_(topic_ids)).delete(synchronize_session=False)
+
+    # 5. Xóa dữ liệu của các nhóm: slot hẹn, tin nhắn, lời mời, thành viên, nhóm
+    if group_ids:
+        AvailabilitySlot.query.filter(AvailabilitySlot.group_id.in_(group_ids)).update({
+            'status': 'open',
+            'group_id': None,
+            'booked_by_id': None,
+            'booked_at': None,
+            'meeting_id': None
+        }, synchronize_session=False)
+        
+        Message.query.filter(Message.group_id.in_(group_ids)).delete(synchronize_session=False)
+        
+        for g_id in group_ids:
+            invitations = Message.query.filter(
+                Message.message_type == 'invitation',
+                Message.meta_data.isnot(None)
+            ).all()
+            for inv in invitations:
+                if f'"group_id": {g_id}' in inv.meta_data or f'"group_id":{g_id}' in inv.meta_data:
+                    db.session.delete(inv)
+                    
+        GroupMember.query.filter(GroupMember.group_id.in_(group_ids)).delete(synchronize_session=False)
+        Group.query.filter(Group.id.in_(group_ids)).delete(synchronize_session=False)
+
+
 @batches_bp.route('/<int:batch_id>', methods=['DELETE'])
 def delete_batch(batch_id):
-    from models import Council, CouncilMember
     batch = Batch.query.get_or_404(batch_id)
     try:
         batch_name = batch.name
-        
         with db.session.no_autoflush:
-            # Unlink topics and groups referencing this batch
-            if batch.topics:
-                for t in batch.topics:
-                    t.batch_id = None
-            if batch.groups:
-                for g in batch.groups:
-                    g.batch_id = None
-                    
-            # Handle councils referencing this batch
-            councils = Council.query.filter_by(batch_id=batch.id).all()
-            for c in councils:
-                CouncilMember.query.filter_by(council_id=c.id).delete()
-                db.session.delete(c)
-                
+            cascade_delete_batch_data(batch.id)
             db.session.delete(batch)
         db.session.commit()
-        return jsonify({'message': f'Đã xóa đợt NCKH "{batch_name}" thành công!', 'deleted_id': batch_id}), 200
+        return jsonify({'message': f'Đã xóa đợt NCKH "{batch_name}" và làm mới toàn bộ dữ liệu liên quan thành công!', 'deleted_id': batch_id}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': f'Không thể xóa đợt NCKH này do có lỗi: {str(e)}'}), 500

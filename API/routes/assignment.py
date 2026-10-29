@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 from flask import Blueprint, jsonify, request, session
 
 from models import (db, User, Batch, Group, GroupMember, Topic, TopicRegistration,
-                    Meeting, AvailabilitySlot)
+                    Meeting, AvailabilitySlot, Notification, Message)
 from mentor_suggest import (suggest_mentors, mentor_stats, mentor_loads,
                             MAX_TOPICS_PER_MENTOR)
 from event_mailer import emit
@@ -160,25 +160,101 @@ def reassign():
         return _err(f'{new_m.full_name} đã giữ {load}/{MAX_TOPICS_PER_MENTOR} đề tài', 409, code='MENTOR_FULL')
 
     old_id = topic.mentor_id
+    old_m = db.session.get(User, old_id) if old_id else None
+    old_name = old_m.full_name if old_m else 'Chưa có'
+    new_name = new_m.full_name
     reason = (d.get('reason') or '').strip()[:300]
+    reason_suffix = f" Lý do: {reason}." if reason else ""
+
     try:
+        # Cập nhật giảng viên mới cho đề tài
         topic.mentor_id = new_m.id
-        # GV mới chưa đồng ý -> quay về bước "chờ GV xác nhận" (đề tài đã duyệt thì giữ nguyên)
-        if topic.status == 'faculty_pending':
-            topic.status = 'pending'
+        # Khoa trực tiếp phê duyệt phân công, không cần GV mới phải accept lại
+        topic.status = 'approved'
+        if not topic.defense_status:
+            topic.defense_status = 'pending'
+
         for reg in TopicRegistration.query.filter_by(topic_id=topic.id).all():
             reg.mentor_id = new_m.id
+            reg.status = 'approved'
+
         group = db.session.get(Group, topic.group_id) if topic.group_id else None
-        if group and (group.mentor_id is None or group.mentor_id == old_id):
+        if not group:
+            # Tạo nhóm nghiên cứu cho đề tài nếu chưa có
+            reg = TopicRegistration.query.filter_by(topic_id=topic.id).first()
+            leader_id = reg.group_id if (reg and db.session.get(User, reg.group_id)) else session.get('user_id')
+            group = Group(
+                name=f"Nhóm {topic.title}",
+                batch_id=topic.batch_id,
+                leader_id=leader_id,
+                mentor_id=new_m.id,
+                status='approved'
+            )
+            db.session.add(group)
+            db.session.flush()
+            topic.group_id = group.id
+        else:
             group.mentor_id = new_m.id
-        released = _release_group_slots(topic.group_id, old_id) if (topic.group_id and old_id) else 0
+            group.status = 'approved'
+
+        # 1. Gửi thông báo chi tiết (Notification) ghi rõ ai chuyển cho ai
+        # A. Gửi cho toàn bộ sinh viên trong nhóm
+        student_ids = set()
+        if group.leader_id:
+            student_ids.add(group.leader_id)
+        for gm in group.members:
+            if gm.student_id:
+                student_ids.add(gm.student_id)
+
+        student_notif = (
+            f"Khoa CNTT đã điều chuyển Giảng viên hướng dẫn đề tài '{topic.title}' "
+            f"từ Thầy/Cô {old_name} sang Thầy/Cô {new_name}.{reason_suffix}"
+        )
+        for sid in student_ids:
+            db.session.add(Notification(user_id=sid, content=student_notif))
+
+        # B. Gửi cho Giảng viên cũ
+        if old_id and old_id != new_m.id:
+            old_mentor_notif = (
+                f"Khoa CNTT đã điều chuyển đề tài '{topic.title}' từ bạn sang Thầy/Cô {new_name}.{reason_suffix}"
+            )
+            db.session.add(Notification(user_id=old_id, content=old_mentor_notif))
+
+        # C. Gửi cho Giảng viên mới
+        new_mentor_notif = (
+            f"Khoa CNTT đã phân công bạn làm Giảng viên hướng dẫn đề tài '{topic.title}' "
+            f"(điều chuyển từ Thầy/Cô {old_name}).{reason_suffix}"
+        )
+        db.session.add(Notification(user_id=new_m.id, content=new_mentor_notif))
+
+        # 2. Tạo tin nhắn nhóm chat tự động kết nối sinh viên và giảng viên mới
+        welcome_chat = Message(
+            sender_id=session.get('user_id', new_m.id),
+            group_id=group.id,
+            content=(
+                f"📢 [Thông báo hệ thống] Khoa đã điều chuyển Giảng viên hướng dẫn của nhóm từ "
+                f"Thầy/Cô {old_name} sang Thầy/Cô {new_name}. "
+                f"Nhóm chat đã sẵn sàng để Thầy/Cô và các bạn sinh viên bắt đầu trao đổi!"
+            ),
+            message_type='text',
+            timestamp=datetime.utcnow()
+        )
+        db.session.add(welcome_chat)
+
+        released = _release_group_slots(group.id, old_id) if (group.id and old_id) else 0
         db.session.commit()
     except Exception as e:
         db.session.rollback()
         return _err(str(e), 500)
 
+    # Gửi email thông báo không block request
     emit('mentor_reassigned', topic_id=topic.id, old_mentor_id=old_id,
-         new_mentor_id=new_m.id, reason=reason, released_slots=released)
-    return jsonify({'message': 'Đã chuyển giảng viên hướng dẫn', 'topic_id': topic.id,
-                    'mentor_id': new_m.id, 'status': topic.status,
-                    'released_slots': released}), 200
+         new_mentor_id=new_m.id, reason=reason, released_slots=released, inapp=False)
+    return jsonify({
+        'message': f'Đã điều chuyển đề tài sang Thầy/Cô {new_name} và cập nhật nhóm chat thành công!',
+        'topic_id': topic.id,
+        'mentor_id': new_m.id,
+        'mentor_name': new_name,
+        'status': topic.status,
+        'released_slots': released
+    }), 200

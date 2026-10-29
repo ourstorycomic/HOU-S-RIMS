@@ -24,7 +24,7 @@
                         </span>
                         {% endif %}
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg p-0 mt-3" style="width: 320px; border-radius: 12px; overflow: hidden;">
+                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg p-0 mt-3" style="width: 380px; max-width: 92vw; border-radius: 16px; overflow: hidden;">
                         <li class="p-3 bg-white border-bottom d-flex justify-content-between align-items-center">
                             <h6 class="fw-bold mb-0 text-dark">Thông báo</h6>
                             <a href="javascript:void(0)" class="small text-primary fw-bold text-decoration-none" onclick="event.preventDefault(); window.showAllNotifications()">Xem tất cả</a>
@@ -141,9 +141,9 @@
                         <div class="col-md-12"><label class="form-label">Loại hình</label><select id="createBatchType" class="form-select"><option value="NCKH Standard" selected>Nghiên cứu khoa học (Chuẩn)</option><option value="Khởi nghiệp sáng tạo">Khởi nghiệp sáng tạo</option></select></div>
                     </div>
                     <div class="row g-3 mb-3">
-                        <div class="col-md-4"><label class="form-label">Ngày bắt đầu</label><input type="date" id="createBatchStart" class="form-control"></div>
-                        <div class="col-md-4"><label class="form-label">Hạn nộp đề tài</label><input type="date" id="createBatchSubmitDeadline" class="form-control"></div>
-                        <div class="col-md-4"><label class="form-label">Ngày kết thúc</label><input type="date" id="createBatchEnd" class="form-control"></div>
+                        <div class="col-md-6"><label class="form-label fw-semibold"><i class="fa-regular fa-calendar-plus me-1 text-primary"></i> Ngày bắt đầu</label><input type="date" id="createBatchStart" class="form-control"></div>
+                        <div class="col-md-6"><label class="form-label fw-semibold"><i class="fa-regular fa-calendar-check me-1 text-success"></i> Ngày kết thúc</label><input type="date" id="createBatchEnd" class="form-control"></div>
+                        <input type="hidden" id="createBatchSubmitDeadline">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Mô tả chi tiết / Ghi chú</label>
@@ -175,9 +175,9 @@
                         <div class="col-md-4"><label class="form-label">Trạng thái</label><select id="editBatchStatus" class="form-select"><option value="active">Hoạt động</option><option value="completed">Đã kết thúc</option></select></div>
                     </div>
                     <div class="row g-3 mb-3">
-                        <div class="col-md-4"><label class="form-label">Ngày bắt đầu</label><input type="date" id="editBatchStart" class="form-control"></div>
-                        <div class="col-md-4"><label class="form-label">Hạn nộp đề tài</label><input type="date" id="editBatchSubmitDeadline" class="form-control"></div>
-                        <div class="col-md-4"><label class="form-label">Ngày kết thúc</label><input type="date" id="editBatchEnd" class="form-control"></div>
+                        <div class="col-md-6"><label class="form-label fw-semibold"><i class="fa-regular fa-calendar-plus me-1 text-primary"></i> Ngày bắt đầu</label><input type="date" id="editBatchStart" class="form-control"></div>
+                        <div class="col-md-6"><label class="form-label fw-semibold"><i class="fa-regular fa-calendar-check me-1 text-success"></i> Ngày kết thúc</label><input type="date" id="editBatchEnd" class="form-control"></div>
+                        <input type="hidden" id="editBatchSubmitDeadline">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Mô tả chi tiết / Ghi chú</label>

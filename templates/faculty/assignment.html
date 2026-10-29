@@ -185,7 +185,7 @@
     if (approved) warn.push('Đề tài đã được phê duyệt chính thức.');
     const c = await Swal.fire({
       title: `Chuyển cho ${selectedMentor.full_name}?`,
-      html: (warn.length ? warn.map(esc).join('<br>') + '<br><br>' : '') + 'Hệ thống sẽ gửi email thông báo cho GV cũ, GV mới và nhóm sinh viên.',
+      html: (warn.length ? warn.map(esc).join('<br>') + '<br><br>' : '') + 'Hệ thống sẽ gửi thông báo đến Sinh viên, Giảng viên cũ và Giảng viên mới, đồng thời tự động cập nhật nhóm chat.',
       icon: warn.length ? 'warning' : 'question', showCancelButton: true,
       confirmButtonText: 'Chuyển', cancelButtonText: 'Hủy'
     });

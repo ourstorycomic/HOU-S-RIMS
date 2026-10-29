@@ -5,157 +5,398 @@
     <div class="d-flex gap-4 align-items-start">
         <div style="flex: 1; min-width: 0;">
             <div class="card border-0 shadow-sm rounded-4 p-4">
-                            <div class="d-flex justify-content-between align-items-center mb-4">
-                                <h6 class="fw-bold text-primary"><i class="fa-solid fa-gavel me-2"></i> HỘI ĐỒNG PHÊ DUYỆT TM</h6>
-                                <button class="btn btn-light btn-sm rounded-circle shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAddCouncil"><i class="fa-solid fa-plus"></i></button>
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h5 class="fw-bold text-primary mb-1"><i class="fa-solid fa-gavel me-2"></i> QUẢN LÝ HỘI ĐỒNG ĐÁNH GIÁ & NGHIỆM THU</h5>
+                        <small class="text-muted">Thành lập hội đồng, gom nhóm theo lĩnh vực, chấm điểm và upload biên bản scan</small>
+                    </div>
+                    <button class="btn btn-primary fw-bold rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAddCouncil">
+                        <i class="fa-solid fa-plus me-2"></i> THÀNH LẬP HỘI ĐỒNG
+                    </button>
+                </div>
+                
+                {% if councils %}
+                    {% for c in councils %}
+                    <div class="card border shadow-sm mb-4 rounded-4 overflow-hidden">
+                        <div class="p-3 bg-white d-flex justify-content-between align-items-center border-bottom" data-bs-toggle="collapse" href="#councilCollapse{{ c.id }}" role="button" style="cursor: pointer;">
+                            <div>
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold px-3 py-1">HỘI ĐỒNG #{{ c.id }}</span>
+                                    <h6 class="fw-bold mb-0 text-dark">{{ c.name }}</h6>
+                                </div>
+                                <small class="text-muted">
+                                    <i class="fa-regular fa-calendar me-1"></i> Ngày họp: <strong>{{ c.meeting_date.strftime('%d/%m/%Y') if c.meeting_date else '---' }}</strong> 
+                                    {% if c.meeting_time %}| Lúc {{ c.meeting_time.strftime('%H:%M') }}{% endif %}
+                                    {% if c.location %}| <i class="fa-solid fa-location-dot me-1"></i> {{ c.location }}{% endif %}
+                                </small>
                             </div>
-                            
-                            {% if councils %}
-                                {% for c in councils %}
-                                <div class="card border shadow-sm mb-3 rounded-3 overflow-hidden">
-                                    <div class="p-3 d-flex justify-content-between align-items-center bg-white" data-bs-toggle="collapse" href="#councilCollapse{{ c.id }}" role="button" style="cursor: pointer;">
-                                        <div>
-                                            <div class="fw-bold">{{ c.name }}</div>
-                                            <small class="text-muted">Ngày thành lập: {{ c.established_date.strftime('%d/%m/%Y') }}</small>
+                            <div class="d-flex align-items-center gap-2">
+                                <button class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold" onclick="event.stopPropagation(); openUploadMinutesModal({{ c.id }}, '{{ c.name }}', '{{ c.minute_file_url or '' }}');" title="Upload Biên bản cứng">
+                                    <i class="fa-solid fa-file-arrow-up me-1"></i> {% if c.minute_file_url %}Biên bản cứng (Đã có){% else %}Upload Biên bản scan{% endif %}
+                                </button>
+                                <button class="btn btn-sm btn-outline-primary rounded-circle border-0" onclick="event.stopPropagation(); editCouncil({{ c.id }});" title="Sửa"><i class="fa-solid fa-pen"></i></button>
+                                <button class="btn btn-sm btn-outline-danger rounded-circle border-0 ms-1" onclick="event.stopPropagation(); deleteCouncil({{ c.id }});" title="Xóa"><i class="fa-solid fa-trash"></i></button>
+                                <i class="fa-solid fa-chevron-down text-muted ms-2"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="collapse show" id="councilCollapse{{ c.id }}">
+                            <div class="card-body bg-light-subtle p-4">
+                                <div class="row g-4">
+                                    <!-- Cột 1: Thông tin & Thành viên -->
+                                    <div class="col-lg-5">
+                                        <div class="bg-white p-3 rounded-4 shadow-xs border mb-3">
+                                            <div class="small fw-bold text-muted text-uppercase mb-2"><i class="fa-solid fa-circle-info text-primary me-1"></i> Thông tin cuộc họp</div>
+                                            <div class="small mb-1"><i class="fa-regular fa-clock me-2 text-muted"></i>{{ c.meeting_time.strftime('%H:%M') if c.meeting_time else '--:--' }} | {{ c.meeting_date.strftime('%d/%m/%Y') if c.meeting_date else '--/--/----' }}</div>
+                                            <div class="small mb-1"><i class="fa-solid fa-location-dot me-2 text-muted"></i>{{ c.location or 'Chưa xác định' }}</div>
+                                            <div class="small mb-2"><i class="fa-solid fa-hashtag me-2 text-muted"></i>Số QĐ: <strong>{{ c.decision_number or 'Chưa cập nhật' }}</strong></div>
+                                            
+                                            <!-- BIÊN BẢN CỨNG SCAN -->
+                                            <div class="pt-2 border-top">
+                                                <div class="small fw-bold text-muted mb-1"><i class="fa-solid fa-file-shield text-success me-1"></i> Biên bản nghiệm thu cứng:</div>
+                                                {% if c.minute_file_url %}
+                                                    <div class="d-flex align-items-center justify-content-between bg-success-subtle border border-success-subtle p-2 rounded-3">
+                                                        <span class="small text-success fw-bold text-truncate me-2"><i class="fa-solid fa-check-circle me-1"></i> Đã nộp file scan biên bản</span>
+                                                        <a href="{{ url_for('static', filename=c.minute_file_url) }}" target="_blank" class="btn btn-xs btn-success rounded-pill px-2 py-1 fw-bold text-white text-decoration-none">
+                                                            <i class="fa-solid fa-eye me-1"></i> Xem file
+                                                        </a>
+                                                    </div>
+                                                {% else %}
+                                                    <div class="d-flex align-items-center justify-content-between bg-warning-subtle border border-warning-subtle p-2 rounded-3">
+                                                        <span class="small text-warning-emphasis fw-semibold"><i class="fa-solid fa-triangle-exclamation me-1"></i> Chưa upload bản cứng scan</span>
+                                                        <button class="btn btn-xs btn-warning rounded-pill px-2 py-1 fw-bold" onclick="openUploadMinutesModal({{ c.id }}, '{{ c.name }}', '');">
+                                                            <i class="fa-solid fa-upload me-1"></i> Tải lên
+                                                        </button>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
                                         </div>
-                                        <div class="d-flex align-items-center gap-3">
-                                            <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); editCouncil({{ c.id }});" title="Sửa"><i class="fa-solid fa-pen"></i></button>
-                                            <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); deleteCouncil({{ c.id }});" title="Xóa"><i class="fa-solid fa-trash"></i></button>
-                                            <i class="fa-solid fa-chevron-right text-muted rotate-icon ms-2"></i>
+
+                                        <div class="bg-white p-3 rounded-4 shadow-xs border">
+                                            <div class="small fw-bold text-muted text-uppercase mb-2"><i class="fa-solid fa-users text-primary me-1"></i> Thành phần Hội đồng ({{ c.members|length }})</div>
+                                            <ul class="list-group list-group-flush small">
+                                                {% if c.members %}
+                                                    {% for m in c.members %}
+                                                    <li class="list-group-item bg-transparent px-0 py-2 d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <span class="badge {% if m.role == 'president' %}bg-danger{% elif m.role == 'secretary' %}bg-warning text-dark{% else %}bg-primary{% endif %} me-2">
+                                                                {% if m.role == 'president' %}Chủ tịch{% elif m.role == 'secretary' %}Thư ký{% else %}Ủy viên{% endif %}
+                                                            </span>
+                                                            <span class="fw-semibold text-dark">{{ m.mentor.full_name if m.mentor else 'N/A' }}</span>
+                                                        </div>
+                                                        <small class="text-muted">{{ m.mentor.email if m.mentor else '' }}</small>
+                                                    </li>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <li class="list-group-item bg-transparent text-muted py-2">Chưa cập nhật thành viên</li>
+                                                {% endif %}
+                                            </ul>
                                         </div>
                                     </div>
-                                    <div class="collapse" id="councilCollapse{{ c.id }}">
-                                        <div class="card-body bg-light border-top p-3">
-                                            <div class="row g-3">
-                                                <div class="col-md-6">
-                                                    <div class="small fw-bold text-muted mb-2">THÔNG TIN HỌP:</div>
-                                                    <div class="small mb-1"><i class="fa-regular fa-clock me-2"></i>{{ c.meeting_time.strftime('%H:%M') if c.meeting_time else '--:--' }} | {{ c.meeting_date.strftime('%d/%m/%Y') if c.meeting_date else '--/--/----' }}</div>
-                                                    <div class="small mb-1"><i class="fa-solid fa-location-dot me-2"></i>{{ c.location or 'Chưa xác định' }}</div>
-                                                    <div class="small mb-2"><i class="fa-solid fa-hashtag me-2"></i>QĐ: {{ c.decision_number or 'Chưa có' }}</div>
-                                                    
-                                                    <div class="small fw-bold text-muted mt-3 mb-2">DANH SÁCH THÀNH VIÊN:</div>
-                                                    <ul class="list-group small">
-                                                        {% if c.members %}
-                                                            {% for m in c.members %}
-                                                            <li class="list-group-item bg-transparent border-0 py-1 ps-0 text-dark">
-                                                                <span class="badge bg-secondary me-2">{% if m.role == 'president' %}Chủ tịch{% elif m.role == 'secretary' %}Thư ký{% else %}Ủy viên{% endif %}</span> 
-                                                                {{ m.mentor.full_name if m.mentor else 'N/A' }}
-                                                            </li>
-                                                            {% endfor %}
-                                                        {% else %}
-                                                            <li class="list-group-item bg-transparent border-0 py-1 ps-0 text-muted">Chưa cập nhật thành viên</li>
-                                                        {% endif %}
-                                                    </ul>
-                                                </div>
-                                                <div class="col-md-6 border-start">
-                                                    <div class="small fw-bold text-muted mb-2">ĐỀ TÀI / NHÓM BÁO CÁO:</div>
-                                                    <ul class="list-group small">
-                                                        {% if c.topics %}
-                                                            {% for t in c.topics %}
-                                                            <li class="list-group-item bg-transparent border-0 py-1 ps-0 text-dark">
-                                                                <i class="fa-solid fa-caret-right me-1 text-primary"></i> <strong>{{ t.title }}</strong>
-                                                                {% if t.presentation_time %}
-                                                                <span class="badge bg-light text-dark border ms-2"><i class="fa-regular fa-clock text-primary"></i> {{ t.presentation_time }}</span>
-                                                                {% endif %}
-                                                                <br>
-                                                                <span class="text-muted ms-3">Nhóm: {{ t.group.name if t.group else 'N/A' }}</span>
-                                                            </li>
-                                                            {% endfor %}
-                                                        {% else %}
-                                                            <li class="list-group-item bg-transparent border-0 py-1 ps-0 text-muted">Chưa phân công đề tài.</li>
-                                                        {% endif %}
-                                                    </ul>
-                                                </div>
+
+                                    <!-- Cột 2: Đề tài báo cáo & Kết quả Đạt / Không đạt -->
+                                    <div class="col-lg-7">
+                                        <div class="bg-white p-3 rounded-4 shadow-xs border h-100">
+                                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                                <div class="small fw-bold text-muted text-uppercase"><i class="fa-solid fa-list-check text-primary me-1"></i> Đề tài & Kết quả Đánh giá ({{ c.topics|length }})</div>
                                             </div>
+
+                                            {% if c.topics %}
+                                                <div class="space-y-3">
+                                                    {% for t in c.topics %}
+                                                    <div class="border rounded-3 p-3 mb-2 bg-light">
+                                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                                            <div class="flex-grow-1 me-2">
+                                                                <div class="d-flex align-items-center gap-2 mb-1">
+                                                                    {% if t.field %}
+                                                                    <span class="badge bg-secondary-subtle text-secondary border fw-semibold" style="font-size: 11px;">
+                                                                        <i class="fa-solid fa-shapes me-1"></i>{{ t.field }}
+                                                                    </span>
+                                                                    {% endif %}
+                                                                    {% if t.presentation_time %}
+                                                                    <span class="badge bg-white text-dark border">
+                                                                        <i class="fa-regular fa-clock text-primary me-1"></i>{{ t.presentation_time }}
+                                                                    </span>
+                                                                    {% endif %}
+                                                                </div>
+                                                                <h6 class="fw-bold text-dark mb-1">{{ t.title }}</h6>
+                                                                <small class="text-muted">Nhóm SV: <strong>{{ t.group.name if t.group else 'Chưa gán nhóm' }}</strong></small>
+                                                            </div>
+                                                            <!-- Trạng thái Đạt / Không đạt -->
+                                                            <div class="text-end shrink-0">
+                                                                {% if t.defense_status == 'passed' %}
+                                                                    <span class="badge bg-success text-white px-3 py-1.5 fw-bold rounded-pill">
+                                                                        <i class="fa-solid fa-check me-1"></i> ĐẠT
+                                                                    </span>
+                                                                    <div class="small text-success fw-bold mt-1">Điểm: {{ t.defense_score or 'N/A' }}</div>
+                                                                {% elif t.defense_status == 'failed' %}
+                                                                    <span class="badge bg-danger text-white px-3 py-1.5 fw-bold rounded-pill">
+                                                                        <i class="fa-solid fa-xmark me-1"></i> KHÔNG ĐẠT
+                                                                    </span>
+                                                                    <div class="small text-danger fw-bold mt-1">Điểm: {{ t.defense_score or 'N/A' }}</div>
+                                                                {% else %}
+                                                                    <span class="badge bg-warning text-dark px-3 py-1.5 fw-bold rounded-pill">
+                                                                        <i class="fa-solid fa-hourglass-half me-1"></i> ĐANG CHỜ KẾT QUẢ
+                                                                    </span>
+                                                                {% endif %}
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="d-flex justify-content-end align-items-center gap-2 pt-2 border-top">
+                                                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold" onclick="openUpdateTopicResultModal({{ c.id }}, {{ t.id }}, '{{ t.title|replace('\'', '\\\'') }}', '{{ t.defense_status or 'pending' }}', '{{ t.defense_score or '' }}')">
+                                                                <i class="fa-solid fa-stamp me-1"></i> Cập nhật kết luận Đạt/Không đạt
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                            {% else %}
+                                                <div class="text-center text-muted py-4">Chưa phân công đề tài/nhóm nào vào hội đồng này.</div>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>
-                                {% endfor %}
-                            {% else %}
-                                <div class="text-center text-muted p-4">Chưa có hội đồng nào được thành lập.</div>
-                            {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-muted p-5">
+                        <i class="fa-solid fa-gavel fa-3x text-muted opacity-25 mb-3"></i>
+                        <p>Chưa có hội đồng nào được thành lập cho đợt này.</p>
+                    </div>
+                {% endif %}
             </div>
         </div>
-        <div style="width: 360px; flex-shrink: 0; position: sticky; top: 20px; align-self: flex-start;">
-            <div class="card border-0 shadow-sm rounded-4 p-4">
-                <h6 class="fw-bold text-success mb-4"><i class="fa-solid fa-certificate me-2"></i> HỘI ĐỒNG NGHIỆM THU</h6>
-                <div class="d-flex flex-column align-items-center justify-content-center text-muted border border-dashed rounded-3 p-4">
-                    <i class="fa-solid fa-layer-group fa-2x mb-3 text-muted opacity-50"></i>
-                    <div class="fw-bold small">CHƯА CÓ HỘI ĐỒNG</div>
-                    <button class="btn btn-success btn-sm mt-3 rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#modalAddCouncil">Thiết lập ngay</button>
+        
+        <!-- SIDEBAR PHẢI: QUY TRÌNH HỘI ĐỒNG -->
+        <div style="width: 340px; flex-shrink: 0; position: sticky; top: 20px; align-self: flex-start;">
+            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-list-check me-2"></i> QUY TRÌNH HỘI ĐỒNG NCKH</h6>
+                <div class="space-y-3 small">
+                    <div class="d-flex gap-2">
+                        <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">1</div>
+                        <div><strong>Gom nhóm theo lĩnh vực:</strong> Phân loại đề tài theo chuyên ngành và gán vào Hội đồng tương ứng.</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">2</div>
+                        <div><strong>Chấm điểm độc lập:</strong> Các thành viên HĐ đăng nhập vào tài khoản giảng viên để chấm theo Rubric.</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">3</div>
+                        <div><strong>Cập nhật Đạt/Không đạt:</strong> Thư ký/Chủ tịch công bố trạng thái đạt yêu cầu và điểm số chính thức.</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">4</div>
+                        <div><strong>Upload Biên bản cứng:</strong> Tải file scan biên bản có chữ ký các thành viên lưu trữ hồ sơ.</div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
-    <div class="modal fade" id="modalAddCouncil" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content border-0 shadow-lg rounded-4">
-                <div class="modal-header bg-success text-white"><h5 class="modal-title fw-bold">Thành lập Hội đồng Mới</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
-                <div class="modal-body p-4">
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-8"><label class="form-label">Tên Hội đồng</label><input type="text" id="councilName" class="form-control" placeholder="HĐ Phê duyệt đề cương..."></div>
-                        <div class="col-md-4"><label class="form-label">Số Quyết định</label><input type="text" id="councilDecision" class="form-control" placeholder="Số: .../QĐ-CNTT"></div>
+
+<!-- ======================================================= -->
+<!-- MODAL THÀNH LẬP / CẬP NHẬT HỘI ĐỒNG (GOM NHÓM THEO LĨNH VỰC) -->
+<!-- ======================================================= -->
+<div class="modal fade" id="modalAddCouncil" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold" id="modalCouncilTitle"><i class="fa-solid fa-gavel me-2"></i> Thành lập Hội đồng Mới</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-8">
+                        <label class="form-label fw-semibold">Tên Hội đồng</label>
+                        <input type="text" id="councilName" class="form-control" placeholder="VD: Hội đồng Nghiệm thu NCKH - Tiểu ban AI & Data">
                     </div>
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-4"><label class="form-label">Ngày họp</label><input type="date" id="councilDate" class="form-control" 
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Số Quyết định thành lập</label>
+                        <input type="text" id="councilDecision" class="form-control" placeholder="VD: 125/QĐ-CNTT">
+                    </div>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Ngày họp</label>
+                        <input type="date" id="councilDate" class="form-control" 
                             min="{{ active_batch.start_date.strftime('%Y-%m-%d') if active_batch and active_batch.start_date else '' }}"
                             max="{{ active_batch.end_date.strftime('%Y-%m-%d') if active_batch and active_batch.end_date else '' }}">
-                            <small class="text-muted" style="font-size: 10px;">Ngày báo cáo phải nằm trong khoảng diễn ra sự kiện</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Giờ bắt đầu</label>
+                        <input type="time" id="councilTime" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Địa điểm phòng họp</label>
+                        <input type="text" id="councilLocation" class="form-control" placeholder="VD: Phòng Hội thảo A2 - Tầng 3">
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <!-- GOM NHÓM THEO LĨNH VỰC -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h6 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-layer-group me-2"></i> GOM NHÓM BÁO CÁO THEO LĨNH VỰC</h6>
+                        <small class="text-muted">Chọn các nhóm đề tài theo chuyên ngành và phân khung giờ báo cáo</small>
+                    </div>
+                    <!-- Bộ lọc lĩnh vực nhanh -->
+                    <div class="d-flex gap-1" id="fieldFilterTabs">
+                        <button type="button" class="btn btn-sm btn-primary active px-3 rounded-pill filter-field-btn" data-field="all">Tất cả lĩnh vực</button>
+                    </div>
+                </div>
+
+                <div class="bg-light p-3 rounded-4 mb-3 border" style="max-height: 280px; overflow-y: auto;">
+                    <div class="row g-3" id="topicSelectionGrid">
+                        {% if not topics or topics|length == 0 %}
+                        <div class="col-12 text-center py-4">
+                            <i class="fa-solid fa-folder-open fs-2 text-muted mb-2 d-block"></i>
+                            <div class="fw-bold text-dark mb-1">Chưa có nhóm đề tài nào trong đợt này</div>
+                            <small class="text-muted">Bạn cần có ít nhất 1 nhóm đề tài để phân công vào Hội đồng nghiệm thu.</small>
                         </div>
-                        <div class="col-md-4"><label class="form-label">Giờ bắt đầu</label><input type="time" id="councilTime" class="form-control"></div>
-                        <div class="col-md-4"><label class="form-label">Địa điểm</label><input type="text" id="councilLocation" class="form-control" placeholder="Phòng họp..."></div>
-                    </div>
-                    
-                    <hr class="my-4">
-                    <h6 class="fw-bold mb-3 small text-muted">DANH SÁCH ĐỀ TÀI / NHÓM BÁO CÁO</h6>
-                    <div class="mb-3">
-                        <label class="form-label">Chọn các nhóm sẽ báo cáo trước Hội đồng này</label>
-                        <select id="councilTopics" class="form-select" multiple style="height: 120px;">
-                            {% for t in topics %}
-                            <option value="{{ t.id }}">{{ t.title }} - Nhóm: {{ t.group.name if t.group else 'Chưa có nhóm' }}</option>
-                            {% endfor %}
-                        </select>
-                        <small class="text-muted">Nhấn giữ Ctrl để chọn nhiều nhóm.</small>
-                        <div id="topicTimesContainer" class="mt-3"></div>
-                    </div>
+                        {% else %}
+                        {% for t in topics %}
+                        <div class="col-md-6 topic-item-card" data-field="{{ t.field or 'Khác' }}">
+                            <div class="card border rounded-3 p-3 h-100 bg-white shadow-xs">
+                                <div class="form-check">
+                                    <input class="form-check-input council-topic-cb" type="checkbox" value="{{ t.id }}" id="cbTopic{{ t.id }}" onchange="handleTopicSelectChange({{ t.id }})">
+                                    <label class="form-check-label w-100" for="cbTopic{{ t.id }}" style="cursor: pointer;">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 10px;">{{ t.field or 'Chưa phân lĩnh vực' }}</span>
+                                            <small class="text-muted">Nhóm: <strong>{{ t.group.name if t.group else 'Chưa có' }}</strong></small>
+                                        </div>
+                                        <div class="fw-bold text-dark text-truncate-2" style="font-size: 13px;">{{ t.title }}</div>
+                                        <div class="text-muted mt-1" style="font-size: 11px;">
+                                            <i class="fa-solid fa-user-tie me-1 text-primary"></i>GVHD: <strong>{{ t.mentor.full_name if t.mentor else 'Chưa có' }}</strong>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="mt-2 pt-2 border-top topic-time-row" id="timeRow{{ t.id }}" style="display: none;">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <small class="text-muted fw-semibold">Giờ báo cáo:</small>
+                                        <input type="time" class="form-control form-control-sm topic-time-input" data-topic-id="{{ t.id }}" placeholder="--:--">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% endif %}                    </div>
+                </div>
 
-                    <hr class="my-4">
-                    <h6 class="fw-bold mb-3 small text-muted">THÀNH PHẦN HỘI ĐỒNG</h6>
-                    
-                    <!-- Hidden inputs to store selected member IDs -->
-                    <input type="hidden" id="councilPresident">
-                    <input type="hidden" id="councilSecretary">
-                    <input type="hidden" id="councilMembers">
+                <hr class="my-4">
+                <h6 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-user-tie me-2"></i> THÀNH PHẦN HỘI ĐỒNG (THÊM GIẢNG VIÊN)</h6>
+                
+                <input type="hidden" id="councilPresident">
+                <input type="hidden" id="councilSecretary">
+                <input type="hidden" id="councilMembers">
 
-                    {% set role_configs = [
-                        ('president', 'Chủ tịch Hội đồng', 'bg-danger'),
-                        ('secretary', 'Thư ký', 'bg-warning text-dark'),
-                        ('member', 'Ủy viên', 'bg-primary')
-                    ] %}
+                {% set role_configs = [
+                    ('president', 'Chủ tịch Hội đồng', 'bg-danger'),
+                    ('secretary', 'Thư ký Hội đồng', 'bg-warning text-dark'),
+                    ('member', 'Ủy viên Hội đồng', 'bg-primary')
+                ] %}
 
+                <div class="row g-3">
                     {% for role_id, role_label, badge_class in role_configs %}
-                    <div class="mb-2" id="section-{{ role_id }}">
-                        <label class="form-label fw-semibold mb-1" style="font-size:13px;">{{ role_label }}</label>
-                        <select class="form-select form-select-sm mb-1" id="picker-{{ role_id }}" onchange="addCouncilMember('{{ role_id }}', '{{ badge_class }}')">
-                            <option value="">-- Chọn giảng viên để thêm --</option>
-                            {% for m in mentors %}
-                            <option value="{{ m.id }}" data-name="{{ m.full_name }}">{{ m.full_name }}</option>
-                            {% endfor %}
-                        </select>
-                        <div id="tags-{{ role_id }}" class="d-flex flex-wrap gap-1 min-height-tag">
-                            <!-- Tags will appear here -->
+                    <div class="col-md-4" id="section-{{ role_id }}">
+                        <div class="p-3 border rounded-4 bg-light h-100">
+                            <label class="form-label fw-bold mb-1" style="font-size:13px;">{{ role_label }}</label>
+                            <select class="form-select form-select-sm mb-2" id="picker-{{ role_id }}" onchange="addCouncilMember('{{ role_id }}', '{{ badge_class }}')">
+                                <option value="">-- Chọn giảng viên --</option>
+                                {% for m in mentors %}
+                                <option value="{{ m.id }}" data-name="{{ m.full_name }}">{{ m.full_name }} ({{ m.faculty or 'CNTT' }})</option>
+                                {% endfor %}
+                            </select>
+                            <div id="tags-{{ role_id }}" class="d-flex flex-wrap gap-1 min-height-tag"></div>
                         </div>
                     </div>
                     {% endfor %}
-                    <div class="mb-0"><label class="form-label">File Quyết định thành lập (PDF)</label><input type="file" id="councilFile" class="form-control" multiple accept=".pdf,.doc,.docx"></div>
                 </div>
-                <div class="modal-footer border-0 px-4 pb-4">
-                    <button class="btn btn-success w-100 fw-bold" onclick="createCouncil()">Xác nhận thành lập</button>
-                </div>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy bỏ</button>
+                <button type="button" class="btn btn-success fw-bold px-4" id="btnSubmitCouncil" onclick="createCouncil()">Xác nhận thành lập</button>
             </div>
         </div>
     </div>
+</div>
+
+<!-- ======================================================= -->
+<!-- MODAL CẬP NHẬT KẾT QUẢ ĐẠT / KHÔNG ĐẠT CỦA ĐỀ TÀI -->
+<!-- ======================================================= -->
+<div class="modal fade" id="modalTopicResult" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-stamp me-2"></i> Kết luận Nghiệm thu Đề tài</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="resCouncilId">
+                <input type="hidden" id="resTopicId">
+                <div class="mb-3">
+                    <label class="form-label text-muted small fw-bold">TÊN ĐỀ TÀI</label>
+                    <div class="p-2.5 bg-light rounded-3 fw-bold text-dark" id="resTopicTitle"></div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Kết luận của Hội đồng</label>
+                    <select class="form-select" id="resDefenseStatus">
+                        <option value="passed">ĐẠT (Nghiệm thu thành công)</option>
+                        <option value="failed">KHÔNG ĐẠT (Yêu cầu chỉnh sửa / Không đạt)</option>
+                        <option value="pending">ĐANG CHỜ ĐÁNH GIÁ</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Điểm tổng kết Hội đồng (Thang 10)</label>
+                    <input type="number" step="0.1" min="0" max="10" class="form-control" id="resDefenseScore" placeholder="VD: 8.5">
+                </div>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button class="btn btn-light fw-bold" data-bs-dismiss="modal">Đóng</button>
+                <button class="btn btn-primary fw-bold px-4" onclick="submitTopicResult()">Lưu kết quả</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================= -->
+<!-- MODAL UPLOAD BIÊN BẢN CỨNG SCAN (PDF/JPG) CHO HỘI ĐỒNG -->
+<!-- ======================================================= -->
+<div class="modal fade" id="modalUploadMinutes" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-file-arrow-up me-2"></i> Tải lên Biên bản Scan Hội đồng</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="uploadMinutesCouncilId">
+                <div class="mb-3">
+                    <label class="form-label text-muted small fw-bold">HỘI ĐỒNG</label>
+                    <div class="p-2.5 bg-light rounded-3 fw-bold text-dark" id="uploadMinutesCouncilName"></div>
+                </div>
+                <div id="currentMinutesAlert" class="mb-3" style="display: none;">
+                    <div class="alert alert-success d-flex justify-content-between align-items-center mb-0 py-2">
+                        <span class="small fw-semibold"><i class="fa-solid fa-check-circle me-1"></i> Đã có biên bản lưu trữ</span>
+                        <a id="currentMinutesLink" href="#" target="_blank" class="btn btn-xs btn-outline-success fw-bold">Xem file</a>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Chọn file scan biên bản cứng (PDF, JPG, PNG)</label>
+                    <input type="file" class="form-control" id="minutesFileInput" accept=".pdf,.jpg,.jpeg,.png">
+                    <small class="text-muted d-block mt-1">Đính kèm biên bản có đầy đủ chữ ký của Chủ tịch, Thư ký và các Ủy viên.</small>
+                </div>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy</button>
+                <button class="btn btn-success fw-bold px-4" id="btnDoUploadMinutes" onclick="doUploadMinutes()">Tải lên & Lưu</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
 .member-tag {
     display: inline-flex; align-items: center; gap: 6px;
@@ -179,6 +420,7 @@ window.COUNCILS_DATA = {};
             meeting_date: {{ (c.meeting_date|string if c.meeting_date else '')|tojson }},
             meeting_time: {{ (c.meeting_time|string)[:5]|tojson if c.meeting_time else '""' }},
             location: {{ (c.location or '')|tojson }},
+            minute_file_url: {{ (c.minute_file_url or '')|tojson }},
             president: [{% for m in c.members if m.role == 'president' %}{id: {{ m.mentor_id }}, name: {{ m.mentor.full_name|tojson }}},{% endfor %}],
             secretary: [{% for m in c.members if m.role == 'secretary' %}{id: {{ m.mentor_id }}, name: {{ m.mentor.full_name|tojson }}},{% endfor %}],
             member: [{% for m in c.members if m.role == 'member' %}{id: {{ m.mentor_id }}, name: {{ m.mentor.full_name|tojson }}},{% endfor %}],
@@ -196,15 +438,35 @@ function addCouncilMember(role, badgeClass) {
     const name = picker.options[picker.selectedIndex]?.dataset?.name;
     if (!val || !name) return;
     
-    // Prevent duplicates within same role
-    if (councilState[role].some(m => m.id === val)) {
-        showToast('Giảng viên này đã được thêm!');
+    // Check single President
+    if (role === 'president' && councilState.president.length >= 1) {
+        Swal.fire('Cảnh báo', 'Hội đồng chỉ có duy nhất 1 Chủ tịch! Vui lòng xóa Chủ tịch hiện tại trước khi chọn người khác.', 'warning');
+        picker.value = '';
+        return;
+    }
+    // Check single Secretary
+    if (role === 'secretary' && councilState.secretary.length >= 1) {
+        Swal.fire('Cảnh báo', 'Hội đồng chỉ có duy nhất 1 Thư ký! Vui lòng xóa Thư ký hiện tại trước khi chọn người khác.', 'warning');
+        picker.value = '';
+        return;
+    }
+
+    // Check duplicate across ALL roles in this council
+    const allAssigned = [
+        ...councilState.president.map(m => ({ ...m, roleName: 'Chủ tịch' })),
+        ...councilState.secretary.map(m => ({ ...m, roleName: 'Thư ký' })),
+        ...councilState.member.map(m => ({ ...m, roleName: 'Ủy viên' }))
+    ];
+    const existing = allAssigned.find(m => String(m.id) === String(val));
+    if (existing) {
+        Swal.fire('Cảnh báo', `Giảng viên "${name}" đã được phân công với vai trò ${existing.roleName}! Mỗi giảng viên chỉ đảm nhận một vai trò duy nhất trong Hội đồng.`, 'warning');
+        picker.value = '';
         return;
     }
     
     councilState[role].push({ id: val, name: name });
     renderTags(role, badgeClass);
-    picker.value = ''; // reset picker
+    picker.value = '';
 }
 
 function removeMemberTag(role, id, badgeClass) {
@@ -223,57 +485,126 @@ function renderTags(role, badgeClass) {
     `).join('');
 }
 
-let _councilSubmitting = false;
-
-// Topic times logic
-function renderTopicTimes() {
-    const select = document.getElementById('councilTopics');
-    const container = document.getElementById('topicTimesContainer');
-    if (!select || !container) return;
-    
-    // Preserve existing values
-    const existingTimes = {};
-    container.querySelectorAll('input').forEach(input => {
-        existingTimes[input.dataset.topicId] = input.value;
+// Gom nhóm theo lĩnh vực: khởi tạo filter tabs
+document.addEventListener('DOMContentLoaded', () => {
+    const cards = document.querySelectorAll('.topic-item-card');
+    const fields = new Set();
+    cards.forEach(c => {
+        const f = c.dataset.field;
+        if (f && f !== 'None') fields.add(f);
     });
     
-    container.innerHTML = '';
-    Array.from(select.selectedOptions).forEach(opt => {
-        const id = opt.value;
-        const text = opt.text;
-        const div = document.createElement('div');
-        div.className = 'd-flex align-items-center mb-2 small';
-        div.innerHTML = `
-            <div class="text-truncate flex-grow-1 fw-bold me-2" title="${text}">${text}</div>
-            <input type="time" class="form-control form-control-sm w-auto topic-time-input" data-topic-id="${id}" value="${existingTimes[id] || ''}">
-        `;
-        container.appendChild(div);
+    const filterContainer = document.getElementById('fieldFilterTabs');
+    if (filterContainer && fields.size > 0) {
+        fields.forEach(field => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-sm btn-outline-primary px-3 rounded-pill filter-field-btn';
+            btn.textContent = field;
+            btn.dataset.field = field;
+            btn.onclick = () => filterTopicsByField(field, btn);
+            filterContainer.appendChild(btn);
+        });
+    }
+});
+
+function filterTopicsByField(field, btnEl) {
+    document.querySelectorAll('.filter-field-btn').forEach(b => {
+        b.classList.remove('btn-primary', 'active');
+        b.classList.add('btn-outline-primary');
+    });
+    btnEl.classList.remove('btn-outline-primary');
+    btnEl.classList.add('btn-primary', 'active');
+
+    const cards = document.querySelectorAll('.topic-item-card');
+    cards.forEach(c => {
+        if (field === 'all' || c.dataset.field === field) {
+            c.style.display = 'block';
+        } else {
+            c.style.display = 'none';
+        }
     });
 }
-document.getElementById('councilTopics').addEventListener('change', renderTopicTimes);
+
+function handleTopicSelectChange(topicId) {
+    const cb = document.getElementById(`cbTopic${topicId}`);
+    const timeRow = document.getElementById(`timeRow${topicId}`);
+    if (timeRow) {
+        timeRow.style.display = cb.checked ? 'block' : 'none';
+    }
+}
+
+let _editingCouncilId = null;
+let _councilSubmitting = false;
 
 async function createCouncil() {
     if (_councilSubmitting) return;
     _councilSubmitting = true;
-    const btn = document.querySelector('#modalAddCouncil .btn-success');
+    const btn = document.getElementById('btnSubmitCouncil');
     if (btn) { btn.disabled = true; btn.textContent = 'Đang xử lý...'; }
-    const name = document.getElementById('councilName').value;
-    const decision_number = document.getElementById('councilDecision').value;
+
+    const name = document.getElementById('councilName').value.trim();
+    const decision_number = document.getElementById('councilDecision').value.trim();
     const meeting_date = document.getElementById('councilDate').value;
     const meeting_time = document.getElementById('councilTime').value;
-    const location = document.getElementById('councilLocation').value;
-    const topics = Array.from(document.getElementById('councilTopics').selectedOptions).map(o => {
-        const input = document.querySelector(`.topic-time-input[data-topic-id="${o.value}"]`);
-        return { id: parseInt(o.value), time: input ? input.value : '' };
+    const location = document.getElementById('councilLocation').value.trim();
+
+    if (!name) {
+        _councilSubmitting = false;
+        if (btn) { btn.disabled = false; btn.textContent = 'Xác nhận thành lập'; }
+        return Swal.fire('Thiếu thông tin', 'Vui lòng nhập Tên Hội đồng!', 'warning');
+    }
+
+    if (name.length < 5) {
+        _councilSubmitting = false;
+        if (btn) { btn.disabled = false; btn.textContent = 'Xác nhận thành lập'; }
+        return Swal.fire('Tên không hợp lệ', 'Tên Hội đồng phải có ít nhất 5 ký tự!', 'warning');
+    }
+
+    if (!meeting_date) {
+        _councilSubmitting = false;
+        if (btn) { btn.disabled = false; btn.textContent = 'Xác nhận thành lập'; }
+        return Swal.fire('Thiếu thông tin', 'Vui lòng chọn Ngày họp của Hội đồng!', 'warning');
+    }
+
+    const selectedTopics = [];
+    document.querySelectorAll('.council-topic-cb:checked').forEach(cb => {
+        const tid = parseInt(cb.value);
+        const timeInput = document.querySelector(`.topic-time-input[data-topic-id="${tid}"]`);
+        selectedTopics.push({
+            id: tid,
+            time: timeInput ? timeInput.value : ''
+        });
     });
+
+    if (selectedTopics.length === 0) {
+        _councilSubmitting = false;
+        if (btn) { btn.disabled = false; btn.textContent = 'Xác nhận thành lập'; }
+        return Swal.fire('Chưa chọn nhóm đề tài', 'Hội đồng nghiệm thu bắt buộc phải có ít nhất 1 nhóm đề tài để đánh giá! Vui lòng tích chọn nhóm đề tài trong danh sách bên trên.', 'warning');
+    }
 
     const president = councilState.president.map(m => m.id);
     const secretary = councilState.secretary.map(m => m.id);
     const members = councilState.member.map(m => m.id);
 
-    if (!name || !meeting_date) {
-        Swal.fire('Lỗi', 'Vui lòng nhập Tên Hội đồng và Ngày họp', 'error');
-        return;
+    if (president.length === 0) {
+        _councilSubmitting = false;
+        if (btn) { btn.disabled = false; btn.textContent = 'Xác nhận thành lập'; }
+        return Swal.fire('Thiếu thành phần', 'Vui lòng chỉ định Chủ tịch Hội đồng!', 'warning');
+    }
+
+    if (secretary.length === 0) {
+        _councilSubmitting = false;
+        if (btn) { btn.disabled = false; btn.textContent = 'Xác nhận thành lập'; }
+        return Swal.fire('Thiếu thành phần', 'Vui lòng chỉ định Thư ký Hội đồng!', 'warning');
+    }
+
+    // Check duplicate
+    const allMemberIds = [...president, ...secretary, ...members];
+    if (new Set(allMemberIds).size !== allMemberIds.length) {
+        _councilSubmitting = false;
+        if (btn) { btn.disabled = false; btn.textContent = 'Xác nhận thành lập'; }
+        return Swal.fire('Lỗi trùng lặp', 'Có giảng viên đang được gán nhiều vai trò trong cùng một hội đồng. Vui lòng kiểm tra lại!', 'warning');
     }
 
     try {
@@ -284,13 +615,13 @@ async function createCouncil() {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 name, decision_number, meeting_date, meeting_time, location,
-                president, secretary, members, topics,
+                president, secretary, members, topics: selectedTopics,
                 batch_id: {{ active_batch.id if active_batch else 'null' }}
             })
         });
         const data = await res.json();
         if (res.ok) {
-            Swal.fire('Thành công', 'Đã lập Hội đồng mới và gửi thông báo!', 'success').then(() => window.location.reload());
+            Swal.fire('Thành công', _editingCouncilId ? 'Đã cập nhật Hội đồng!' : 'Đã thành lập Hội đồng mới thành công!', 'success').then(() => location.reload());
         } else {
             _councilSubmitting = false;
             if (btn) { btn.disabled = false; btn.textContent = 'Xác nhận thành lập'; }
@@ -303,17 +634,57 @@ async function createCouncil() {
     }
 }
 
-// Append modal to body to prevent stacking context issues
-document.addEventListener('DOMContentLoaded', () => {
-    document.body.appendChild(document.getElementById('modalAddCouncil'));
-});
+function editCouncil(id) {
+    const data = window.COUNCILS_DATA[id];
+    if (!data) return;
+    _editingCouncilId = id;
+    
+    document.getElementById('modalCouncilTitle').innerHTML = '<i class="fa-solid fa-pen-to-square me-2"></i> Cập nhật Hội đồng';
+    document.getElementById('councilName').value = data.name;
+    document.getElementById('councilDecision').value = data.decision_number;
+    document.getElementById('councilDate').value = data.meeting_date;
+    document.getElementById('councilTime').value = data.meeting_time;
+    document.getElementById('councilLocation').value = data.location;
+    
+    // Check topics
+    document.querySelectorAll('.council-topic-cb').forEach(cb => {
+        const tid = parseInt(cb.value);
+        const matched = data.topics.find(t => t.id === tid);
+        cb.checked = !!matched;
+        handleTopicSelectChange(tid);
+        if (matched) {
+            const timeInput = document.querySelector(`.topic-time-input[data-topic-id="${tid}"]`);
+            if (timeInput) timeInput.value = matched.time || '';
+        }
+    });
 
-// Reset state when modal opens
-document.getElementById('modalAddCouncil').addEventListener('show.bs.modal', () => {
-    _councilSubmitting = false;
-    if (typeof _editingCouncilId !== 'undefined' && _editingCouncilId) return;
-    const btn = document.querySelector('#modalAddCouncil .btn-success');
-    if (btn) { btn.disabled = false; btn.textContent = 'Xác nhận thành lập'; }
+    councilState.president = data.president || [];
+    councilState.secretary = data.secretary || [];
+    councilState.member = data.member || [];
+    renderTags('president', 'bg-danger');
+    renderTags('secretary', 'bg-warning text-dark');
+    renderTags('member', 'bg-primary');
+
+    const btn = document.getElementById('btnSubmitCouncil');
+    if (btn) btn.textContent = 'Lưu thay đổi';
+
+    const modal = new bootstrap.Modal(document.getElementById('modalAddCouncil'));
+    modal.show();
+}
+
+document.getElementById('modalAddCouncil').addEventListener('hidden.bs.modal', () => {
+    _editingCouncilId = null;
+    document.getElementById('modalCouncilTitle').innerHTML = '<i class="fa-solid fa-gavel me-2"></i> Thành lập Hội đồng Mới';
+    document.getElementById('councilName').value = '';
+    document.getElementById('councilDecision').value = '';
+    document.getElementById('councilDate').value = '';
+    document.getElementById('councilTime').value = '';
+    document.getElementById('councilLocation').value = '';
+    
+    document.querySelectorAll('.council-topic-cb').forEach(cb => {
+        cb.checked = false;
+        handleTopicSelectChange(cb.value);
+    });
     councilState.president = [];
     councilState.secretary = [];
     councilState.member = [];
@@ -321,17 +692,18 @@ document.getElementById('modalAddCouncil').addEventListener('show.bs.modal', () 
         const tags = document.getElementById('tags-' + role);
         if (tags) tags.innerHTML = '';
     });
+    const btn = document.getElementById('btnSubmitCouncil');
+    if (btn) btn.textContent = 'Xác nhận thành lập';
 });
 
 async function deleteCouncil(id) {
     const result = await Swal.fire({
-        title: 'Xác nhận xóa?',
-        text: 'Hội đồng sẽ bị xóa và thành viên sẽ được thông báo.',
+        title: 'Xác nhận xóa Hội đồng?',
+        text: 'Hội đồng sẽ bị xóa và các đề tài sẽ được giải phóng.',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#dc3545',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Xóa',
+        confirmButtonText: 'Xóa ngay',
         cancelButtonText: 'Hủy'
     });
     if (!result.isConfirmed) return;
@@ -339,78 +711,105 @@ async function deleteCouncil(id) {
         const res = await fetch(`/api/councils/${id}`, { method: 'DELETE' });
         const data = await res.json();
         if (res.ok) {
-            Swal.fire('Thành công', 'Đã xóa hội đồng và thông báo cho thành viên.', 'success').then(() => window.location.reload());
+            Swal.fire('Đã xóa', 'Hội đồng đã được xóa.', 'success').then(() => location.reload());
         } else {
             Swal.fire('Lỗi', data.error || 'Có lỗi xảy ra', 'error');
         }
     } catch (e) {
-        Swal.fire('Lỗi', 'Lỗi kết nối', 'error');
+        Swal.fire('Lỗi', 'Lỗi kết nối máy chủ', 'error');
     }
 }
 
+// =======================================================
+// CẬP NHẬT KẾT QUẢ ĐẠT / KHÔNG ĐẠT CỦA ĐỀ TÀI
+// =======================================================
+function openUpdateTopicResultModal(councilId, topicId, topicTitle, curStatus, curScore) {
+    document.getElementById('resCouncilId').value = councilId;
+    document.getElementById('resTopicId').value = topicId;
+    document.getElementById('resTopicTitle').textContent = topicTitle;
+    document.getElementById('resDefenseStatus').value = curStatus || 'pending';
+    document.getElementById('resDefenseScore').value = curScore || '';
 
-let _editingCouncilId = null;
-
-function editCouncil(id) {
-    const data = window.COUNCILS_DATA[id];
-    if (!data) return;
-    
-    _editingCouncilId = id;
-    document.getElementById('councilName').value = data.name;
-    document.getElementById('councilDecision').value = data.decision_number;
-    document.getElementById('councilDate').value = data.meeting_date;
-    document.getElementById('councilTime').value = data.meeting_time;
-    document.getElementById('councilLocation').value = data.location;
-    
-    // Select topics
-    const topicsSelect = document.getElementById('councilTopics');
-    if (topicsSelect) {
-        Array.from(topicsSelect.options).forEach(opt => {
-            opt.selected = data.topics.some(t => t.id === parseInt(opt.value));
-        });
-        renderTopicTimes();
-        // Set times after render
-        data.topics.forEach(t => {
-            const input = document.querySelector(`.topic-time-input[data-topic-id="${t.id}"]`);
-            if (input) input.value = t.time;
-        });
-    }
-    
-    // Set members
-    councilState.president = data.president || [];
-    councilState.secretary = data.secretary || [];
-    councilState.member = data.member || [];
-    renderTags('president', 'bg-danger');
-    renderTags('secretary', 'bg-warning text-dark');
-    renderTags('member', 'bg-primary');
-    
-    // Update modal title and button
-    document.querySelector('#modalAddCouncil .modal-title').textContent = 'Cập nhật Hội đồng';
-    const btn = document.querySelector('#modalAddCouncil .btn-success');
-    if (btn) btn.textContent = 'Lưu thay đổi';
-    
-    const modal = new bootstrap.Modal(document.getElementById('modalAddCouncil'));
+    const modal = new bootstrap.Modal(document.getElementById('modalTopicResult'));
     modal.show();
 }
 
-// Intercept reset on modal close
-document.getElementById('modalAddCouncil').addEventListener('hidden.bs.modal', () => {
-    _editingCouncilId = null;
-    document.querySelector('#modalAddCouncil .modal-title').textContent = 'Thành lập Hội đồng Mới';
-    document.getElementById('councilName').value = '';
-    document.getElementById('councilDecision').value = '';
-    document.getElementById('councilDate').value = '';
-    document.getElementById('councilTime').value = '';
-    document.getElementById('councilLocation').value = '';
-    
-    councilState.president = [];
-    councilState.secretary = [];
-    councilState.member = [];
-    renderTags('president', 'bg-danger');
-    renderTags('secretary', 'bg-warning text-dark');
-    renderTags('member', 'bg-primary');
-});
+async function submitTopicResult() {
+    const councilId = document.getElementById('resCouncilId').value;
+    const topicId = document.getElementById('resTopicId').value;
+    const status = document.getElementById('resDefenseStatus').value;
+    const score = document.getElementById('resDefenseScore').value;
 
+    try {
+        const res = await fetch(`/api/councils/${councilId}/topics/${topicId}/result`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ defense_status: status, defense_score: score })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            Swal.fire('Thành công', data.message || 'Đã cập nhật kết quả đề tài!', 'success').then(() => location.reload());
+        } else {
+            Swal.fire('Lỗi', data.error || 'Có lỗi xảy ra', 'error');
+        }
+    } catch (e) {
+        Swal.fire('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
+    }
+}
 
+// =======================================================
+// UPLOAD BIÊN BẢN CỨNG SCAN (PDF/JPG)
+// =======================================================
+function openUploadMinutesModal(councilId, councilName, curFile) {
+    document.getElementById('uploadMinutesCouncilId').value = councilId;
+    document.getElementById('uploadMinutesCouncilName').textContent = councilName;
+    document.getElementById('minutesFileInput').value = '';
+
+    const alertEl = document.getElementById('currentMinutesAlert');
+    const linkEl = document.getElementById('currentMinutesLink');
+    if (curFile) {
+        alertEl.style.display = 'block';
+        linkEl.href = `/static/${curFile}`;
+    } else {
+        alertEl.style.display = 'none';
+    }
+
+    const modal = new bootstrap.Modal(document.getElementById('modalUploadMinutes'));
+    modal.show();
+}
+
+async function doUploadMinutes() {
+    const councilId = document.getElementById('uploadMinutesCouncilId').value;
+    const fileInput = document.getElementById('minutesFileInput');
+    if (!fileInput.files || fileInput.files.length === 0) {
+        return Swal.fire('Lỗi', 'Vui lòng chọn file scan biên bản (PDF/JPG/PNG)', 'warning');
+    }
+
+    const btn = document.getElementById('btnDoUploadMinutes');
+    btn.disabled = true;
+    btn.textContent = 'Đang tải lên...';
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    try {
+        const res = await fetch(`/api/councils/${councilId}/upload-minutes`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (res.ok) {
+            Swal.fire('Thành công', 'Đã tải lên biên bản scan cứng thành công!', 'success').then(() => location.reload());
+        } else {
+            btn.disabled = false;
+            btn.textContent = 'Tải lên & Lưu';
+            Swal.fire('Lỗi', data.error || 'Upload thất bại', 'error');
+        }
+    } catch (e) {
+        btn.disabled = false;
+        btn.textContent = 'Tải lên & Lưu';
+        Swal.fire('Lỗi', 'Không thể kết nối tới máy chủ', 'error');
+    }
+}
 </script>
 {% endblock %}

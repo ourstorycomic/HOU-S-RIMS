@@ -128,6 +128,9 @@ class Topic(db.Model):
     council_id = db.Column(db.Integer, db.ForeignKey('councils.id'), nullable=True)
     presentation_time = db.Column(db.String(20), nullable=True)
     status = db.Column(db.String(20), default='pending') # pending, faculty_pending, approved, rejected
+    field = db.Column(db.String(100), nullable=True) # Linh vuc NCKH
+    defense_status = db.Column(db.String(50), default='pending') # pending, passed, failed
+    defense_score = db.Column(db.Float, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
@@ -226,6 +229,8 @@ class Submission(db.Model):
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
     feedback = db.Column(db.Text, nullable=True)
     feedback_at = db.Column(db.DateTime, nullable=True)
+    feedback_file_url = db.Column(db.Text, nullable=True)
+    feedback_file_name = db.Column(db.String(255), nullable=True)
     
     # Khoa (Faculty) Approval fields
     faculty_status = db.Column(db.String(30), default='pending') # 'pending', 'approved', 'revision_required'
@@ -286,6 +291,8 @@ class Submission(db.Model):
             'feedback': self.feedback,
             'feedback_list': self.feedback_list,
             'feedback_at': self.feedback_at.strftime('%d/%m/%Y %H:%M') if self.feedback_at else None,
+            'feedback_file_url': self.feedback_file_url,
+            'feedback_file_name': self.feedback_file_name,
             'submitted_at': self.submitted_at.strftime('%d/%m/%Y %H:%M') if self.submitted_at else None,
             'faculty_status': self.faculty_status or 'pending',
             'faculty_feedback': self.faculty_feedback,
@@ -309,6 +316,7 @@ class Council(db.Model):
     meeting_time = db.Column(db.Time, nullable=True)
     location = db.Column(db.String(255), nullable=True)
     decision_file_url = db.Column(db.Text, nullable=True)
+    minute_file_url = db.Column(db.Text, nullable=True) # File scan bien ban cung (PDF/JPG)
     batch_id = db.Column(db.Integer, db.ForeignKey('batches.id'), nullable=False)
     established_date = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -336,9 +344,13 @@ class Evaluation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     council_id = db.Column(db.Integer, db.ForeignKey('councils.id'), nullable=False)
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=False)
+    evaluator_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     rubric_id = db.Column(db.Integer, db.ForeignKey('rubrics.id'), nullable=False)
     score = db.Column(db.Float, nullable=False)
+    criteria_scores = db.Column(db.Text, nullable=True) # JSON chi tiet diem tung tieu chi
     comments = db.Column(db.Text, nullable=True)
+    
+    evaluator = db.relationship('User', foreign_keys=[evaluator_id])
 
 class Milestone(db.Model):
     __tablename__ = 'milestones'

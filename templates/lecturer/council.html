@@ -3,23 +3,31 @@
 {% block lecturer_content %}
 <div id="view-l-council" class="fade-in">
     <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
-        <h5 class="fw-bold mb-3"><i class="fa-solid fa-gavel text-primary me-2"></i> Hội đồng Chấm thi của tôi</h5>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h5 class="fw-bold mb-1 text-primary"><i class="fa-solid fa-gavel me-2"></i> HỘI ĐỒNG ĐÁNH GIÁ CỦA TÔI</h5>
+                <small class="text-muted">Danh sách hội đồng được phân công và chấm điểm độc lập theo tiêu chuẩn Rubric</small>
+            </div>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill fw-bold">
+                <i class="fa-solid fa-user-check me-1"></i> Thành viên Hội đồng
+            </span>
+        </div>
 
         {% if my_councils %}
             <div class="row g-4">
             {% for c in my_councils %}
                 {% set my_role = c.members | selectattr('mentor_id', 'equalto', session.get('user_id', 0)) | map(attribute='role') | first | default('member') %}
-                <div class="col-md-6">
-                    <div class="card border shadow-sm rounded-4 h-100 p-4">
+                <div class="col-lg-6">
+                    <div class="card border shadow-sm rounded-4 h-100 p-4 bg-white d-flex flex-column">
                         <div class="d-flex justify-content-between align-items-start mb-3">
-                            <h6 class="fw-bold text-primary mb-0">{{ c.name }}</h6>
-                            <span class="badge {% if my_role == 'president' %}bg-danger{% elif my_role == 'secretary' %}bg-warning text-dark{% else %}bg-primary{% endif %}">
-                                {% if my_role == 'president' %}Chủ tịch{% elif my_role == 'secretary' %}Thư ký{% else %}Ủy viên{% endif %}
+                            <h6 class="fw-bold text-dark mb-0">{{ c.name }}</h6>
+                            <span class="badge {% if my_role == 'president' %}bg-danger{% elif my_role == 'secretary' %}bg-warning text-dark{% else %}bg-primary{% endif %} px-3 py-1.5 rounded-pill fw-bold">
+                                {% if my_role == 'president' %}Chủ tịch HĐ{% elif my_role == 'secretary' %}Thư ký HĐ{% else %}Ủy viên HĐ{% endif %}
                             </span>
                         </div>
 
                         <div class="small text-muted mb-1">
-                            <i class="fa-regular fa-calendar me-1"></i>
+                            <i class="fa-regular fa-calendar text-primary me-2"></i>
                             Ngày họp: <strong>{{ c.meeting_date.strftime('%d/%m/%Y') if c.meeting_date else '---' }}</strong>
                             {% if c.meeting_time %}
                                 lúc <strong>{{ c.meeting_time.strftime('%H:%M') }}</strong>
@@ -27,35 +35,63 @@
                         </div>
                         {% if c.location %}
                         <div class="small text-muted mb-1">
-                            <i class="fa-solid fa-location-dot me-1"></i> Địa điểm: <strong>{{ c.location }}</strong>
+                            <i class="fa-solid fa-location-dot text-danger me-2"></i> Địa điểm: <strong>{{ c.location }}</strong>
                         </div>
                         {% endif %}
                         {% if c.decision_number %}
                         <div class="small text-muted mb-2">
-                            <i class="fa-solid fa-file-lines me-1"></i> Số QĐ: <strong>{{ c.decision_number }}</strong>
+                            <i class="fa-solid fa-file-signature text-secondary me-2"></i> Số QĐ: <strong>{{ c.decision_number }}</strong>
                         </div>
                         {% endif %}
 
+                        <!-- Biên bản cứng -->
+                        <div class="small mb-3 pt-2 border-top">
+                            <i class="fa-solid fa-file-shield text-success me-1"></i> Biên bản scan cứng: 
+                            {% if c.minute_file_url %}
+                                <a href="{{ url_for('static', filename=c.minute_file_url) }}" target="_blank" class="fw-bold text-success text-decoration-none">
+                                    <i class="fa-solid fa-file-pdf me-1"></i> Xem biên bản đã nộp
+                                </a>
+                            {% else %}
+                                <span class="text-muted fst-italic">Chưa có biên bản scan</span>
+                            {% endif %}
+                        </div>
+
+                        <hr class="my-2">
+                        <div class="small fw-bold text-muted text-uppercase mb-2">
+                            <i class="fa-solid fa-list-ol text-primary me-1"></i> Danh sách đề tài chấm điểm ({{ c.topics|length }}):
+                        </div>
+
                         {% if c.topics %}
-                        <div class="mt-2">
-                            <div class="small fw-bold text-muted mb-1">Nhóm báo cáo:</div>
+                        <div class="space-y-2 flex-grow-1">
                             {% for t in c.topics %}
-                            <div class="d-flex align-items-center small mb-1">
-                                <i class="fa-solid fa-users text-primary me-2"></i>
-                                <span>{{ t.title }} — <em>{{ t.group.name if t.group else 'Chưa có nhóm' }}</em></span>
-                                {% if t.presentation_time %}
-                                <span class="badge bg-light text-dark border ms-2">
-                                    <i class="fa-regular fa-clock text-primary"></i> {{ t.presentation_time }}
-                                </span>
-                                {% endif %}
+                            <div class="p-3 bg-light rounded-3 border mb-2">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <div class="fw-bold text-dark text-truncate-2" style="font-size: 13px;">{{ t.title }}</div>
+                                    <span class="badge {% if t.defense_status == 'passed' %}bg-success{% elif t.defense_status == 'failed' %}bg-danger{% else %}bg-secondary{% endif %} ms-2 shrink-0">
+                                        {% if t.defense_status == 'passed' %}ĐẠT{% elif t.defense_status == 'failed' %}KHÔNG ĐẠT{% else %}CHỜ CHẤM{% endif %}
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center small text-muted mb-2">
+                                    <span>Nhóm: <strong>{{ t.group.name if t.group else 'Chưa gán nhóm' }}</strong></span>
+                                    {% if t.presentation_time %}
+                                    <span><i class="fa-regular fa-clock me-1"></i>{{ t.presentation_time }}</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                                    <button class="btn btn-xs btn-outline-secondary rounded-pill px-2.5 py-1" onclick="viewCouncilGrades({{ c.id }}, {{ t.id }}, '{{ t.title|replace('\'', '\\\'') }}')">
+                                        <i class="fa-solid fa-chart-simple me-1"></i> Xem điểm HĐ
+                                    </button>
+                                    <button class="btn btn-xs btn-primary rounded-pill px-3 py-1 fw-bold" onclick="openGradeModal({{ c.id }}, {{ t.id }}, '{{ t.title|replace('\'', '\\\'') }}', '{{ t.group.name if t.group else '' }}')">
+                                        <i class="fa-solid fa-pen-nib me-1"></i> Vào chấm điểm (Rubric)
+                                    </button>
+                                </div>
                             </div>
                             {% endfor %}
                         </div>
+                        {% else %}
+                        <div class="text-center text-muted py-3 small">Chưa có đề tài nào trong hội đồng này.</div>
                         {% endif %}
-
-                        <button class="btn btn-outline-primary w-100 fw-bold mt-3" onclick="showToast('Chức năng chấm điểm đang được hoàn thiện!')">
-                            <i class="fa-solid fa-pen-to-square me-2"></i> Vào chấm điểm
-                        </button>
                     </div>
                 </div>
             {% endfor %}
@@ -69,7 +105,266 @@
     </div>
 </div>
 
-{% endblock %}
+<!-- ======================================================= -->
+<!-- MODAL PHIẾU CHẤM ĐIỂM ĐỘC LẬP THEO RUBRIC -->
+<!-- ======================================================= -->
+<div class="modal fade" id="modalGradeRubric" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-primary text-white">
+                <div>
+                    <h5 class="modal-title fw-bold mb-0"><i class="fa-solid fa-clipboard-check me-2"></i> Phiếu Chấm Điểm Độc Lập (Rubric)</h5>
+                    <small class="text-white-50" id="gradeRubricName">Bộ tiêu chí đánh giá NCKH</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="gradeCouncilId">
+                <input type="hidden" id="gradeTopicId">
+                <input type="hidden" id="gradeRubricId" value="{{ active_rubric.id if active_rubric else 1 }}">
 
-{% block modals %}
+                <!-- Đề tài đang chấm -->
+                <div class="bg-light p-3 rounded-4 border mb-4">
+                    <div class="small fw-bold text-muted text-uppercase mb-1">ĐỀ TÀI ĐÁNH GIÁ</div>
+                    <h6 class="fw-bold text-primary mb-1" id="gradeTopicTitle"></h6>
+                    <small class="text-muted">Nhóm sinh viên thực hiện: <strong id="gradeGroupName"></strong></small>
+                </div>
+
+                <!-- Form tiêu chí Rubric -->
+                <div class="small fw-bold text-muted text-uppercase mb-3">
+                    <i class="fa-solid fa-sliders text-primary me-1"></i> NHẬP ĐIỂM TỪNG TIÊU CHÍ (THANG 10)
+                </div>
+
+                <div id="rubricGradingForm" class="space-y-3 mb-4">
+                    <!-- Render dynamic criteria -->
+                </div>
+
+                <!-- Tổng điểm -->
+                <div class="p-3 bg-primary-subtle border border-primary-subtle rounded-4 d-flex justify-content-between align-items-center mb-3">
+                    <span class="fw-bold text-primary text-uppercase"><i class="fa-solid fa-calculator me-2"></i> TỔNG ĐIỂM ĐÁNH GIÁ CỦA BẠN:</span>
+                    <span class="h4 mb-0 fw-bold text-primary"><span id="gradeTotalScoreDisplay">0.0</span> / 10.0</span>
+                </div>
+
+                <!-- Nhận xét của giám khảo -->
+                <div class="mb-0">
+                    <label class="form-label fw-bold small text-muted">NHẬN XÉT / GÓP Ý CỦA THÀNH VIÊN HỘI ĐỒNG</label>
+                    <textarea class="form-control" id="gradeComments" rows="3" placeholder="Nhập nhận xét về ưu điểm, hạn chế và định hướng phát triển của đề tài..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy bỏ</button>
+                <button class="btn btn-success fw-bold px-4 shadow-sm" id="btnSubmitGrade" onclick="submitGrade()">
+                    <i class="fa-solid fa-floppy-disk me-1"></i> Lưu Phiếu Chấm Điểm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================= -->
+<!-- MODAL XEM ĐIỂM TỔNG HỢP TOÀN HỘI ĐỒNG -->
+<!-- ======================================================= -->
+<div class="modal fade" id="modalViewGrades" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-secondary text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-chart-pie me-2"></i> Tổng Hợp Điểm Hội Đồng</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="small text-muted fw-bold">ĐỀ TÀI</label>
+                    <div class="fw-bold text-dark" id="viewGradesTopicTitle"></div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm align-middle mb-3">
+                        <thead class="table-light small">
+                            <tr>
+                                <th>Thành viên HĐ</th>
+                                <th class="text-center" style="width: 100px;">Điểm chấm</th>
+                            </tr>
+                        </thead>
+                        <tbody id="viewGradesTableBody" class="small">
+                            <!-- Dynamic -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="p-3 bg-light rounded-3 border d-flex justify-content-between align-items-center">
+                    <span class="fw-bold text-muted">ĐIỂM TRUNG BÌNH HỘI ĐỒNG:</span>
+                    <span class="h5 mb-0 fw-bold text-success" id="viewGradesAvg">0.0 / 10</span>
+                </div>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button class="btn btn-light fw-bold" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentRubricCriteria = [];
+
+{% if active_rubric and active_rubric.criteria_json %}
+    try {
+        currentRubricCriteria = {{ active_rubric.criteria_json|safe }};
+        if (typeof currentRubricCriteria === 'string') {
+            currentRubricCriteria = JSON.parse(currentRubricCriteria);
+        }
+    } catch (e) {
+        currentRubricCriteria = [];
+    }
+{% endif %}
+
+if (!currentRubricCriteria || currentRubricCriteria.length === 0) {
+    currentRubricCriteria = [
+        { id: 1, name: 'Tính cấp thiết, tổng quan & mục tiêu đề tài', weight: 20, max_score: 2.0, desc: 'Đánh giá tính cấp thiết, rõ ràng của bài toán' },
+        { id: 2, name: 'Phương pháp nghiên cứu & tính khoa học', weight: 30, max_score: 3.0, desc: 'Đánh giá mô hình lý thuyết, công nghệ' },
+        { id: 3, name: 'Sản phẩm đề tài & tính ứng dụng thực tiễn', weight: 30, max_score: 3.0, desc: 'Đánh giá sản phẩm phần mềm/hệ thống thực nghiệm' },
+        { id: 4, name: 'Kỹ năng thuyết trình & trả lời phản biện', weight: 20, max_score: 2.0, desc: 'Đánh giá độ tự tin và khả năng phản biện' }
+    ];
+}
+
+function openGradeModal(councilId, topicId, topicTitle, groupName) {
+    document.getElementById('gradeCouncilId').value = councilId;
+    document.getElementById('gradeTopicId').value = topicId;
+    document.getElementById('gradeTopicTitle').textContent = topicTitle;
+    document.getElementById('gradeGroupName').textContent = groupName || 'Chưa gán nhóm';
+    document.getElementById('gradeComments').value = '';
+
+    const container = document.getElementById('rubricGradingForm');
+    container.innerHTML = '';
+
+    currentRubricCriteria.forEach((c, idx) => {
+        const item = document.createElement('div');
+        item.className = 'border rounded-3 p-3 bg-white shadow-xs';
+        item.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <div class="fw-bold text-dark" style="font-size: 13px;">
+                    <span class="badge bg-secondary me-1">${idx + 1}</span> ${c.name}
+                    <small class="text-primary fw-semibold ms-1">(${c.weight}%)</small>
+                </div>
+                <div class="d-flex align-items-center gap-1">
+                    <input type="number" step="0.1" min="0" max="${c.max_score || 10}" 
+                        class="form-control form-control-sm text-end fw-bold rubric-score-input" 
+                        data-crit-id="${c.id}" 
+                        data-max="${c.max_score}" 
+                        style="width: 80px;" 
+                        placeholder="0.0" 
+                        oninput="recalcTotalScore()">
+                    <span class="small text-muted fw-bold">/ ${c.max_score}đ</span>
+                </div>
+            </div>
+            <div class="small text-muted">${c.desc || ''}</div>
+        `;
+        container.appendChild(item);
+    });
+
+    recalcTotalScore();
+
+    const modal = new bootstrap.Modal(document.getElementById('modalGradeRubric'));
+    modal.show();
+}
+
+function recalcTotalScore() {
+    let total = 0;
+    document.querySelectorAll('.rubric-score-input').forEach(input => {
+        const val = parseFloat(input.value) || 0;
+        const max = parseFloat(input.dataset.max) || 10;
+        if (val > max) {
+            input.value = max;
+            total += max;
+        } else if (val < 0) {
+            input.value = 0;
+        } else {
+            total += val;
+        }
+    });
+    document.getElementById('gradeTotalScoreDisplay').textContent = total.toFixed(1);
+}
+
+async function submitGrade() {
+    const councilId = document.getElementById('gradeCouncilId').value;
+    const topicId = document.getElementById('gradeTopicId').value;
+    const rubricId = document.getElementById('gradeRubricId').value;
+    const comments = document.getElementById('gradeComments').value.trim();
+
+    const criteriaScores = {};
+    document.querySelectorAll('.rubric-score-input').forEach(input => {
+        criteriaScores[input.dataset.critId] = parseFloat(input.value) || 0;
+    });
+
+    const totalScore = parseFloat(document.getElementById('gradeTotalScoreDisplay').textContent) || 0;
+
+    const btn = document.getElementById('btnSubmitGrade');
+    btn.disabled = true;
+    btn.textContent = 'Đang lưu phiếu...';
+
+    try {
+        const res = await fetch(`/api/councils/${councilId}/topics/${topicId}/grade`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                rubric_id: parseInt(rubricId),
+                criteria_scores: criteriaScores,
+                total_score: totalScore,
+                comments: comments
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            Swal.fire('Thành công', data.message || 'Đã lưu phiếu chấm điểm thành công!', 'success').then(() => location.reload());
+        } else {
+            btn.disabled = false;
+            btn.textContent = 'Lưu Phiếu Chấm Điểm';
+            Swal.fire('Lỗi', data.error || 'Có lỗi xảy ra', 'error');
+        }
+    } catch (e) {
+        btn.disabled = false;
+        btn.textContent = 'Lưu Phiếu Chấm Điểm';
+        Swal.fire('Lỗi', 'Không thể kết nối máy chủ', 'error');
+    }
+}
+
+async function viewCouncilGrades(councilId, topicId, topicTitle) {
+    document.getElementById('viewGradesTopicTitle').textContent = topicTitle;
+    const tbody = document.getElementById('viewGradesTableBody');
+    tbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted">Đang tải dữ liệu...</td></tr>';
+
+    const modal = new bootstrap.Modal(document.getElementById('modalViewGrades'));
+    modal.show();
+
+    try {
+        const res = await fetch(`/api/councils/${councilId}/topics/${topicId}/evaluations`);
+        const data = await res.json();
+        if (res.ok && data.evaluations) {
+            if (data.evaluations.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted py-3">Chưa có thành viên nào nộp phiếu chấm điểm.</td></tr>';
+                document.getElementById('viewGradesAvg').textContent = 'Chưa có';
+            } else {
+                let sum = 0;
+                tbody.innerHTML = data.evaluations.map(e => {
+                    sum += e.score;
+                    return `
+                        <tr>
+                            <td>
+                                <strong>${e.evaluator_name}</strong>
+                                ${e.comments ? `<br><small class="text-muted">"${e.comments}"</small>` : ''}
+                            </td>
+                            <td class="text-center fw-bold text-primary">${e.score} đ</td>
+                        </tr>
+                    `;
+                }).join('');
+                const avg = (sum / data.evaluations.length).toFixed(1);
+                document.getElementById('viewGradesAvg').textContent = `${avg} / 10 điểm`;
+            }
+        } else {
+            tbody.innerHTML = '<tr><td colspan="2" class="text-center text-danger">Lỗi tải dữ liệu</td></tr>';
+        }
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="2" class="text-center text-danger">Lỗi kết nối máy chủ</td></tr>';
+    }
+}
+</script>
 {% endblock %}

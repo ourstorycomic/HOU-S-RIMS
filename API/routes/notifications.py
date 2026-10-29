@@ -65,7 +65,7 @@ def sync_notifications():
     if not user_id:
         return jsonify({'error': 'Unauthorized'}), 401
 
-    from models import Notification, GroupMember, Topic, Group, User
+    from models import Notification, GroupMember, Topic, Group, User, Batch
     
     current_u = User.query.get(user_id)
     user_role = (current_u.role if current_u else '').lower()
@@ -77,9 +77,15 @@ def sync_notifications():
     
     unread_notifs_count = sum(1 for n in notifs if not n.is_read)
     
+    active_batch = Batch.query.filter_by(status='active').order_by(Batch.id.desc()).first()
+    active_batch_id = active_batch.id if active_batch else None
+
     # 2. Received Invitations (memberships where current user is NOT leader)
     received_invitations = []
-    memberships = GroupMember.query.filter_by(student_id=user_id).all()
+    memberships_q = GroupMember.query.filter_by(student_id=user_id)
+    if active_batch_id:
+        memberships_q = memberships_q.join(Group).filter(Group.batch_id == active_batch_id)
+    memberships = memberships_q.all()
     for m in memberships:
         if m.group and m.group.leader_id != user_id and m.status in ['pending', 'invited']:
             topic = m.group.topics[0] if (m.group.topics and len(m.group.topics) > 0) else None
@@ -98,14 +104,16 @@ def sync_notifications():
     # 3. Group and topic status (for live member acceptance & topic progress updates)
     group_data = None
     sent_pending_invitations = []
-    led_group = Group.query.filter_by(leader_id=user_id).order_by(Group.id.desc()).first()
-    if not led_group and memberships:
-        # Check any group user is member of (khi đã chính thức đồng ý tham gia)
-        accepted_m = [m for m in memberships if m.status in ['accepted', 'joined']]
-        if accepted_m:
-            first_m = accepted_m[0]
-            if first_m.group:
-                led_group = first_m.group
+    led_group = None
+    if active_batch_id:
+        led_group = Group.query.filter_by(leader_id=user_id, batch_id=active_batch_id).order_by(Group.id.desc()).first()
+        if not led_group and memberships:
+            # Check any group user is member of (khi đã chính thức đồng ý tham gia)
+            accepted_m = [m for m in memberships if m.status in ['accepted', 'joined']]
+            if accepted_m:
+                first_m = accepted_m[0]
+                if first_m.group and first_m.group.batch_id == active_batch_id:
+                    led_group = first_m.group
 
     if led_group:
         g_topic = led_group.topics[0] if (led_group.topics and len(led_group.topics) > 0) else None
@@ -196,7 +204,10 @@ def sync_notifications():
         latest_sub_status = latest_sub.status if latest_sub else ''
         latest_sub_fac = latest_sub.faculty_status if latest_sub else ''
         
-        latest_topic = Topic.query.order_by(Topic.id.desc()).first()
+        latest_topic_q = Topic.query
+        if active_batch_id:
+            latest_topic_q = latest_topic_q.filter_by(batch_id=active_batch_id)
+        latest_topic = latest_topic_q.order_by(Topic.id.desc()).first()
         latest_topic_id = latest_topic.id if latest_topic else 0
         latest_topic_status = latest_topic.status if latest_topic else ''
         

@@ -366,19 +366,38 @@ async function renderSubmissionHistory(topicId, filterType = null) {
                         <span><i class="fa-regular fa-clock me-1"></i> ${sub.submitted_at}</span>
                     </div>
 
-                    <!-- Mentor feedback box -->
-                    ${sub.feedback ? `
+                    <!-- Mentor feedback & Attached file box -->
+                    ${(sub.feedback || sub.feedback_file_url) ? `
                     <div class="mt-2 pt-2 border-top">
                         <div class="d-flex align-items-center justify-content-between mb-1">
                             <div class="small fw-bold text-primary d-flex align-items-center gap-1">
                                 <i class="fa-solid fa-comment-dots text-primary"></i>
-                                Nhận xét của Giảng viên hướng dẫn:
+                                Đánh giá & Nhận xét của Giảng viên hướng dẫn:
                             </div>
                             ${sub.feedback_at ? `<small class="text-muted" style="font-size: 10px;">${sub.feedback_at}</small>` : ''}
                         </div>
+                        ${sub.feedback ? `
                         <div class="p-2 rounded-2 ${sub.status === 'revision_required' ? 'bg-danger-subtle text-danger-emphasis border border-danger-subtle' : 'bg-warning-subtle text-dark border border-warning-subtle'} small" style="white-space: pre-wrap; font-size: 11.5px; line-height: 1.4;">
                             ${sub.feedback}
-                        </div>
+                        </div>` : ''}
+
+                        <!-- File đính kèm từ Giảng viên để sinh viên dễ nhận diện -->
+                        ${sub.feedback_file_url ? `
+                        <div class="mt-2 p-2 rounded-3 bg-white border border-primary-subtle d-flex align-items-center justify-content-between shadow-2xs">
+                            <div class="d-flex align-items-center gap-2 small text-primary fw-bold">
+                                <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
+                                    <i class="fa-solid fa-paperclip"></i>
+                                </div>
+                                <div>
+                                    <span class="d-block text-dark" style="font-size: 11.5px;">Bản sửa / Tài liệu đính kèm từ GVHD:</span>
+                                    <span class="text-muted fw-normal" style="font-size: 10.5px;">${sub.feedback_file_name || 'Tài liệu hướng dẫn'}</span>
+                                </div>
+                            </div>
+                            <a href="/static/${sub.feedback_file_url}" target="_blank" download class="btn btn-xs btn-primary rounded-pill px-3 py-1 fw-bold text-decoration-none shadow-xs">
+                                <i class="fa-solid fa-download me-1"></i> Tải về xem
+                            </a>
+                        </div>` : ''}
+
                         ${sub.status === 'revision_required' && isLatest ? `
                         <div class="alert alert-warning py-1.5 px-2 mt-1.5 mb-0 small border-0 d-flex align-items-center gap-2" style="font-size: 11px;">
                             <i class="fa-solid fa-circle-exclamation flex-shrink-0"></i>

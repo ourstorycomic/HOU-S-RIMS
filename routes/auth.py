@@ -47,16 +47,12 @@ def login():
         ).first()
 
         valid_pw = False
-        if user:
-            # Cho phép mật khẩu demo 123456 / 123 hoặc so khớp hash / chuỗi
-            if password in ['123', '123456'] or not user.password_hash or password == user.password_hash:
-                valid_pw = True
-            else:
-                try:
-                    if check_password_hash(user.password_hash, password):
-                        valid_pw = True
-                except Exception:
-                    pass
+        if user and user.password_hash:
+            try:
+                if check_password_hash(user.password_hash, password):
+                    valid_pw = True
+            except Exception:
+                pass
 
         if user and valid_pw:
             # Store user info in session
@@ -99,7 +95,15 @@ def api_login():
 
     user = User.query.filter_by(username=username).first()
     
-    if user and (user.password_hash == password or not user.password_hash or password in ['123', '123456']):
+    valid_pw = False
+    if user and user.password_hash:
+        try:
+            if check_password_hash(user.password_hash, password):
+                valid_pw = True
+        except Exception:
+            pass
+
+    if user and valid_pw:
         access_token = create_access_token(identity=user.username, additional_claims={"role": user.role, "name": user.full_name})
         return jsonify(access_token=access_token, user=user.to_dict()), 200
 

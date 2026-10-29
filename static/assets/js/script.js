@@ -338,8 +338,11 @@ function showToast(message, type = 'success') {
             toast: true,
             position: 'top-end',
             showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true
+            timer: 3500,
+            timerProgressBar: true,
+            customClass: {
+                popup: 'notif-toast-custom'
+            }
         });
     } else {
         alert(message);

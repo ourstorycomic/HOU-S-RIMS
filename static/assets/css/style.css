@@ -969,3 +969,103 @@ a { text-decoration: none !important; }
     justify-content: space-between;
     align-items: center;
 }
+
+
+/* ==========================================================================
+   NOTIFICATION & TOAST MARGIN/PADDING ENHANCEMENTS
+   ========================================================================== */
+.swal2-container.swal2-top-end {
+    top: 24px !important;
+    right: 24px !important;
+    padding: 0 !important;
+}
+.notif-toast-custom {
+    margin-top: 12px !important;
+    margin-right: 12px !important;
+    padding: 14px 20px !important;
+    border-radius: 14px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12) !important;
+}
+.notif-detail-modal-card {
+    font-family: inherit;
+}
+.notif-detail-modal-card p {
+    margin-bottom: 0.75rem !important;
+    line-height: 1.6 !important;
+}
+.notif-detail-modal-card p:last-child {
+    margin-bottom: 0 !important;
+}
+.notif-detail-modal-card .rich-content-display {
+    padding: 6px 4px !important;
+}
+.notif-detail-modal-card .rich-content-display p {
+    margin-bottom: 0.75rem !important;
+}
+.notif-dropdown-item {
+    padding: 14px 18px !important;
+    transition: background-color 0.15s ease-in-out;
+}
+.notif-dropdown-item:hover {
+    background-color: #f1f5f9 !important;
+}
+
+.notif-modal-body {
+    padding: 22px 24px !important;
+    background: #f8fafc !important;
+}
+.notif-detail-modal-card .mb-3,
+.notif-detail-modal-card .mb-3\.5 {
+    margin-bottom: 16px !important;
+}
+.notif-detail-modal-card .p-3,
+.notif-detail-modal-card .p-3\.5,
+.notif-detail-modal-card .p-4 {
+    padding: 16px 20px !important;
+}
+.notif-attachment-box {
+    margin-top: 16px !important;
+    margin-bottom: 16px !important;
+    padding: 18px 20px !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+}
+.notif-attachment-pill {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 10px 16px !important;
+    margin-bottom: 8px !important;
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    transition: all 0.2s ease-in-out !important;
+}
+.notif-attachment-pill:last-child {
+    margin-bottom: 0 !important;
+}
+.notif-attachment-pill:hover {
+    background: #eff6ff !important;
+    border-color: #3b82f6 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08) !important;
+}
+
+/* Fractional utility shims so spacing is never 0 in any component */
+.gap-0\.5 { gap: 0.125rem !important; }
+.gap-1\.5 { gap: 0.375rem !important; }
+.gap-2\.5 { gap: 0.625rem !important; }
+.gap-3\.5 { gap: 0.875rem !important; }
+.p-2\.5 { padding: 0.625rem !important; }
+.p-3\.5 { padding: 0.875rem !important; }
+.px-2\.5 { padding-left: 0.625rem !important; padding-right: 0.625rem !important; }
+.px-3\.5 { padding-left: 0.875rem !important; padding-right: 0.875rem !important; }
+.py-1\.5 { padding-top: 0.375rem !important; padding-bottom: 0.375rem !important; }
+.py-2\.5 { padding-top: 0.625rem !important; padding-bottom: 0.625rem !important; }
+.mb-0\.5 { margin-bottom: 0.125rem !important; }
+.mb-1\.5 { margin-bottom: 0.375rem !important; }
+.mb-2\.5 { margin-bottom: 0.625rem !important; }
+.mb-3\.5 { margin-bottom: 0.875rem !important; }
+.border-slate-200 { border-color: #e2e8f0 !important; }
+.shadow-xs, .shadow-2xs { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important; }

@@ -23,44 +23,74 @@
             {% endif %}
             <div class="row g-4">
                     <div class="col-md-4">
-                        <div class="card border-0 shadow-sm rounded-4 p-4 text-center mb-4">
-                            <div class="mx-auto bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px; font-size: 30px;">
-                                <i class="fa-regular fa-user"></i>
+                        <div class="card border-0 shadow-sm rounded-4 p-4 text-center mb-4 bg-white">
+                            <div class="mx-auto bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center mb-3 fw-bold fs-2" style="width: 80px; height: 80px;">
+                                {{ current_user.full_name[0] if (current_user and current_user.full_name) else 'G' }}
                             </div>
-                            <h5 class="fw-bold mb-1">{{ current_user.full_name if current_user else 'Giảng Viên' }}</h5>
-                            <p class="text-muted small mb-2">{{ current_user.email if current_user else '' }}</p>
-                            <div class="text-warning mb-3 small">
-                                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                            <h5 class="fw-bold mb-1 text-dark">{{ current_user.full_name if current_user else 'Giảng Viên' }}</h5>
+                            <div class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1.5 rounded-pill small mb-2">
+                                <i class="fa-solid fa-building me-1"></i>{{ current_user.faculty or 'Khoa Công nghệ thông tin' }}
                             </div>
-                            <button class="btn btn-dark rounded-pill px-4 fw-bold w-100" data-bs-toggle="modal" data-bs-target="#modalEditProfile">Chỉnh sửa hồ sơ</button>
+                            <p class="text-muted small mb-1"><i class="fa-regular fa-envelope me-1"></i>{{ current_user.email if current_user else '' }}</p>
+                            <p class="text-muted small mb-3"><i class="fa-solid fa-phone me-1"></i>{{ current_user.phone or 'Chưa cập nhật SĐT' }}</p>
+                            <button class="btn btn-primary rounded-pill px-4 fw-bold w-100 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalEditProfile">
+                                <i class="fa-solid fa-user-pen me-2"></i>Chỉnh sửa hồ sơ
+                            </button>
                         </div>
-                        <div class="card border-0 shadow-sm rounded-4 p-4">
-                            <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-chart-line me-2"></i> Chỉ số NCKH</h6>
+                        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                            <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-chart-pie me-2"></i> Chỉ số NCKH & Hướng dẫn</h6>
                             <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
-                                <span class="text-muted small fw-bold">H-INDEX</span><span class="fw-bold text-primary">--</span>
+                                <span class="text-muted small fw-bold">BỘ MÔN</span>
+                                <span class="fw-bold text-dark">{{ current_user.faculty or 'CNTT' }}</span>
                             </div>
                             <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
-                                <span class="text-muted small fw-bold">BÀI BÁO</span><span class="fw-bold text-primary">--</span>
+                                <span class="text-muted small fw-bold">CHỜ DUYỆT</span>
+                                <span class="fw-bold text-warning">{{ global_pending_topics_count if global_pending_topics_count is defined else 0 }} đề tài</span>
                             </div>
                             <div class="d-flex justify-content-between">
-                                <span class="text-muted small fw-bold">HƯỚNG DẪN</span><span class="fw-bold text-primary">{{ my_groups|length }}</span>
+                                <span class="text-muted small fw-bold">ĐANG HƯỚNG DẪN</span>
+                                <span class="fw-bold text-success">{{ global_my_groups_count if global_my_groups_count is defined else 0 }} nhóm</span>
                             </div>
                         </div>
                     </div>
                     <div class="col-md-8">
-                        <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
-                            <h6 class="fw-bold mb-3">Hướng nghiên cứu chính</h6>
-                            <div class="d-flex flex-wrap gap-2">
-                                <span class="badge bg-light text-muted border border-dashed px-3 py-2 rounded-pill cursor-pointer" data-bs-toggle="modal" data-bs-target="#modalEditProfile">+ Thêm hướng mới</span>
+                        <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-lightbulb text-warning me-2"></i>Hướng nghiên cứu chuyên sâu</h6>
+                                <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold" data-bs-toggle="modal" data-bs-target="#modalEditProfile">
+                                    <i class="fa-solid fa-pen me-1"></i> Chỉnh sửa
+                                </button>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                {% if current_user and current_user.bio %}
+                                    {% for kw in current_user.bio.split(',') %}
+                                        {% if kw.strip() %}
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill fs-7">
+                                            <i class="fa-solid fa-tag me-1"></i>{{ kw.strip() }}
+                                        </span>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-muted small fst-italic">Chưa thiết lập từ khóa hướng nghiên cứu. Nhấn chỉnh sửa để thêm từ khóa giúp hệ thống tự động gợi ý đề tài.</span>
+                                {% endif %}
+                            </div>
+                            <hr class="my-3 text-muted opacity-25">
+                            <div>
+                                <h6 class="fw-bold small text-muted text-uppercase mb-2">Giới thiệu & Chuyên môn</h6>
+                                <p class="text-dark small mb-0" style="line-height: 1.7;">
+                                    {{ current_user.bio if (current_user and current_user.bio) else 'Giảng viên chưa cập nhật phần giới thiệu chuyên môn.' }}
+                                </p>
                             </div>
                         </div>
                         
-                        <div class="card border-0 shadow-sm rounded-4 p-4">
-                            <h6 class="fw-bold mb-4">Danh sách công bố tiêu biểu</h6>
-                            <div class="text-center text-muted py-4">
-                                <i class="fa-regular fa-newspaper fs-1 mb-3 d-block opacity-25"></i>
-                                <div class="small">Chưa cập nhật công bố khoa học.</div>
-                                <button class="btn btn-outline-primary btn-sm rounded-pill mt-3 px-3">Cập nhật ngay</button>
+                        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-book-bookmark text-primary me-2"></i>Hồ sơ khoa học & Đồng bộ dữ liệu</h6>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">Đồng bộ Supabase DB</span>
+                            </div>
+                            <div class="p-3 bg-light rounded-3 text-muted small">
+                                <i class="fa-solid fa-circle-check text-success me-1"></i>
+                                Hồ sơ giảng viên được kết nối và cập nhật trực tiếp vào cơ sở dữ liệu Supabase PostgreSQL. Mọi cập nhật thông tin sẽ tự động đồng bộ trên toàn bộ hệ thống HOU S-RIMS.
                             </div>
                         </div>
                     </div>

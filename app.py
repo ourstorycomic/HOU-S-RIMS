@@ -16,7 +16,10 @@ from flasgger import Swagger
 
 load_dotenv(override=True)
 
+from academic_year import current_academic_year
+
 app = Flask(__name__)
+app.jinja_env.globals['current_academic_year'] = current_academic_year
 app.secret_key = 'secret_key'
 app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
 if not os.path.exists(app.config['UPLOAD_FOLDER']): os.makedirs(app.config['UPLOAD_FOLDER'])
@@ -150,7 +153,11 @@ def serve_static_uploads_fallback(filename):
     abort(404)
 
 @app.route('/<path:filename>')
-def serve_static(filename): return send_from_directory('Models', filename)
+def serve_static(filename):
+    if os.path.exists('Models'):
+        return send_from_directory('Models', filename)
+    from flask import abort
+    abort(404)
 
 if __name__ == '__main__':
     with app.app_context():

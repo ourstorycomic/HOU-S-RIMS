@@ -182,7 +182,10 @@ def council():
 
 @faculty_bp.route('/rubric')
 def rubric():
-    return render_template('faculty/rubric.html')
+    from models import Rubric
+    rubrics = Rubric.query.all()
+    active_rubric = rubrics[0] if rubrics else None
+    return render_template('faculty/rubric.html', rubrics=rubrics, active_rubric=active_rubric)
 
 @faculty_bp.route('/stats')
 def stats_page():

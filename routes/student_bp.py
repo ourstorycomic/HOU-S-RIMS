@@ -25,14 +25,16 @@ def inject_common_data():
 
     # Nhóm chat đã duyệt
     approved_chat_groups = []
-    if current_user:
-        member_group_ids = [m.group_id for m in GroupMember.query.filter(
+    if current_user and active_batch:
+        member_group_ids = [m.group_id for m in GroupMember.query.join(Group).filter(
             GroupMember.student_id == current_user.id,
-            GroupMember.status.in_(['accepted', 'joined'])
+            GroupMember.status.in_(['accepted', 'joined']),
+            Group.batch_id == active_batch.id
         ).all()]
         my_groups = Group.query.filter(
+            Group.batch_id == active_batch.id,
             (Group.leader_id == current_user.id) | (Group.id.in_(member_group_ids))
-        ).all() if (member_group_ids or Group.query.filter_by(leader_id=current_user.id).first()) else []
+        ).all() if (member_group_ids or Group.query.filter_by(leader_id=current_user.id, batch_id=active_batch.id).first()) else []
         for g in my_groups:
             if (g.status == 'approved') or any(t.status == 'approved' for t in g.topics):
                 approved_chat_groups.append(g)

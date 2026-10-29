@@ -46,16 +46,25 @@ def student_page():
     user_id = session.get('user_id')
     current_user = User.query.get(user_id) if user_id else None
     
-    # Tìm nhóm của sinh viên (nếu có)
+    batches = Batch.query.filter_by(status='active').order_by(Batch.id.desc()).all()
+    if not batches:
+        batches = Batch.query.order_by(Batch.id.desc()).all()
+    active_batch = batches[0] if (batches and batches[0].status == 'active') else None
+    active_batch_id = active_batch.id if active_batch else None
+
+    # Tìm nhóm của sinh viên trong đợt active hiện tại
     active_group = None
-    if current_user:
-        active_group = Group.query.filter_by(leader_id=current_user.id).order_by(Group.id.desc()).first()
+    if current_user and active_batch_id:
+        active_group = Group.query.filter_by(leader_id=current_user.id, batch_id=active_batch_id).order_by(Group.id.desc()).first()
         if not active_group:
-            membership = GroupMember.query.filter_by(student_id=current_user.id).order_by(GroupMember.id.desc()).first()
+            membership = GroupMember.query.join(Group).filter(
+                GroupMember.student_id == current_user.id,
+                Group.batch_id == active_batch_id
+            ).order_by(GroupMember.id.desc()).first()
             if membership:
                 active_group = Group.query.get(membership.group_id)
                 
-    # Lấy danh sách nhóm & đề tài của sinh viên
+    # Lấy danh sách nhóm & đề tài của sinh viên trong đợt active hiện tại
     my_groups = []
     my_topics = []
     approved_chat_groups = []
@@ -67,38 +76,45 @@ def student_page():
 
     if current_user:
         from models import Skill, Achievement, Experience
-        member_group_ids = [m.group_id for m in GroupMember.query.filter_by(student_id=current_user.id).all()]
-        my_groups = Group.query.filter(
-            (Group.leader_id == current_user.id) | (Group.id.in_(member_group_ids))
-        ).all()
-        if my_groups:
-            group_ids = [g.id for g in my_groups]
-            my_topics = Topic.query.filter(Topic.group_id.in_(group_ids)).order_by(Topic.id.desc()).all()
-            for g in my_groups:
-                is_approved = (g.status == 'approved') or any(t.status == 'approved' for t in g.topics)
-                if is_approved:
-                    approved_chat_groups.append(g)
-        else:
-            my_topics = Topic.query.join(Group).filter(Group.leader_id == current_user.id).order_by(Topic.id.desc()).all()
-
-        pending_invitations = GroupMember.query.filter(
-            GroupMember.student_id == current_user.id,
-            GroupMember.status.in_(['pending', 'invited'])
-        ).all()
-
-        sent_pending_invitations = GroupMember.query.join(Group).filter(
-            Group.leader_id == current_user.id,
-            GroupMember.student_id != current_user.id,
-            GroupMember.status.in_(['pending', 'invited'])
-        ).all()
-
         skills = Skill.query.filter_by(student_id=current_user.id).all()
         achievements = Achievement.query.filter_by(student_id=current_user.id).all()
         experiences = Experience.query.filter_by(student_id=current_user.id).all()
 
-    batches = Batch.query.filter_by(status='active').order_by(Batch.id.desc()).all()
-    if not batches:
-        batches = Batch.query.order_by(Batch.id.desc()).all()
+        if active_batch_id:
+            member_group_ids = [m.group_id for m in GroupMember.query.join(Group).filter(
+                GroupMember.student_id == current_user.id,
+                Group.batch_id == active_batch_id
+            ).all()]
+            my_groups = Group.query.filter(
+                Group.batch_id == active_batch_id,
+                (Group.leader_id == current_user.id) | (Group.id.in_(member_group_ids))
+            ).all()
+            if my_groups:
+                group_ids = [g.id for g in my_groups]
+                my_topics = Topic.query.filter(Topic.batch_id == active_batch_id, Topic.group_id.in_(group_ids)).order_by(Topic.id.desc()).all()
+                for g in my_groups:
+                    is_approved = (g.status == 'approved') or any(t.status == 'approved' for t in g.topics)
+                    if is_approved:
+                        approved_chat_groups.append(g)
+            else:
+                my_topics = Topic.query.join(Group).filter(
+                    Group.leader_id == current_user.id,
+                    Group.batch_id == active_batch_id,
+                    Topic.batch_id == active_batch_id
+                ).order_by(Topic.id.desc()).all()
+
+            pending_invitations = GroupMember.query.join(Group).filter(
+                GroupMember.student_id == current_user.id,
+                Group.batch_id == active_batch_id,
+                GroupMember.status.in_(['pending', 'invited'])
+            ).all()
+
+            sent_pending_invitations = GroupMember.query.join(Group).filter(
+                Group.leader_id == current_user.id,
+                Group.batch_id == active_batch_id,
+                GroupMember.student_id != current_user.id,
+                GroupMember.status.in_(['pending', 'invited'])
+            ).all()
 
     from sqlalchemy import func
     mentors = User.query.filter(func.lower(User.role) == 'lecturer').all()
@@ -129,9 +145,19 @@ def student_page():
         s_skills = [sk.name for sk in Skill.query.filter_by(student_id=s.id).all()]
         major = major_map.get(s.student_id, 'Kỹ thuật phần mềm')
         
-        # Check active group membership
-        accepted_memberships = GroupMember.query.filter_by(student_id=s.id, status='accepted').all()
-        lead_groups = Group.query.filter_by(leader_id=s.id).all()
+        # Check active group membership in this batch
+        lead_groups = []
+        accepted_memberships = []
+        if active_batch_id:
+            lead_groups = Group.query.filter_by(leader_id=s.id, batch_id=active_batch_id).all()
+            accepted_memberships = GroupMember.query.join(Group).filter(
+                GroupMember.student_id == s.id,
+                Group.batch_id == active_batch_id,
+                GroupMember.status.in_(['accepted', 'joined'])
+            ).all()
+        else:
+            lead_groups = Group.query.filter_by(leader_id=s.id).all()
+            accepted_memberships = GroupMember.query.filter_by(student_id=s.id, status='accepted').all()
         
         has_group = bool(accepted_memberships or lead_groups)
         group_member_count = 0
