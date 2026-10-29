@@ -19,6 +19,34 @@
     <div class="sidebar-menu-wrapper" style="flex: 1; overflow-y: auto; padding-bottom: 100px;">
 
 
+    {% if session.get('role') == 'admin' %}
+    <div class="menu-category">QUẢN TRỊ CẤP TRƯỜNG</div>
+    <a href="{{ url_for('web.admin_page') }}#overview" onclick="{% if request.endpoint == 'web.admin_page' %}event.preventDefault(); switchTab('overview', this){% endif %}" class="nav-link">
+        <i class="fa-solid fa-chart-pie"></i> Tổng quan Trường
+    </a>
+    <a href="{{ url_for('web.admin_page') }}#batches" onclick="{% if request.endpoint == 'web.admin_page' %}event.preventDefault(); switchTab('batches', this){% endif %}" class="nav-link">
+        <i class="fa-solid fa-paper-plane"></i> Triển khai đợt NCKH
+    </a>
+    <a href="{{ url_for('web.admin_page') }}#topics" onclick="{% if request.endpoint == 'web.admin_page' %}event.preventDefault(); switchTab('topics', this){% endif %}" class="nav-link">
+        <i class="fa-solid fa-layer-group"></i> Đề tài & Nhóm
+    </a>
+    <a href="{{ url_for('web.admin_page') }}#lecturers" onclick="{% if request.endpoint == 'web.admin_page' %}event.preventDefault(); switchTab('lecturers', this){% endif %}" class="nav-link">
+        <i class="fa-regular fa-user"></i> Giảng viên
+    </a>
+    <a href="{{ url_for('web.admin_page') }}#approvals" onclick="{% if request.endpoint == 'web.admin_page' %}event.preventDefault(); switchTab('approvals', this){% endif %}" class="nav-link">
+        <i class="fa-regular fa-file-lines"></i> Phê duyệt cấp Trường
+    </a>
+    <a href="{{ url_for('web.admin_page') }}#councils" onclick="{% if request.endpoint == 'web.admin_page' %}event.preventDefault(); switchTab('councils', this){% endif %}" class="nav-link">
+        <i class="fa-solid fa-gavel"></i> Hội đồng Trường
+    </a>
+    <a href="{{ url_for('web.admin_page') }}#rubric" onclick="{% if request.endpoint == 'web.admin_page' %}event.preventDefault(); switchTab('rubric', this){% endif %}" class="nav-link">
+        <i class="fa-solid fa-clipboard-list"></i> Rubric Trường
+    </a>
+    <a href="{{ url_for('web.admin_page') }}#reports" onclick="{% if request.endpoint == 'web.admin_page' %}event.preventDefault(); switchTab('reports', this){% endif %}" class="nav-link">
+        <i class="fa-solid fa-chart-simple"></i> Báo cáo Thống kê
+    </a>
+    {% endif %}
+
     {% if session.get('role') == 'faculty' %}
     <div class="menu-category">QUẢN LÝ KHOA CÔNG NGHỆ THÔNG TIN</div>
     <a href="{{ url_for('faculty.dashboard') }}" class="nav-link {{ 'active-main' if request.endpoint == 'faculty.dashboard' else '' }}">
@@ -80,34 +108,37 @@
 
     {% if session.get('role') == 'student' %}
     <div class="menu-category">SINH VIÊN PORTAL</div>
-    <a href="{{ url_for('student.dashboard') }}" class="nav-link {{ 'active-student' if request.endpoint == 'student.dashboard' else '' }}">
+    <a href="/student#s-explore" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-explore', this); }" class="nav-link active-student">
         <i class="fa-solid fa-compass"></i> Khám phá ý tưởng
     </a>
-    <a href="{{ url_for('student.portfolio') }}" class="nav-link {{ 'active-student' if request.endpoint == 'student.portfolio' else '' }}">
+    <a href="/student#s-mentors" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-mentors', this); }" class="nav-link">
+        <i class="fa-solid fa-chalkboard-user"></i> Tìm kiếm Mentor
+    </a>
+    <a href="/student#s-members" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-members', this); }" class="nav-link">
+        <i class="fa-solid fa-user-group"></i> Tìm kiếm thành viên
+    </a>
+    <a href="/student#s-profile" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-profile', this); }" class="nav-link">
         <i class="fa-regular fa-id-badge"></i> Hồ sơ năng lực
     </a>
-    <a href="{{ url_for('student.register') }}" class="nav-link {{ 'active-student' if request.endpoint == 'student.register' else '' }}">
-        <i class="fa-solid fa-pen-to-square"></i> Đăng ký NCKH
+    <a href="/student#s-register" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-register', this); }" class="nav-link">
+        <i class="fa-solid fa-pen-to-square"></i> Đăng ký Đề tài
     </a>
-    <a href="{{ url_for('student.progress') }}" class="nav-link {{ 'active-student' if request.endpoint == 'student.progress' else '' }}">
+    <a href="/student#s-group" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-group', this); }" class="nav-link">
         <i class="fa-solid fa-layer-group"></i> Nhóm nghiên cứu
     </a>
-    <a href="{{ url_for('student.templates_page') }}" class="nav-link {{ 'active-student' if request.endpoint == 'student.templates_page' else '' }}">
+    <a href="/student#s-templates" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-templates', this); }" class="nav-link">
         <i class="fa-regular fa-folder-open"></i> Tài liệu mẫu
     </a>
-    <a href="{{ url_for('student.submit') }}" class="nav-link {{ 'active-student' if request.endpoint == 'student.submit' else '' }}">
+    <a href="/student#s-submit" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-submit', this); }" class="nav-link">
         <i class="fa-solid fa-cloud-arrow-up"></i> Nộp báo cáo
     </a>
-    <a href="{{ url_for('student.chat') }}" class="nav-link {{ 'active-student' if request.endpoint == 'student.chat' else '' }}">
+    <a href="/student#s-chat" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-chat', this); }" class="nav-link">
         <i class="fa-regular fa-comments"></i> Chatgroups
-        {% set sg_count = global_my_groups_count if global_my_groups_count is defined else (my_groups | length if my_groups is defined else 0) %}
+        {% set sg_count = approved_chat_groups | length if approved_chat_groups is defined else 0 %}
         {% if sg_count > 0 %}<span class="badge bg-primary rounded-pill ms-1" style="font-size: 9px;">{{ sg_count }}</span>{% endif %}
     </a>
-    <a href="{{ url_for('student.calendar') }}" class="nav-link {{ 'active-student' if request.endpoint == 'student.calendar' else '' }}">
+    <a href="/student#s-calendar" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-calendar', this); }" class="nav-link">
         <i class="fa-regular fa-calendar"></i> Lịch & Thông báo
-    </a>
-    <a href="{{ url_for('student.result') }}" class="nav-link {{ 'active-student' if request.endpoint == 'student.result' else '' }}">
-        <i class="fa-solid fa-square-poll-vertical"></i> Hội đồng & Kết quả
     </a>
     {% endif %}
 

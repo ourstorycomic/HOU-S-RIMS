@@ -13,21 +13,24 @@ def send_notification_email(to_email, subject, content, html_content=None, attac
     SMTP_PORT = 587
     
     # ĐIỀN EMAIL CỦA BẠN VÀO DÒNG BÊN DƯỚI
-    SENDER_EMAIL = os.environ.get('MAIL_USERNAME', 'kastanland1169@gmail.com') 
+    SENDER_EMAIL = (os.environ.get('MAIL_USERNAME') or 'kastanland1169@gmail.com').strip()
     
-    # Mật khẩu ứng dụng bạn vừa cấp (Xóa dấu cách đi)
-    SENDER_PASSWORD = os.environ.get('MAIL_PASSWORD', 'sjvggmnrnygsfkxx') 
+    # Mật khẩu ứng dụng (tự động xóa khoảng trắng nếu người dùng copy cả dấu cách)
+    raw_password = os.environ.get('MAIL_PASSWORD') or 'sjvggmnrnygsfkxx'
+    SENDER_PASSWORD = raw_password.replace(' ', '').strip() 
     
     if not SENDER_EMAIL or not SENDER_PASSWORD:
         print('Không thể gửi email: Chưa cấu hình MAIL_USERNAME đúng cách')
         return False
         
     try:
+        from email.header import Header
         # Create the root message (mixed is needed if we have attachments)
         msg = MIMEMultipart('mixed')
         msg['From'] = f"HOU S-RIMS <{SENDER_EMAIL}>"
         msg['To'] = to_email
-        msg['Subject'] = subject
+        msg['Reply-To'] = SENDER_EMAIL
+        msg['Subject'] = Header(subject, 'utf-8')
         
         # Create the alternative part for text/html
         alt_part = MIMEMultipart('alternative')

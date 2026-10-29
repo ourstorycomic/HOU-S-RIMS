@@ -1,7 +1,17 @@
+from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify, session
 from models import db, Message, User
 
 chat_bp = Blueprint('chat_api', __name__, url_prefix='/api/chat')
+
+def to_vn_time(dt, fmt='%H:%M %d/%m/%Y'):
+    """
+    Chuyển đổi thời gian UTC sang múi giờ Việt Nam (UTC+7 / GMT+7)
+    """
+    if not dt:
+        dt = datetime.utcnow()
+    vn_dt = dt + timedelta(hours=7)
+    return vn_dt.strftime(fmt)
 
 @chat_bp.route('/<int:group_id>/messages', methods=['GET'])
 def get_messages(group_id):
@@ -27,7 +37,7 @@ def get_messages(group_id):
             'message_type': msg.message_type,
             'file_url': msg.file_url,
             'file_name': msg.file_name,
-            'timestamp': msg.timestamp.strftime('%H:%M %d/%m/%Y')
+            'timestamp': to_vn_time(msg.timestamp)
         })
     return jsonify(result), 200
 
@@ -54,7 +64,7 @@ def get_media(group_id):
                 'id': msg.id,
                 'url': msg.file_url,
                 'type': msg.message_type,
-                'timestamp': msg.timestamp.strftime('%d/%m/%Y')
+                'timestamp': to_vn_time(msg.timestamp, '%d/%m/%Y')
             })
         
         # Group files
@@ -63,7 +73,7 @@ def get_media(group_id):
                 'id': msg.id,
                 'url': msg.file_url,
                 'name': msg.file_name or 'Tài liệu',
-                'timestamp': msg.timestamp.strftime('%d/%m/%Y')
+                'timestamp': to_vn_time(msg.timestamp, '%d/%m/%Y')
             })
             
         # Extract links from text
@@ -72,7 +82,7 @@ def get_media(group_id):
             links.append({
                 'id': msg.id,
                 'url': url,
-                'timestamp': msg.timestamp.strftime('%d/%m/%Y')
+                'timestamp': to_vn_time(msg.timestamp, '%d/%m/%Y')
             })
             
     return jsonify({
@@ -94,13 +104,15 @@ def send_message(group_id):
     if not sender_id:
         return jsonify({'error': 'Unauthorized or missing sender_id'}), 401
         
+    now_utc = datetime.utcnow()
     new_msg = Message(
         sender_id=sender_id,
         group_id=group_id,
         content=data['content'],
         message_type=data.get('message_type', 'text'),
         file_url=data.get('file_url'),
-        file_name=data.get('file_name')
+        file_name=data.get('file_name'),
+        timestamp=now_utc
     )
     db.session.add(new_msg)
     db.session.commit()
@@ -117,7 +129,7 @@ def send_message(group_id):
             'message_type': new_msg.message_type,
             'file_url': new_msg.file_url,
             'file_name': new_msg.file_name,
-            'timestamp': new_msg.timestamp.strftime('%H:%M %d/%m/%Y')
+            'timestamp': to_vn_time(new_msg.timestamp)
         }
     }), 201
 
@@ -186,8 +198,10 @@ def get_private_conversations():
     if not my_id:
         return jsonify({'error': 'Unauthorized'}), 401
         
-    # Get distinct users we chatted with
-    # This requires querying messages where sender_id=me or receiver_id=me
+    from models import User, Group, GroupMember, Topic, Message
+    from sqlalchemy import or_, and_
+
+    # 1. Get distinct users we chatted with
     messages = Message.query.filter(
         and_(Message.group_id == None, or_(Message.sender_id == my_id, Message.receiver_id == my_id))
     ).order_by(Message.timestamp.desc()).all()
@@ -200,13 +214,84 @@ def get_private_conversations():
             seen.add(other_id)
             other_user = User.query.get(other_id)
             if other_user:
+                sub_text = msg.content if msg.message_type == 'text' else ('Lời mời tham gia nhóm' if msg.message_type == 'invitation' else f'[{msg.message_type}]')
                 result.append({
                     'id': other_user.id,
                     'name': other_user.full_name,
                     'role': other_user.role,
-                    'last_message': msg.content if msg.message_type == 'text' else f'[{msg.message_type}]',
-                    'timestamp': msg.timestamp.strftime('%H:%M %d/%m')
+                    'last_message': sub_text,
+                    'timestamp': to_vn_time(msg.timestamp, '%H:%M %d/%m')
                 })
+
+    # 2. Add group peers: mentor (GVHD), leader, and group members from all approved groups/topics that my_id belongs to
+    group_ids = set()
+
+    # If my_id is a group member
+    member_records = GroupMember.query.filter(GroupMember.student_id == my_id).all()
+    for mr in member_records:
+        group_ids.add(mr.group_id)
+
+    # If my_id is group leader
+    led_groups = Group.query.filter_by(leader_id=my_id).all()
+    for lg in led_groups:
+        group_ids.add(lg.id)
+
+    # If my_id is mentor (Lecturer)
+    mentored_topics = Topic.query.filter_by(mentor_id=my_id).all()
+    for mt in mentored_topics:
+        if mt.group_id:
+            group_ids.add(mt.group_id)
+
+    mentored_groups = Group.query.filter_by(mentor_id=my_id).all()
+    for mg in mentored_groups:
+        group_ids.add(mg.id)
+
+    peer_dict = {}  # peer_id -> role_description
+
+    if group_ids:
+        groups = Group.query.filter(Group.id.in_(list(group_ids))).all()
+        for g in groups:
+            # A. Mentor (GVHD): Luôn cho phép trao đổi cá nhân 1-1 với Giảng viên hướng dẫn ngay từ khi đăng ký
+            m_id = g.mentor_id
+            if not m_id:
+                for t in g.topics:
+                    if t.mentor_id:
+                        m_id = t.mentor_id
+                        break
+            if m_id and m_id != my_id:
+                peer_dict[m_id] = 'Giảng viên hướng dẫn'
+            elif my_id == m_id and g.leader_id and g.leader_id != my_id:
+                if g.leader_id not in peer_dict:
+                    peer_dict[g.leader_id] = 'Sinh viên (Trưởng nhóm đề tài)'
+
+            # B & C: Thành viên nhóm khác chỉ được tạo hội thoại riêng khi đề tài đã được Khoa/Viện phê duyệt
+            is_approved = (g.status == 'approved') or any(t.status == 'approved' for t in g.topics)
+            if is_approved:
+                # Group Leader
+                if g.leader_id and g.leader_id != my_id:
+                    if g.leader_id not in peer_dict:
+                        peer_dict[g.leader_id] = 'Trưởng nhóm NCKH'
+
+                # Group Members
+                for gm in g.members:
+                    if gm.student_id != my_id:
+                        if gm.student_id not in peer_dict:
+                            peer_dict[gm.student_id] = 'Thành viên nhóm'
+
+    # Append any peer not yet in seen
+    for peer_id, role_label in peer_dict.items():
+        if peer_id not in seen:
+            seen.add(peer_id)
+            peer_user = User.query.get(peer_id)
+            if peer_user:
+                result.append({
+                    'id': peer_user.id,
+                    'name': peer_user.full_name,
+                    'role': peer_user.role,
+                    'last_message': role_label,
+                    'timestamp': ''
+                })
+
     return jsonify(result), 200
 
 @chat_bp.route('/private/<int:user_id>/messages', methods=['GET'])
@@ -245,7 +330,7 @@ def get_private_messages(user_id):
             'file_name': msg.file_name,
             'meta_data': msg.meta_data,
             'is_read': msg.is_read,
-            'timestamp': msg.timestamp.strftime('%H:%M %d/%m/%Y')
+            'timestamp': to_vn_time(msg.timestamp)
         })
     return jsonify(result), 200
 
@@ -259,6 +344,7 @@ def send_private_message(user_id):
     if not sender_id:
         return jsonify({'error': 'Unauthorized or missing sender_id'}), 401
         
+    now_utc = datetime.utcnow()
     new_msg = Message(
         sender_id=sender_id,
         receiver_id=user_id,
@@ -266,7 +352,8 @@ def send_private_message(user_id):
         content=data['content'],
         message_type=data.get('message_type', 'text'),
         file_url=data.get('file_url'),
-        file_name=data.get('file_name')
+        file_name=data.get('file_name'),
+        timestamp=now_utc
     )
     db.session.add(new_msg)
     db.session.commit()
@@ -283,7 +370,7 @@ def send_private_message(user_id):
             'message_type': new_msg.message_type,
             'file_url': new_msg.file_url,
             'file_name': new_msg.file_name,
-            'timestamp': new_msg.timestamp.strftime('%H:%M %d/%m/%Y')
+            'timestamp': to_vn_time(new_msg.timestamp)
         }
     }), 201
 
@@ -312,14 +399,14 @@ def get_private_media(user_id):
                 'id': msg.id,
                 'url': msg.file_url,
                 'type': msg.message_type,
-                'timestamp': msg.timestamp.strftime('%d/%m/%Y')
+                'timestamp': to_vn_time(msg.timestamp, '%d/%m/%Y')
             })
         elif msg.message_type == 'file' and msg.file_url:
             files.append({
                 'id': msg.id,
                 'url': msg.file_url,
                 'name': msg.file_name or 'Tài liệu',
-                'timestamp': msg.timestamp.strftime('%d/%m/%Y')
+                'timestamp': to_vn_time(msg.timestamp, '%d/%m/%Y')
             })
             
         urls = url_pattern.findall(msg.content or '')
@@ -327,7 +414,7 @@ def get_private_media(user_id):
             links.append({
                 'id': msg.id,
                 'url': url,
-                'timestamp': msg.timestamp.strftime('%d/%m/%Y')
+                'timestamp': to_vn_time(msg.timestamp, '%d/%m/%Y')
             })
             
     return jsonify({

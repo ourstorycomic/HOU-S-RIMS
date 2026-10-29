@@ -28,7 +28,7 @@
         <form action="/login" method="POST">
             <div class="mb-3">
                 <label class="form-label small fw-bold text-muted">TÊN ĐĂNG NHẬP</label>
-                <input type="text" name="username" class="form-control" placeholder="Ví dụ: admin, gv01, sv01..." required>
+                <input type="text" name="username" class="form-control" placeholder="Ví dụ: faculty1, lecturer1, student1..." required>
             </div>
             <div class="mb-4">
                 <label class="form-label small fw-bold text-muted">MẬT KHẨU</label>
@@ -42,9 +42,21 @@
         </div>
         
         <div class="mt-3 p-2 bg-light rounded text-center small text-muted border border-dashed">
-            <strong>TK Demo:</strong> <code>faculty1</code> (Quản trị Khoa), <code>lecturer1</code> (Giảng viên) hoặc <code>student1</code> (Sinh viên)<br>
+            <strong>TK Demo:</strong> <code role="button" class="text-primary text-decoration-underline" onclick="fillLogin('faculty1')" title="Nhấn để điền">faculty1</code> (Quản trị Khoa), <code role="button" class="text-primary text-decoration-underline" onclick="fillLogin('lecturer1')" title="Nhấn để điền">lecturer1</code> (Giảng viên) hoặc <code role="button" class="text-primary text-decoration-underline" onclick="fillLogin('student1')" title="Nhấn để điền">student1</code> (Sinh viên)<br>
             <em>Mật khẩu chung: 123456</em>
         </div>
     </div>
+
+    <script>
+        function fillLogin(user) {
+            const u = document.querySelector('input[name="username"]');
+            const p = document.querySelector('input[name="password"]');
+            if (u) u.value = user;
+            if (p) {
+                p.value = '123456';
+                p.focus();
+            }
+        }
+    </script>
 </body>
 </html>

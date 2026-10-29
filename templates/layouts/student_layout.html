@@ -18,38 +18,53 @@
                 <div class="dropdown">
                     <button class="btn btn-light border-0 btn-sm fw-bold text-muted position-relative" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="fa-regular fa-bell" style="font-size: 1.1rem;"></i>
-                        {% set unread_count = notifications|selectattr('is_read', 'equalto', false)|list|length %}
-                        {% set pending_inv_count = current_user.group_memberships | selectattr('status', 'equalto', 'pending') | list | length if current_user else 0 %}
-                        {% if unread_count + pending_inv_count > 0 %}
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 9px; min-width: 18px;">
+                        {% set unread_count = notifications|selectattr('is_read', 'equalto', false)|list|length if notifications else 0 %}
+                        {% set received_invitations = [] %}
+                        {% if current_user and current_user.group_memberships %}
+                            {% for m in current_user.group_memberships %}
+                                {% if m.group and m.group.leader_id != current_user.id %}
+                                    {% set _ = received_invitations.append(m) %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                        {% set pending_inv_count = received_invitations | selectattr('status', 'in', ['pending', 'invited']) | list | length %}
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notifBellBadge" style="font-size: 9px; min-width: 18px; {% if unread_count + pending_inv_count == 0 %}display:none;{% endif %}">
                             {{ unread_count + pending_inv_count }}
                         </span>
-                        {% endif %}
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg p-0 mt-3" style="width: 320px; border-radius: 12px; overflow: hidden;">
+                    <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg p-0 mt-3" style="width: 330px; border-radius: 12px; overflow: hidden;">
                         <li class="p-3 bg-white border-bottom d-flex justify-content-between align-items-center">
                             <h6 class="fw-bold mb-0 text-dark">Thông báo</h6>
                             <a href="#" class="small text-primary fw-bold text-decoration-none" onclick="showAllNotifications()">Xem tất cả</a>
                         </li>
                         
-                        <div style="max-height: 360px; overflow-y: auto;">
-                            {% set pending_invitations = [] %}
-                            {% if current_user %}
-                                {% set pending_invitations = current_user.group_memberships | selectattr('status', 'equalto', 'pending') | list %}
-                            {% endif %}
-                            
-                            {% for inv in pending_invitations %}
+                        <div id="notifDropdownList" style="max-height: 360px; overflow-y: auto;">
+                            {% for inv in received_invitations if inv.status in ['pending', 'invited'] %}
                             {% set topic = inv.group.topics[0] if inv.group and inv.group.topics else None %}
+                            {% set is_pending = inv.status in ['pending', 'invited'] %}
+                            {% set is_accepted = inv.status in ['accepted', 'joined'] %}
                             <li>
-                                <div class="dropdown-item p-3 border-bottom bg-warning-subtle">
+                                <div class="dropdown-item p-3 border-bottom {% if is_pending %}bg-warning-subtle{% else %}bg-white{% endif %}">
                                     <div class="d-flex gap-3 align-items-start">
-                                        <div class="bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;"><i class="fa-solid fa-users"></i></div>
-                                        <div class="flex-grow-1">
-                                            <div class="fw-bold small text-dark mb-1">Lời mời tham gia nhóm NCKH</div>
+                                        <div class="{% if is_accepted %}bg-success text-white{% elif is_pending %}bg-warning text-dark{% else %}bg-secondary-subtle text-secondary{% endif %} rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;">
+                                            <i class="fa-solid {% if is_accepted %}fa-check{% elif is_pending %}fa-users{% else %}fa-xmark{% endif %}"></i>
+                                        </div>
+                                        <div class="flex-grow-1" style="white-space: normal;">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span class="fw-bold small text-dark">Lời mời tham gia nhóm NCKH</span>
+                                                {% if is_accepted %}
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill" style="font-size: 10px;"><i class="fa-solid fa-check me-1"></i>Đã chấp nhận</span>
+                                                {% elif is_pending %}
+                                                    <span class="badge bg-warning text-dark rounded-pill" style="font-size: 10px;">Chờ phản hồi</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary-subtle text-secondary rounded-pill" style="font-size: 10px;">Đã từ chối</span>
+                                                {% endif %}
+                                            </div>
                                             <div class="small text-muted mb-2" style="line-height: 1.4;">
                                                 Bạn được mời vào nhóm <strong>{{ inv.group.name }}</strong>
                                                 {% if topic %} - Đề tài: <em>{{ topic.title }}</em>{% endif %}
                                             </div>
+                                            {% if is_pending %}
                                             <div class="d-flex gap-2">
                                                 <button class="btn btn-sm btn-dark rounded-pill px-3 py-1" style="font-size: 11px;" onclick="handleGroupInvitation({{ inv.group_id }}, 'accepted')">
                                                     <i class="fa-solid fa-check me-1"></i> Đồng ý
@@ -58,6 +73,15 @@
                                                     <i class="fa-solid fa-xmark me-1"></i> Từ chối
                                                 </button>
                                             </div>
+                                            {% elif is_accepted %}
+                                            <div class="text-success small fw-semibold" style="font-size: 11px;">
+                                                <i class="fa-solid fa-circle-check me-1"></i> Đã chấp nhận lời mời tham gia nhóm.
+                                            </div>
+                                            {% else %}
+                                            <div class="text-muted small fst-italic" style="font-size: 11px;">
+                                                <i class="fa-solid fa-ban me-1"></i> Đã từ chối lời mời này.
+                                            </div>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>
@@ -66,17 +90,36 @@
                             
                             {% if notifications %}
                                 {% for notif in notifications %}
+                                {% set is_faculty_approved = 'Khoa' in notif.content and ('phê duyệt' in notif.content or 'ĐÃ PHÊ DUYỆT' in notif.content) %}
+                                {% set is_faculty_revision = 'Khoa' in notif.content and ('chỉnh sửa' in notif.content or 'YÊU CẦU' in notif.content) %}
+                                {% set is_lecturer_review = 'Giảng viên' in notif.content or 'GV' in notif.content or 'đánh giá' in notif.content or 'hướng dẫn' in notif.content %}
                                 <li>
-                                    <a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start {% if not notif.is_read %}bg-light{% endif %}" href="#" onclick="readNotification({{ notif.id }}, decodeURIComponent('{{ notif.content | urlencode }}'), false)">
-                                        <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;"><i class="fa-regular fa-bell"></i></div>
-                                        <div>
-                                            <div class="fw-bold small text-dark mb-1 d-flex align-items-center justify-content-between">
-                                                <span>Thông báo hệ thống</span>
+                                    <a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start notif-dropdown-item {% if not notif.is_read %}bg-light{% endif %}" 
+                                       href="javascript:void(0)" 
+                                       data-notif-id="{{ notif.id }}" 
+                                       data-notif-content="{{ notif.content | e }}" 
+                                       onclick="event.preventDefault(); window.handleNotifItemClick(this, event)">
+                                        <div class="{% if is_faculty_approved %}bg-success-subtle text-success{% elif is_faculty_revision %}bg-danger-subtle text-danger{% elif is_lecturer_review %}bg-primary-subtle text-primary{% else %}bg-secondary-subtle text-secondary{% endif %} rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;">
+                                            <i class="{% if is_faculty_approved %}fa-solid fa-stamp{% elif is_faculty_revision %}fa-solid fa-triangle-exclamation{% elif is_lecturer_review %}fa-solid fa-chalkboard-user{% else %}fa-regular fa-bell{% endif %}"></i>
+                                        </div>
+                                        <div class="flex-grow-1" style="min-width: 0;">
+                                            <div class="fw-bold small mb-1 d-flex align-items-center justify-content-between">
+                                                <span class="{% if is_faculty_approved %}text-success{% elif is_faculty_revision %}text-danger{% elif is_lecturer_review %}text-primary{% else %}text-dark{% endif %}">
+                                                    {% if is_faculty_approved %}
+                                                        <i class="fa-solid fa-circle-check me-1"></i>Khoa đã phê duyệt
+                                                    {% elif is_faculty_revision %}
+                                                        <i class="fa-solid fa-triangle-exclamation me-1"></i>Khoa yêu cầu sửa
+                                                    {% elif is_lecturer_review %}
+                                                        <i class="fa-solid fa-user-tie me-1"></i>Đánh giá từ GVHD
+                                                    {% else %}
+                                                        Thông báo hệ thống
+                                                    {% endif %}
+                                                </span>
                                                 {% if not notif.is_read %}
                                                     <span class="badge bg-danger rounded-circle p-1" style="width:8px; height:8px;"></span>
                                                 {% endif %}
                                             </div>
-                                            <div class="small text-muted mb-1" style="line-height: 1.4; white-space: normal;">{{ notif.content.split('|||')[0] | striptags | truncate(80) }}</div>
+                                            <div class="small text-muted mb-1" style="line-height: 1.4; white-space: normal;">{{ notif.content.split('|||')[0] | striptags | replace('\n', ' ') | truncate(95) }}</div>
                                             <div class="text-muted" style="font-size: 10px;">{{ notif.created_at.strftime('%d/%m/%Y %H:%M') if notif.created_at else '' }}</div>
                                         </div>
                                     </a>
@@ -84,14 +127,14 @@
                                 {% endfor %}
                             {% endif %}
                             
-                            {% if not notifications and not pending_invitations %}
+                            {% if not notifications and not received_invitations %}
                                 <li class="p-3 text-center text-muted small">Không có thông báo nào</li>
                             {% endif %}
                         </div>
 
                         <li class="p-2 bg-light text-center border-top d-flex justify-content-between px-3">
-                            <a href="#" class="small text-muted fw-bold text-decoration-none" style="font-size: 11px;" onclick="showAllNotifications()">Xem tất cả</a>
-                            <a href="#" class="small text-danger fw-bold text-decoration-none" style="font-size: 11px;" onclick="deleteAllReadNotifications()"><i class="fa-solid fa-trash me-1"></i> Xóa thư đã đọc</a>
+                            <a href="javascript:void(0)" class="small text-muted fw-bold text-decoration-none" style="font-size: 11px;" onclick="event.preventDefault(); window.showAllNotifications()">Xem tất cả</a>
+                            <a href="javascript:void(0)" class="small text-danger fw-bold text-decoration-none" style="font-size: 11px;" onclick="event.preventDefault(); window.deleteAllReadNotifications()"><i class="fa-solid fa-trash me-1"></i> Xóa thư đã đọc</a>
                         </li>
                     </ul>
                 </div>
@@ -146,7 +189,7 @@
                                     <strong>{{ student.full_name }}</strong><br>
                                     <small class="text-muted">{{ student.student_id or 'Chưa cập nhật mã' }}</small>
                                 </span>
-                                <a href="/profile/{{ student.student_id or student.username or student.id }}" target="_blank" class="btn btn-sm btn-light ms-auto rounded-circle" title="Xem Profile Sinh viên" onclick="event.stopPropagation();">
+                                <a href="/profile/{{ student.student_id or student.username or student.id }}" class="btn btn-sm btn-light ms-auto rounded-circle" title="Xem Profile Sinh viên" onclick="event.stopPropagation();">
                                     <i class="fa-regular fa-id-badge text-primary"></i>
                                 </a>
                             </label>
@@ -199,7 +242,7 @@ window.selectedMembersForGroup = [];
                             <div class="d-flex align-items-center gap-3">
                                 <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold small" style="width: 35px; height: 35px;">${name.substring(0,2).toUpperCase()}</div>
                                 <div>
-                                    <a href="/profile/${identifier}" target="_blank" class="fw-bold text-dark text-decoration-none hover-primary">${name}</a>
+                                    <a href="/profile/${identifier}" class="fw-bold text-dark text-decoration-none hover-primary">${name}</a>
                                     <div class="small text-muted">Thành viên (${sid})</div>
                                 </div>
                             </div>

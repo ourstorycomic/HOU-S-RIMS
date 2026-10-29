@@ -72,7 +72,7 @@
                                         <div class="d-flex flex-column gap-2">
                                             {% for fb in sub.feedback_list %}
                                             <div class="p-2 rounded-3 bg-warning-subtle border border-warning position-relative">
-                                                <div class="small text-dark" style="white-space: pre-wrap;">{{ fb.text }}</div>
+                                                <div class="small text-dark rich-content-display">{{ fb.text | safe }}</div>
                                                 {% if fb.time %}
                                                 <div class="text-muted mt-1" style="font-size:10px;"><i class="fa-regular fa-clock me-1"></i>{{ fb.time }}</div>
                                                 {% endif %}
@@ -158,14 +158,16 @@
                             <div class="list-group list-group-flush flex-grow-1 overflow-auto">
                                 {% if my_groups %}
                                     {% for g in my_groups %}
-                                    <a href="#" class="list-group-item list-group-item-action border-0 p-3 chat-group-item" data-group-id="{{ g.id }}" onclick="updateChatHeader('{{ g.name }}', {{ g.id }})">
+                                    {% set topic_title = g.topics[0].title if (g.topics and g.topics[0] and g.topics[0].title) else '' %}
+                                    {% set display_group_name = ('Nhóm ' ~ topic_title) if topic_title else (g.name if (g.name and not g.name.startswith('Nhóm ID:')) else ('Nhóm ID: ' ~ g.id)) %}
+                                    <a href="#" class="list-group-item list-group-item-action border-0 p-3 chat-group-item" data-group-id="{{ g.id }}" onclick="updateChatHeader('{{ display_group_name | escape }}', {{ g.id }})">
                                         <div class="d-flex align-items-center gap-3">
                                             <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px; background-color: #6366f1 !important;"><i class="fa-solid fa-users"></i></div>
                                             <div class="overflow-hidden">
                                                 <div class="d-flex justify-content-between">
-                                                    <span class="fw-bold text-dark text-truncate">{{ g.name }}</span>
+                                                    <span class="fw-bold text-dark text-truncate">{{ display_group_name }}</span>
                                                 </div>
-                                                <small class="text-muted text-truncate d-block">Nhóm ID: {{ g.id }}</small>
+                                                <small class="text-muted text-truncate d-block">{{ topic_title if topic_title else ('Nhóm ID: ' ~ g.id) }}</small>
                                             </div>
                                         </div>
                                     </a>

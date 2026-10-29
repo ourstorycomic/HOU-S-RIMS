@@ -16,15 +16,24 @@
                                     <div class="d-flex gap-2 mb-1">
                                         <span class="badge bg-warning text-dark" style="font-size: 10px;">CHỜ PHÊ DUYỆT</span>
                                     </div>
-                                    <div class="fw-bold mb-1">{{ topic.title }}</div>
-                                    <small class="text-muted"><i class="fa-solid fa-users me-1"></i> {{ topic.description }}</small>
+                                    <div class="fw-bold fs-6 text-dark mb-1">{{ topic.title }}</div>
+                                    {% if topic.description %}
+                                    <div class="small text-secondary bg-light p-2.5 rounded-2 border mt-1 mb-1 rich-content-display" style="line-height: 1.5; max-width: 650px;">
+                                        <div class="d-flex align-items-center gap-1 mb-1 text-primary fw-bold">
+                                            <i class="fa-solid fa-align-left me-1"></i><span>Mô tả đề tài:</span>
+                                        </div>
+                                        <div class="text-dark bg-white p-2 rounded border-0" style="max-height: 150px; overflow-y: auto;">
+                                            {{ topic.description | safe }}
+                                        </div>
+                                    </div>
+                                    {% endif %}
                                 </div>
                                 <div class="d-flex gap-2">
                                     {% set students = [] %}
                                     {% if topic.group and topic.group.members %}
                                         {% for member in topic.group.members %}
                                             {% set identifier = member.student.student_id or member.student.username or member.student.id %}
-                                            {% set link = '<a href="/profile/' ~ identifier ~ '" target="_blank" class="text-decoration-none fw-bold">' ~ member.student.full_name ~ '</a>' %}
+                                            {% set link = '<a href="/profile/' ~ identifier ~ '" class="text-decoration-none fw-bold">' ~ member.student.full_name ~ '</a>' %}
                                             {% set _ = students.append(link) %}
                                         {% endfor %}
                                     {% endif %}

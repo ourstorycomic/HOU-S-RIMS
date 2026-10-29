@@ -33,18 +33,21 @@ def create_batch():
       400:
         description: Invalid input
     """
-    data = request.form
+    if request.is_json:
+        data = request.get_json() or {}
+    else:
+        data = request.form or {}
     
-    if not data or not data.get('name'):
-        return jsonify({'error': 'Missing required field: name'}), 400
+    name = (data.get('name') or '').strip()
+    if not name:
+        return jsonify({'error': 'Thiếu trường bắt buộc: Tên đợt (name)'}), 400
 
-    academic_year = data.get('academic_year', '2025-2026')
-    existing_batch = Batch.query.filter(Batch.academic_year == academic_year, Batch.status != 'hidden').first()
+    academic_year = (data.get('academic_year') or '2025-2026').strip()
+    # Ràng buộc nghiệp vụ: Mỗi năm học chỉ được triển khai duy nhất 1 đợt NCKH
+    existing_batch = Batch.query.filter(Batch.academic_year == academic_year, Batch.status == 'active').first()
     
     if existing_batch:
-        msg = f"Không thể tạo thêm đợt mới. Năm học {academic_year} đã có 1 đợt NCKH là '{existing_batch.name}'"
-        if existing_batch.status == 'active':
-            msg += " và đợt này vẫn đang còn hiệu lực."
+        msg = f"Năm học {academic_year} đã có đợt NCKH '{existing_batch.name}' đang có hiệu lực. Theo quy định, mỗi năm học chỉ được triển khai 1 đợt NCKH duy nhất. Vui lòng xóa hoặc kết thúc đợt hiện tại trước khi triển khai đợt mới cho năm học này."
         return jsonify({'error': msg}), 400
         
     import os
@@ -56,11 +59,22 @@ def create_batch():
         submission_deadline = None
 
         if data.get('start_date'):
-            start_date = datetime.strptime(data['start_date'], '%Y-%m-%d')
+            try:
+                start_date = datetime.strptime(data['start_date'], '%Y-%m-%d')
+            except ValueError:
+                pass
         if data.get('end_date'):
-            end_date = datetime.strptime(data['end_date'], '%Y-%m-%d')
+            try:
+                end_date = datetime.strptime(data['end_date'], '%Y-%m-%d')
+            except ValueError:
+                pass
         if data.get('submission_deadline'):
-            submission_deadline = datetime.strptime(data['submission_deadline'], '%Y-%m-%d')
+            try:
+                submission_deadline = datetime.strptime(data['submission_deadline'], '%Y-%m-%d')
+            except ValueError:
+                pass
+        elif end_date:
+            submission_deadline = end_date
             
         doc_filenames = []
         doc_paths = []
@@ -94,7 +108,8 @@ def create_batch():
         
         from models import User, Notification
         from email_utils import send_notification_email
-        users = User.query.filter(User.role.in_(['student', 'lecturer'])).all()
+        from sqlalchemy import func
+        users = User.query.filter(func.lower(User.role).in_(['student', 'lecturer'])).all()
         
         b_start_str = start_date.strftime('%d/%m/%Y') if start_date else 'Chưa công bố'
         b_submit_str = submission_deadline.strftime('%d/%m/%Y') if submission_deadline else 'Chưa công bố'
@@ -262,12 +277,29 @@ def update_batch(batch_id):
 
 @batches_bp.route('/<int:batch_id>', methods=['DELETE'])
 def delete_batch(batch_id):
+    from models import Council, CouncilMember
     batch = Batch.query.get_or_404(batch_id)
     try:
-        # Soft delete instead of hard delete to preserve data integrity
-        batch.status = 'hidden'
+        batch_name = batch.name
+        
+        with db.session.no_autoflush:
+            # Unlink topics and groups referencing this batch
+            if batch.topics:
+                for t in batch.topics:
+                    t.batch_id = None
+            if batch.groups:
+                for g in batch.groups:
+                    g.batch_id = None
+                    
+            # Handle councils referencing this batch
+            councils = Council.query.filter_by(batch_id=batch.id).all()
+            for c in councils:
+                CouncilMember.query.filter_by(council_id=c.id).delete()
+                db.session.delete(c)
+                
+            db.session.delete(batch)
         db.session.commit()
-        return jsonify({'message': 'Batch deleted (hidden) successfully'}), 200
+        return jsonify({'message': f'Đã xóa đợt NCKH "{batch_name}" thành công!', 'deleted_id': batch_id}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Không thể ẩn đợt NCKH này do có lỗi: {str(e)}'}), 500
+        return jsonify({'error': f'Không thể xóa đợt NCKH này do có lỗi: {str(e)}'}), 500

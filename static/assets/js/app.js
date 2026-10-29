@@ -3,24 +3,86 @@
 // HOU S-RIMS - Application Logic (No hardcoded data)
 // ============================================================
 
-// Group invitation handler (called from notification dropdown)
+// Real-time synchronization state
+window._seenNotifIds = new Set();
+window._notifInitDone = false;
+window._liveSyncTimer = null;
+
+// Group invitation handler (instant DOM update + real-time sync, NO page reload!)
 async function handleGroupInvitation(groupId, action) {
+    const isAcc = action === 'accepted';
+    
+    // 1. Optimistic UI update: immediately change button to status badge in dropdown
+    const itemEl = document.querySelector(`[data-inv-group-id="${groupId}"]`) || 
+                   document.querySelector(`button[onclick*="handleGroupInvitation(${groupId}"]`)?.closest('li, .dropdown-item');
+    if (itemEl) {
+        const actionsDiv = itemEl.querySelector('.d-flex.gap-2:has(button)') || itemEl.querySelector('.d-flex.gap-2');
+        if (actionsDiv) {
+            actionsDiv.outerHTML = isAcc ? 
+                `<div class="text-success small fw-semibold mt-1" style="font-size: 11px;"><i class="fa-solid fa-circle-check me-1"></i> Đã chấp nhận lời mời tham gia nhóm.</div>` :
+                `<div class="text-muted small fst-italic mt-1" style="font-size: 11px;"><i class="fa-solid fa-ban me-1"></i> Đã từ chối lời mời này.</div>`;
+        }
+        const badgeEl = itemEl.querySelector('.badge');
+        if (badgeEl) {
+            badgeEl.className = isAcc ? 'badge bg-success-subtle text-success border border-success-subtle rounded-pill' : 'badge bg-secondary-subtle text-secondary rounded-pill';
+            badgeEl.innerHTML = isAcc ? '<i class="fa-solid fa-check me-1"></i>Đã chấp nhận' : 'Đã từ chối';
+        }
+        itemEl.classList.remove('bg-warning-subtle');
+        itemEl.classList.add('bg-white');
+    }
+
+    // Xử lý ẩn mượt mà thẻ lời mời trong banner màu vàng
+    const bannerItem = document.querySelector(`button[onclick*="handleGroupInvitation(${groupId}"]`)?.closest('.d-flex.flex-wrap');
+    if (bannerItem) {
+        bannerItem.style.transition = 'all 0.35s ease';
+        bannerItem.style.opacity = '0';
+        setTimeout(() => {
+            bannerItem.remove();
+            const banner = document.getElementById('globalPendingInvitationBanner');
+            if (banner && !banner.querySelector('.btn-dark')) {
+                banner.style.transition = 'all 0.35s ease';
+                banner.style.opacity = '0';
+                setTimeout(() => banner.remove(), 350);
+            }
+        }, 350);
+    }
+
     try {
         const resp = await fetch('/api/topics/invitation', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({group_id: groupId, action: action})
         });
+        const data = await resp.json().catch(() => ({}));
         if (resp.ok) {
-            const msg = action === 'accepted' ? 'Đã tham gia nhóm nghiên cứu!' : 'Đã từ chối lời mời.';
-            Swal.fire({ icon: 'success', title: 'Thành công', text: msg, timer: 2000, showConfirmButton: false })
-                .then(() => location.reload());
+            const msg = isAcc ? 'Đã tham gia nhóm nghiên cứu thành công!' : 'Đã từ chối lời mời tham gia nhóm.';
+            if (typeof Swal !== 'undefined') {
+                Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                }).fire({
+                    icon: isAcc ? 'success' : 'info',
+                    title: msg
+                });
+            }
+            // Trigger immediate sync across all badge counters and lists
+            if (typeof syncNotificationsLive === 'function') {
+                syncNotificationsLive(true);
+            }
+            // Cập nhật lại ngay lập tức màn hình Đăng ký Đề tài
+            if (typeof window.checkAndLoadMyTopic === 'function') {
+                window.checkAndLoadMyTopic();
+            }
         } else {
-            const data = await resp.json();
-            Swal.fire('Lỗi', data.error || 'Có lỗi xảy ra', 'error');
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Thông báo', data.error || 'Có lỗi xảy ra', 'warning');
+            }
         }
     } catch(e) {
-        Swal.fire('Lỗi', e.message, 'error');
+        console.error("handleGroupInvitation error:", e);
     }
 }
 
@@ -210,14 +272,24 @@ document.addEventListener('DOMContentLoaded', function () {
                 const data = await resp.json();
                 if (resp.ok || resp.status === 201) {
                     // Close modal if open
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalRegisterTopic'));
-                    if (modal) modal.hide();
+                    const modalConfirm = (typeof bootstrap !== 'undefined') ? (
+                        bootstrap.Modal.getInstance(document.getElementById('modalConfirmRegister')) ||
+                        bootstrap.Modal.getInstance(document.getElementById('modalRegisterTopic'))
+                    ) : null;
+                    if (modalConfirm) modalConfirm.hide();
+
                     await Swal.fire({
                         icon: 'success', title: 'Đăng ký thành công!',
                         text: 'Đề tài đã được gửi và đang chờ giảng viên duyệt.',
                         timer: 2000, showConfirmButton: false
                     });
-                    location.reload();
+
+                    if (typeof checkAndLoadMyTopic === 'function') {
+                        await checkAndLoadMyTopic();
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    } else {
+                        location.reload();
+                    }
                 } else {
                     Swal.fire('Lỗi', data.error || 'Đăng ký thất bại.', 'error');
                 }
@@ -237,8 +309,13 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             const data = await resp.json();
             if (resp.ok) {
-                Swal.fire({icon: 'success', title: 'Đã hủy', text: 'Đã hủy đăng ký đề tài thành công.', timer: 2000, showConfirmButton: false})
-                .then(() => location.reload());
+                Swal.fire({icon: 'success', title: 'Đã hủy', text: 'Đã hủy đăng ký đề tài thành công.', timer: 2000, showConfirmButton: false});
+                if (typeof renderTopicFormView === 'function') {
+                    renderTopicFormView();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    location.reload();
+                }
             } else {
                 Swal.fire('Lỗi', data.error || 'Không thể hủy đề tài.', 'error');
             }
@@ -307,6 +384,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
                 const data = await resp.json();
                 if (resp.ok || resp.status === 201) {
+                    sessionStorage.setItem('active_admin_tab', 'batches');
+                    window.location.hash = '#batches';
                     await Swal.fire({ icon: 'success', title: 'Tạo đợt thành công!', timer: 1600, showConfirmButton: false });
                     location.reload();
                 } else {
@@ -337,6 +416,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 try {
                     const res = await fetch(`/api/batches/${id}`, { method: 'DELETE' });
                     if (res.ok) {
+                        sessionStorage.setItem('active_admin_tab', 'batches');
+                        window.location.hash = '#batches';
                         Swal.fire('Đã xóa!', 'Đợt NCKH đã bị xóa.', 'success').then(() => location.reload());
                     } else {
                         const data = await res.json();
@@ -414,14 +495,30 @@ document.addEventListener('DOMContentLoaded', function () {
 // ===================== SAVE BATCH (standalone, called by onclick) =====================
 async function saveBatch() {
     const name = document.getElementById('batch-name')?.value?.trim();
+    const year = document.getElementById('batch-year')?.value?.trim() || '2025-2026';
     const startDate = document.getElementById('batch-start-date')?.value;
     const endDate = document.getElementById('batch-end-date')?.value;
     const type = document.getElementById('batch-type')?.value;
     const description = document.getElementById('batch-description')?.value;
+    const fileInput = document.getElementById('batch-file');
 
     if (!name) {
         Swal.fire('Thiếu thông tin', 'Vui lòng nhập tên đợt triển khai.', 'warning');
         return;
+    }
+
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('academic_year', year);
+    formData.append('type', type || 'NCKH Standard');
+    if (startDate) formData.append('start_date', startDate);
+    if (endDate) {
+        formData.append('end_date', endDate);
+        formData.append('submission_deadline', endDate);
+    }
+    if (description) formData.append('description', description);
+    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+        formData.append('guidance_doc', fileInput.files[0]);
     }
 
     // Close the modal
@@ -431,19 +528,13 @@ async function saveBatch() {
     try {
         const resp = await fetch('/api/batches', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                name,
-                type: type || 'NCKH Standard',
-                start_date: startDate || null,
-                end_date: endDate || null,
-                submission_deadline: endDate || null,
-                description: description || ''
-            })
+            body: formData
         });
         const data = await resp.json();
         if (resp.ok || resp.status === 201) {
-            await Swal.fire({ icon: 'success', title: 'Đã tạo đợt mới!', text: `"${name}" đã được ban hành.`, timer: 2000, showConfirmButton: false });
+            sessionStorage.setItem('active_admin_tab', 'batches');
+            window.location.hash = '#batches';
+            await Swal.fire({ icon: 'success', title: 'Đã tạo đợt mới!', text: `"${name}" đã được ban hành.`, timer: 1800, showConfirmButton: false });
             location.reload();
         } else {
             Swal.fire('Lỗi', data.error || 'Tạo đợt thất bại.', 'error');
@@ -1043,23 +1134,32 @@ async function submitEditBatch() {
 
 async function deleteBatch(id, name) {
     const result = await Swal.fire({
-        title: 'Bạn có chắc chắn muốn xóa?',
-        text: `Hành động này sẽ xóa/ẩn đợt NCKH "${name}".`,
+        title: 'Xác nhận xóa đợt?',
+        text: `Bạn có chắc chắn muốn xóa đợt NCKH "${name}" không? Thao tác này sẽ xóa đợt khỏi hệ thống.`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Có, xóa nó!',
-        cancelButtonText: 'Hủy'
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fa-solid fa-trash-can me-1"></i> Xóa vĩnh viễn',
+        cancelButtonText: 'Hủy bỏ'
     });
 
     if (result.isConfirmed) {
         try {
             const res = await fetch(`/api/batches/${id}`, { method: 'DELETE' });
+            const data = await res.json();
             if (res.ok) {
-                Swal.fire('Đã xóa!', 'Đợt NCKH đã được ẩn.', 'success').then(() => location.reload());
+                sessionStorage.setItem('active_admin_tab', 'batches');
+                window.location.hash = '#batches';
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Đã xóa!',
+                    text: data.message || 'Đợt NCKH đã được xóa thành công.',
+                    timer: 1800,
+                    showConfirmButton: false
+                });
+                location.reload();
             } else {
-                const data = await res.json();
                 Swal.fire('Lỗi', data.error || 'Có lỗi xảy ra', 'error');
             }
         } catch(e) {
@@ -1067,6 +1167,7 @@ async function deleteBatch(id, name) {
         }
     }
 }
+window.deleteBatch = deleteBatch;
 
 document.addEventListener('DOMContentLoaded', () => {
     const today = new Date().toISOString().split('T')[0];
@@ -1106,123 +1207,767 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-async function readNotification(id, content, fromAll = false) {
-    try {
-        await fetch(`/api/notifications/${id}/read`, { method: 'PATCH' });
-    } catch(e) { console.error(e); }
+// ====================================================================
+// HỆ THỐNG MODAL CHI TIẾT THÔNG BÁO HIỆN ĐẠI (CHUNG CHO SINH VIÊN, GIẢNG VIÊN & KHOA)
+// ====================================================================
+window.handleNotifActionClick = function(href) {
+    if (typeof Swal !== 'undefined') Swal.close();
+    if (!href) return;
 
-    let parts = content.split('|||');
-    let textHtml = parts[0];
-    let htmlContent = `<div class="ql-editor" style="text-align: left; font-size: 14px; padding: 0;">${textHtml}</div>`;
-    
-    if (parts.length > 1) {
-        htmlContent += `<hr><div style="text-align:center; display: flex; flex-direction: column; gap: 8px;">`;
-        for (let i = 1; i < parts.length; i++) {
-            if (parts[i].trim() !== '') {
-                let fileName = parts[i].trim();
-                htmlContent += `<a href="/static/uploads/batches/${encodeURIComponent(fileName)}" target="_blank" class="btn btn-outline-primary rounded-pill fw-bold"><i class="fa-solid fa-download me-2"></i>Tải về ${fileName}</a>`;
+    // Xử lý chuyển tab trực tiếp nếu đang ở trang Sinh viên
+    if (href.includes('#s-') || href.startsWith('/student#s-')) {
+        const parts = href.split('#');
+        const tabId = parts[1];
+        if (typeof switchTab === 'function') {
+            const navLink = document.querySelector(`a[href*="${tabId}"]`);
+            if (navLink) {
+                switchTab(tabId, navLink);
+            } else {
+                window.location.hash = '#' + tabId;
             }
+            return;
         }
-        htmlContent += `</div>`;
     }
 
-    Swal.fire({
-        title: 'Chi tiết Thông báo',
-        html: htmlContent,
-        icon: 'info',
-        confirmButtonText: 'Đóng'
-    }).then(() => {
-        if (fromAll) {
-            // Reopen the notification list without full page reload
+    if (href.startsWith('/lecturer') && window.location.pathname.startsWith('/lecturer')) {
+        window.location.href = href;
+        return;
+    }
+
+    window.location.href = href;
+};
+
+window.goBackToAllNotifications = function() {
+    if (typeof Swal !== 'undefined') Swal.close();
+    setTimeout(() => {
+        if (typeof showAllNotifications === 'function') {
             showAllNotifications();
-        } else {
-            // Just update badge count without full reload
+        }
+    }, 200);
+};
+
+function buildModernNotificationHtml(id, content, fromAll) {
+    const parts = (content || '').split('|||');
+    const mainHtml = parts[0] || '';
+    const attachments = parts.slice(1).map(s => s.trim()).filter(Boolean);
+
+    // 1. Phân tích Link hành động (Button hành động chính ở footer)
+    let actionUrl = '';
+    let actionText = '';
+    let actionIcon = 'fa-solid fa-arrow-up-right-from-square';
+
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = mainHtml;
+
+    const linkEl = tempDiv.querySelector('a[href]');
+    if (linkEl) {
+        actionUrl = linkEl.getAttribute('href') || '';
+        actionText = linkEl.textContent.trim() || 'Xem chi tiết';
+        linkEl.remove();
+    }
+
+    const cleanHtml = tempDiv.innerHTML.trim();
+    const textContent = tempDiv.textContent || tempDiv.innerText || '';
+
+    // 2. Xác định Loại thông báo & Theme màu sắc
+    let theme = {
+        gradient: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+        categoryTag: 'THÔNG BÁO HỆ THỐNG',
+        icon: 'fa-solid fa-bell',
+        headline: 'Thông báo từ Hệ thống NCKH',
+        isApproval: false,
+        isRevision: false
+    };
+
+    const isFacultyApproval = textContent.includes('Khoa') && (textContent.includes('phê duyệt') || textContent.includes('ĐÃ PHÊ DUYỆT'));
+    const isFacultyRevision = textContent.includes('Khoa') && (textContent.includes('chỉnh sửa') || textContent.includes('YÊU CẦU CHỈNH SỬA') || textContent.includes('YÊU CẦU'));
+    const isLecturerApproved = (textContent.includes('Giảng viên') || textContent.includes('GVHD') || textContent.includes('TS.')) && (textContent.includes('phê duyệt') || textContent.includes('ĐÃ DUYỆT'));
+    const isLecturerRevision = (textContent.includes('Giảng viên') || textContent.includes('GVHD') || textContent.includes('TS.')) && (textContent.includes('yêu cầu') || textContent.includes('chỉnh sửa'));
+    const isLecturerReview = (textContent.includes('Giảng viên') || textContent.includes('GVHD') || textContent.includes('TS.')) && (textContent.includes('đánh giá') || textContent.includes('ghi chú') || textContent.includes('nhận xét'));
+    const isStudentSubmission = textContent.includes('Bài nộp mới từ nhóm') || textContent.includes('vừa nộp');
+    const isTopicWaitingFaculty = textContent.includes('Đề tài mới chờ Khoa phê duyệt') || (textContent.includes('chờ Hội đồng Khoa') && textContent.includes('thẩm định'));
+    const isGroupInvitation = textContent.includes('Lời mời tham gia') || textContent.includes('mời vào nhóm') || textContent.includes('mời tham gia nhóm');
+    const isTopicApproval = textContent.includes('phê duyệt đề tài') || (textContent.includes('Đề tài NCKH') && textContent.includes('chính thức phê duyệt'));
+    const isBatchAnnouncement = textContent.includes('Đợt NCKH:') || textContent.includes('NCKH 20') || textContent.includes('Kế hoạch NCKH');
+    const isCalendarMeeting = textContent.includes('Lịch hẹn') || textContent.includes('lịch hẹn');
+    const isCouncil = textContent.includes('Hội đồng') || textContent.includes('hội đồng');
+
+    if (isFacultyApproval) {
+        theme.gradient = 'linear-gradient(135deg, #065f46 0%, #059669 100%)';
+        theme.categoryTag = 'KHOA CÔNG NGHỆ THÔNG TIN • ĐÃ PHÊ DUYỆT';
+        theme.icon = 'fa-solid fa-stamp';
+        theme.headline = 'Khoa CNTT đã phê duyệt Đạt yêu cầu';
+        theme.isApproval = true;
+    } else if (isFacultyRevision) {
+        theme.gradient = 'linear-gradient(135deg, #991b1b 0%, #dc2626 100%)';
+        theme.categoryTag = 'KHOA CÔNG NGHỆ THÔNG TIN • YÊU CẦU CHỈNH SỬA';
+        theme.icon = 'fa-solid fa-triangle-exclamation';
+        theme.headline = 'Khoa CNTT yêu cầu chỉnh sửa bài nộp';
+        theme.isRevision = true;
+    } else if (isLecturerApproved) {
+        theme.gradient = 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)';
+        theme.categoryTag = 'GIẢNG VIÊN HƯỚNG DẪN • ĐÃ DUYỆT';
+        theme.icon = 'fa-solid fa-circle-check';
+        theme.headline = 'Giảng viên hướng dẫn đã duyệt Đạt';
+        theme.isApproval = true;
+    } else if (isLecturerRevision) {
+        theme.gradient = 'linear-gradient(135deg, #b45309 0%, #d97706 100%)';
+        theme.categoryTag = 'GIẢNG VIÊN HƯỚNG DẪN • YÊU CẦU SỬA';
+        theme.icon = 'fa-solid fa-triangle-exclamation';
+        theme.headline = 'Giảng viên yêu cầu chỉnh sửa bài nộp';
+        theme.isRevision = true;
+    } else if (isLecturerReview) {
+        theme.gradient = 'linear-gradient(135deg, #0369a1 0%, #0284c7 100%)';
+        theme.categoryTag = 'GIẢNG VIÊN HƯỚNG DẪN • ĐÁNH GIÁ';
+        theme.icon = 'fa-solid fa-chalkboard-user';
+        theme.headline = 'Giảng viên đã nhận xét & đánh giá bài nộp';
+    } else if (isTopicWaitingFaculty) {
+        theme.gradient = 'linear-gradient(135deg, #854d0e 0%, #d97706 100%)';
+        theme.categoryTag = 'HỘI ĐỒNG KHOA • THẨM ĐỊNH ĐỀ TÀI';
+        theme.icon = 'fa-solid fa-building-columns';
+        theme.headline = 'Đề tài NCKH mới chờ Khoa thẩm định';
+        if (!actionUrl) actionUrl = '/faculty/topics';
+    } else if (isStudentSubmission) {
+        theme.gradient = 'linear-gradient(135deg, #312e81 0%, #4f46e5 100%)';
+        theme.categoryTag = 'BÀI NỘP MỚI TỪ SINH VIÊN';
+        theme.icon = 'fa-solid fa-file-arrow-up';
+        theme.headline = 'Sinh viên nộp hồ sơ / bài báo cáo mới';
+        if (!actionUrl) actionUrl = '/lecturer/progress';
+    } else if (isGroupInvitation) {
+        theme.gradient = 'linear-gradient(135deg, #0f766e 0%, #0d9488 100%)';
+        theme.categoryTag = 'LỜI MỜI THAM GIA NHÓM NCKH';
+        theme.icon = 'fa-solid fa-user-plus';
+        theme.headline = 'Lời mời tham gia nhóm Nghiên cứu khoa học';
+        if (!actionUrl) actionUrl = '/student#s-group';
+    } else if (isTopicApproval) {
+        theme.gradient = 'linear-gradient(135deg, #3730a3 0%, #6366f1 100%)';
+        theme.categoryTag = 'PHÊ DUYỆT ĐỀ TÀI NCKH CHÍNH THỨC';
+        theme.icon = 'fa-solid fa-award';
+        theme.headline = '🎉 Đề tài NCKH đã được phê duyệt chính thức';
+        theme.isApproval = true;
+    } else if (isBatchAnnouncement) {
+        theme.gradient = 'linear-gradient(135deg, #312e81 0%, #4338ca 100%)';
+        theme.categoryTag = 'KẾ HOẠCH & HƯỚNG DẪN ĐỢT NCKH';
+        theme.icon = 'fa-solid fa-bullhorn';
+        theme.headline = 'Thông báo Đợt Nghiên cứu khoa học';
+    } else if (isCalendarMeeting) {
+        theme.gradient = 'linear-gradient(135deg, #0e7490 0%, #0891b2 100%)';
+        theme.categoryTag = 'LỊCH HẸN & TRAO ĐỔI NCKH';
+        theme.icon = 'fa-solid fa-calendar-check';
+        theme.headline = 'Cập nhật trạng thái lịch hẹn';
+    } else if (isCouncil) {
+        theme.gradient = 'linear-gradient(135deg, #701a75 0%, #a21caf 100%)';
+        theme.categoryTag = 'HỘI ĐỒNG ĐÁNH GIÁ NGHIỆM THU';
+        theme.icon = 'fa-solid fa-users-rectangle';
+        theme.headline = 'Phân công Hội đồng đánh giá NCKH';
+    }
+
+    // 3. Phân tách các trường dữ liệu chi tiết
+    let topicTitle = '';
+    let docVersionFile = '';
+    let statusLabel = '';
+    let feedbackText = '';
+
+    // Tìm tên Đề tài & Tệp
+    const topicRegex = /Đề tài:\s*(?:<strong>)?(.*?)(?:<\/strong>)?(?:\s*\((.*?)\))?(?:<\/p>|<br>|[\r\n]|$)/i;
+    const topicMatch = mainHtml.match(topicRegex) 
+                    || mainHtml.match(/đề tài\s*(?:NCKH)?(?:\s*<strong>)?:\s*(.*?)(?:<\/strong>)?(?:<\/p>|<br>|[\r\n]|$)/i)
+                    || mainHtml.match(/đề tài\s*(?:<strong>)?["'“]?([^"'”<]+)["'”]?/i);
+    if (topicMatch) {
+        topicTitle = topicMatch[1] ? topicMatch[1].replace(/<\/?[^>]+(>|$)/g, "").trim() : '';
+        if (topicMatch[2]) {
+            docVersionFile = topicMatch[2].replace(/<\/?[^>]+(>|$)/g, "").trim();
+        }
+    }
+
+    // Tìm kết quả thẩm định
+    const badgeMatch = mainHtml.match(/<span class="badge[^"]*">(.*?)<\/span>/i);
+    if (badgeMatch) {
+        statusLabel = badgeMatch[1].replace(/<\/?[^>]+(>|$)/g, "").trim();
+    }
+
+    // Tìm ý kiến chỉ đạo / ghi chú / mô tả
+    const feedbackRegex = /(?:Ý kiến chỉ đạo(?: của Khoa| từ Khoa)?:?|Ghi chú(?: từ GV)?:?|Nhận xét(?: của Giảng viên)?:?|Lý do(?: từ chối)?:?|Mô tả(?:\s*\/\s*Ý tưởng nghiên cứu)?:?)\s*(?:<\/strong>)?\s*([\s\S]*?)(?:<\/p>|<a |$)/i;
+    const feedbackMatch = mainHtml.match(feedbackRegex);
+    if (feedbackMatch) {
+        feedbackText = feedbackMatch[1].replace(/<\/?[^>]+(>|$)/g, "").trim();
+    }
+
+    // Tìm dòng tiêu đề đầu tiên nếu có
+    const strongHeaderMatch = mainHtml.match(/<p>\s*<strong>(.*?)<\/strong>\s*<\/p>/i) || mainHtml.match(/<strong>(.*?)<\/strong>/i);
+    if (strongHeaderMatch) {
+        const hText = strongHeaderMatch[1].replace(/<\/?[^>]+(>|$)/g, "").trim();
+        if (hText.length > 5 && !hText.includes('Đề tài:') && !hText.includes('Kết quả') && !hText.includes('Ý kiến') && !hText.includes('Mô tả')) {
+            theme.headline = hText;
+        }
+    }
+
+    // Tinh chỉnh nút hành động và icon
+    if (actionUrl) {
+        if (actionUrl.includes('submit')) {
+            actionIcon = 'fa-solid fa-file-arrow-up';
+            actionText = 'Xem Hồ sơ Bài nộp';
+        } else if (actionUrl.includes('faculty/topics')) {
+            actionIcon = 'fa-solid fa-check-double';
+            actionText = 'Xem & Phê duyệt Đề tài';
+        } else if (actionUrl.includes('lecturer/progress') || actionUrl.includes('progress')) {
+            actionIcon = 'fa-solid fa-clipboard-check';
+            actionText = actionText && actionText !== 'Xem chi tiết' ? actionText : 'Xem Tiến độ Đề tài';
+        } else if (actionUrl.includes('group')) {
+            actionIcon = 'fa-solid fa-users';
+            actionText = 'Quản lý Nhóm NCKH';
+        } else if (actionUrl.includes('calendar')) {
+            actionIcon = 'fa-solid fa-calendar-check';
+            actionText = 'Xem Lịch làm việc';
+        } else if (actionUrl.includes('chat')) {
+            actionIcon = 'fa-solid fa-comments';
+            actionText = 'Vào phòng Chat Nhóm';
+        }
+    }
+
+    // 4. Xây dựng khối HTML giao diện hiện đại
+    let bodyCardsHtml = '';
+
+    if (topicTitle || statusLabel || feedbackText) {
+        // Cấu trúc dạng thẻ bài nộp / đề tài
+        if (topicTitle) {
+            bodyCardsHtml += `
+                <!-- Khối thông tin Đề tài & Bài nộp -->
+                <div class="p-3.5 rounded-4 bg-white border border-slate-200 shadow-xs mb-3">
+                    <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-1">
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fw-bold" style="font-size: 11px;">
+                            <i class="fa-solid fa-book-bookmark me-1"></i> Đề tài NCKH
+                        </span>
+                        ${docVersionFile ? `<span class="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 11px;"><i class="fa-solid fa-file-lines me-1"></i> ${docVersionFile}</span>` : ''}
+                    </div>
+                    <div class="fw-bold text-dark fs-6" style="line-height: 1.45;">
+                        ${topicTitle}
+                    </div>
+                </div>
+            `;
+        }
+
+        if (statusLabel) {
+            let sBg = '#ecfdf5', sBorder = '#a7f3d0', sText = '#065f46', sIcon = 'fa-solid fa-circle-check', sIconBg = '#d1fae5';
+            if (theme.isRevision || statusLabel.includes('YÊU CẦU') || statusLabel.includes('TỪ CHỐI')) {
+                sBg = '#fef2f2'; sBorder = '#fecaca'; sText = '#991b1b'; sIcon = 'fa-solid fa-triangle-exclamation'; sIconBg = '#fee2e2';
+            } else if (statusLabel.includes('CHỜ') || statusLabel.includes('ĐANG')) {
+                sBg = '#fffbeb'; sBorder = '#fde68a'; sText = '#b45309'; sIcon = 'fa-solid fa-clock'; sIconBg = '#fef3c7';
+            }
+
+            bodyCardsHtml += `
+                <!-- Khối Quyết định thẩm định -->
+                <div class="p-3.5 rounded-4 mb-3 d-flex align-items-center gap-3 shadow-xs" style="background: ${sBg}; border: 1.5px solid ${sBorder};">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px; background: ${sIconBg}; color: ${sText}; font-size: 20px;">
+                        <i class="${sIcon}"></i>
+                    </div>
+                    <div>
+                        <div class="text-uppercase fw-bold" style="font-size: 10.5px; letter-spacing: 0.5px; color: ${sText}; opacity: 0.85;">Quyết định & Kết quả thẩm định:</div>
+                        <div class="fw-bold" style="font-size: 15px; color: ${sText};">
+                            ${statusLabel}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (feedbackText) {
+            bodyCardsHtml += `
+                <!-- Khối Ý kiến chỉ đạo / Nhận xét -->
+                <div class="p-3.5 rounded-4 mb-3" style="background: #fffbeb; border: 1px solid #fde68a; border-left: 5px solid #f59e0b;">
+                    <div class="fw-bold mb-1.5 d-flex align-items-center gap-1.5" style="color: #b45309; font-size: 13px;">
+                        <i class="fa-solid fa-comment-dots fs-6"></i> Ý kiến chỉ đạo / Ghi chú phản hồi:
+                    </div>
+                    <div style="font-size: 13.5px; color: #334155; line-height: 1.55; white-space: pre-wrap;">
+                        ${feedbackText}
+                    </div>
+                </div>
+            `;
+        }
+    } else {
+        // Thông báo văn bản tự do / đợt nckh / lịch hẹn
+        bodyCardsHtml += `
+            <div class="p-3.5 rounded-4 bg-white border border-slate-200 shadow-xs mb-3">
+                <div class="ql-editor rich-content-display p-0" style="font-size: 13.5px; line-height: 1.6; color: #1e293b;">
+                    ${cleanHtml}
+                </div>
+            </div>
+        `;
+    }
+
+    // Khối tệp đính kèm (nếu có)
+    let attachmentsHtml = '';
+    if (attachments.length > 0) {
+        attachmentsHtml = `
+            <div class="p-3.5 rounded-4 bg-white border border-slate-200 shadow-xs mb-3">
+                <div class="small fw-bold text-dark mb-2.5 d-flex align-items-center gap-1.5">
+                    <i class="fa-solid fa-paperclip text-primary"></i> Tài liệu đính kèm (${attachments.length}):
+                </div>
+                <div class="d-flex flex-column gap-2">
+                    ${attachments.map(f => `
+                        <a href="/static/uploads/batches/${encodeURIComponent(f)}" target="_blank" class="btn btn-outline-primary rounded-pill d-flex align-items-center justify-content-between p-2.5 px-3.5 text-decoration-none fw-bold small text-start">
+                            <span class="text-truncate me-2"><i class="fa-solid fa-file-pdf me-2 text-danger"></i>${f}</span>
+                            <span class="badge bg-primary text-white rounded-pill px-2.5 py-1"><i class="fa-solid fa-download me-1"></i> Tải về</span>
+                        </a>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    // Khối nút hành động đáy (Footer Action Bar)
+    const backBtn = fromAll ? `
+        <button type="button" class="btn btn-outline-secondary rounded-pill px-3.5 py-2 fw-bold small d-inline-flex align-items-center gap-1.5" onclick="window.goBackToAllNotifications()">
+            <i class="fa-solid fa-arrow-left"></i> Quay lại danh sách
+        </button>
+    ` : `
+        <span class="badge bg-light text-secondary border rounded-pill px-3 py-1.5 small fw-semibold" style="font-size: 11px;">
+            <i class="fa-solid fa-shield-halved text-primary me-1"></i> HOU S-RIMS
+        </span>
+    `;
+
+    const actionBtn = actionUrl ? `
+        <button type="button" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm d-inline-flex align-items-center gap-2 small" onclick="window.handleNotifActionClick('${actionUrl}')">
+            <i class="${actionIcon}"></i> ${actionText}
+        </button>
+    ` : '';
+
+    return `
+        <div class="notif-detail-modal-card text-start" style="font-family: inherit;">
+            <!-- Header Banner -->
+            <div class="p-4 text-white position-relative" style="background: ${theme.gradient}; border-radius: 18px 18px 0 0;">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="badge rounded-pill px-3 py-1 fw-bold text-uppercase" style="background: rgba(255,255,255,0.22); backdrop-filter: blur(6px); font-size: 10.5px; letter-spacing: 0.5px;">
+                        <i class="${theme.icon} me-1"></i> ${theme.categoryTag}
+                    </span>
+                    <button type="button" class="btn-close btn-close-white" onclick="Swal.close()" aria-label="Close" style="opacity: 0.85; filter: invert(1);"></button>
+                </div>
+                <h5 class="fw-bold mb-0 text-white" style="line-height: 1.4; font-size: 17px;">
+                    ${theme.headline}
+                </h5>
+            </div>
+
+            <!-- Body Content -->
+            <div class="p-3.5 p-md-4" style="background: #f8fafc; max-height: 60vh; overflow-y: auto;">
+                ${bodyCardsHtml}
+                ${attachmentsHtml}
+            </div>
+
+            <!-- Footer Action Bar -->
+            <div class="p-3 px-4 bg-white border-top d-flex align-items-center justify-content-between" style="border-radius: 0 0 18px 18px;">
+                <div>${backBtn}</div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-light rounded-pill px-3.5 py-2 fw-bold text-secondary border small" onclick="Swal.close()">
+                        Đóng
+                    </button>
+                    ${actionBtn}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+let _readingNotifLock = false;
+async function readNotification(id, content, fromAll = false) {
+    if (_readingNotifLock) return;
+    _readingNotifLock = true;
+    setTimeout(() => { _readingNotifLock = false; }, 400);
+
+    // Lưu lại thông báo để có thể quay lại từ sub-modal nếu cần
+    window._lastNotifModal = { id, content, fromAll };
+
+    // Đánh dấu đã thấy ngay lập tức để sync không coi là mới
+    if (window._seenNotifIds) {
+        window._seenNotifIds.add(id);
+        window._seenNotifIds.add(Number(id));
+        window._seenNotifIds.add(String(id));
+    }
+
+    // Gửi request đánh dấu đã đọc trên server
+    fetch(`/api/notifications/${id}/read`, { method: 'PATCH' })
+        .then(() => {
+            document.querySelectorAll('#notifBellBadge, .notif-badge, [data-notif-count]').forEach(el => {
+                let count = parseInt(el.textContent) || 0;
+                if (count > 0) {
+                    count--;
+                    el.textContent = count;
+                    if (count === 0) el.style.display = 'none';
+                }
+            });
+        })
+        .catch(console.error);
+
+    // Lấy nội dung nếu chưa có
+    if (!content && window._allNotifications && window._allNotifications[id]) {
+        content = window._allNotifications[id];
+    }
+    if (!content) {
+        try {
+            const res = await fetch('/api/notifications');
+            const data = await res.json();
+            const found = (data || []).find(n => String(n.id) === String(id));
+            if (found) {
+                content = found.content;
+                window._allNotifications = window._allNotifications || {};
+                window._allNotifications[id] = content;
+            }
+        } catch (e) {}
+    }
+    if (!content) content = 'Thông báo hệ thống';
+
+    const isFromAll = Boolean(fromAll);
+    const htmlModal = buildModernNotificationHtml(id, content, isFromAll);
+
+    window._isReadingNotifModal = true;
+    Swal.fire({
+        html: htmlModal,
+        showConfirmButton: false,
+        showCloseButton: false,
+        width: 580,
+        padding: '0',
+        background: '#ffffff',
+        allowOutsideClick: true,
+        customClass: {
+            popup: 'rounded-4 shadow-lg border-0 overflow-hidden p-0'
+        }
+    }).then(() => {
+        window._isReadingNotifModal = false;
+        if (typeof _refreshNotifBadge === 'function') {
             _refreshNotifBadge();
         }
     });
 }
 
+let _showingAllNotifs = false;
 async function showAllNotifications() {
+    if (_showingAllNotifs) return;
+    _showingAllNotifs = true;
+    setTimeout(() => { _showingAllNotifs = false; }, 400);
+
     try {
         const res = await fetch('/api/notifications');
         const data = await res.json();
         
         if (!data || data.length === 0) {
-            Swal.fire('Thông báo', 'Bạn không có thông báo nào.', 'info');
+            Swal.fire({
+                icon: 'info',
+                title: 'Hộp thư Thông báo',
+                text: 'Bạn không có thông báo nào.',
+                confirmButtonText: 'Đóng',
+                confirmButtonColor: '#2563eb',
+                customClass: { popup: 'rounded-4' }
+            });
             return;
         }
 
-        // Store notifications globally so onclick can access by id
         window._allNotifications = {};
         data.forEach(n => { window._allNotifications[n.id] = n.content; });
 
-        let html = `
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="text-muted small fw-bold"><i class="fa-solid fa-list me-1"></i>Danh sách thông báo</span>
-            <button class="btn btn-sm btn-outline-danger py-0 px-2 rounded-pill" onclick="Swal.close(); setTimeout(() => deleteAllReadNotifications(), 300)"><i class="fa-solid fa-trash me-1"></i>Xóa đã đọc</button>
-        </div>
-        <div class="list-group text-start" style="max-height: 400px; overflow-y: auto;">`;
+        const unreadCount = data.filter(n => !n.is_read).length;
 
-        data.forEach(n => {
-            let badge = !n.is_read ? '<span class="badge bg-danger rounded-circle p-1 ms-1" style="width:8px; height:8px; display:inline-block;"></span>' : '';
-            let temp = document.createElement("div");
-            temp.innerHTML = n.content.split('|||')[0];
-            let cleanText = temp.textContent || temp.innerText || "";
-            if (cleanText.length > 100) cleanText = cleanText.substring(0, 100) + '...';
-            // Escape for HTML attribute
-            let safeText = cleanText.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        // Render card items
+        let listItems = data.map(n => {
+            const raw = n.content.split('|||')[0];
+            const temp = document.createElement("div");
+            temp.innerHTML = raw;
+            const cleanText = (temp.textContent || temp.innerText || "").trim();
+            const snippet = cleanText.length > 95 ? cleanText.substring(0, 95) + '...' : cleanText;
 
-            html += `
-                <a href="#" class="list-group-item list-group-item-action py-3 ${!n.is_read ? 'bg-light' : ''}"
-                    data-notif-id="${n.id}"
-                    onclick="event.preventDefault(); _openNotifDetail(${n.id})">
-                    <div class="d-flex w-100 justify-content-between align-items-center">
-                        <strong class="mb-1 text-primary small"><i class="fa-solid fa-envelope me-2"></i>Hệ thống ${badge}</strong>
-                        <small class="text-muted" style="font-size:10px;">${n.created_at}</small>
+            const isFacultyApproved = n.content.includes('Khoa') && (n.content.includes('phê duyệt') || n.content.includes('ĐÃ PHÊ DUYỆT'));
+            const isFacultyRevision = n.content.includes('Khoa') && (n.content.includes('chỉnh sửa') || n.content.includes('YÊU CẦU'));
+            const isLecturerReview = n.content.includes('Giảng viên') || n.content.includes('GV') || n.content.includes('đánh giá') || n.content.includes('hướng dẫn');
+
+            let badgeHtml = '<span class="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1 small">Hệ thống</span>';
+            let iconClass = 'fa-solid fa-bell text-secondary';
+
+            if (isFacultyApproved) {
+                badgeHtml = '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 small"><i class="fa-solid fa-stamp me-1"></i>Khoa đã duyệt</span>';
+                iconClass = 'fa-solid fa-stamp text-success';
+            } else if (isFacultyRevision) {
+                badgeHtml = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1 small"><i class="fa-solid fa-triangle-exclamation me-1"></i>Khoa yêu cầu sửa</span>';
+                iconClass = 'fa-solid fa-triangle-exclamation text-danger';
+            } else if (isLecturerReview) {
+                badgeHtml = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 small"><i class="fa-solid fa-chalkboard-user me-1"></i>GVHD đánh giá</span>';
+                iconClass = 'fa-solid fa-chalkboard-user text-primary';
+            }
+
+            return `
+                <div class="list-group-item list-group-item-action p-3 mb-2 rounded-4 border ${!n.is_read ? 'border-primary-subtle bg-white shadow-xs' : 'bg-light bg-opacity-75'}"
+                    style="cursor: pointer; transition: all 0.2s;"
+                    onclick="event.preventDefault(); readNotification(${n.id}, window._allNotifications[${n.id}], true)">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 38px; height: 38px; background: rgba(0,0,0,0.04);">
+                            <i class="${iconClass}"></i>
+                        </div>
+                        <div class="flex-grow-1" style="min-width: 0;">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <div>
+                                    ${badgeHtml}
+                                    ${!n.is_read ? '<span class="badge bg-danger rounded-circle p-1 ms-1" style="width:8px; height:8px; display:inline-block;"></span>' : ''}
+                                </div>
+                                <span class="text-muted small" style="font-size: 11px;">${n.created_at}</span>
+                            </div>
+                            <p class="mb-0 text-dark small" style="line-height: 1.45; font-size: 13px;">${snippet}</p>
+                        </div>
                     </div>
-                    <p class="mb-0 small text-muted mt-1" style="white-space: normal; line-height: 1.4;">${safeText}</p>
-                </a>
+                </div>
             `;
-        });
-        html += '</div>';
+        }).join('');
+
+        let modalHtml = `
+            <div class="text-start" style="font-family: inherit;">
+                <!-- Header -->
+                <div class="p-4 text-white position-relative" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); border-radius: 16px 16px 0 0;">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <span class="badge rounded-pill px-3 py-1 fw-bold text-uppercase" style="background: rgba(255,255,255,0.22); font-size: 10.5px;">
+                            <i class="fa-solid fa-inbox me-1"></i> HỘP THƯ HỆ THỐNG
+                        </span>
+                        <button type="button" class="btn-close btn-close-white" onclick="Swal.close()" aria-label="Close" style="opacity: 0.85; filter: invert(1);"></button>
+                    </div>
+                    <div class="d-flex align-items-baseline justify-content-between">
+                        <div>
+                            <h5 class="fw-bold mb-0 text-white">Tất cả Thông báo</h5>
+                            <small class="text-white-50">Tổng số: ${data.length} thông báo ${unreadCount > 0 ? `• <span class="text-warning fw-bold">${unreadCount} chưa đọc</span>` : ''}</small>
+                        </div>
+                        <button class="btn btn-sm btn-outline-light rounded-pill px-3 py-1 fw-bold small" onclick="deleteAllReadNotifications()">
+                            <i class="fa-solid fa-trash me-1"></i> Xóa đã đọc
+                        </button>
+                    </div>
+                </div>
+
+                <!-- List Content -->
+                <div class="p-3.5 p-md-4" style="background: #f8fafc; max-height: 58vh; overflow-y: auto;">
+                    <div class="list-group list-group-flush border-0">
+                        ${listItems}
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="p-3 px-4 bg-white border-top text-end" style="border-radius: 0 0 16px 16px;">
+                    <button type="button" class="btn btn-light rounded-pill px-4 py-2 fw-bold text-secondary border small" onclick="Swal.close()">
+                        Đóng
+                    </button>
+                </div>
+            </div>
+        `;
 
         Swal.fire({
-            title: 'Tất cả Thông báo',
-            html: html,
+            html: modalHtml,
             showConfirmButton: false,
-            showCloseButton: true,
+            showCloseButton: false,
             width: 620,
+            padding: '0',
+            background: '#ffffff',
             customClass: {
-                popup: 'p-4 rounded-4'
+                popup: 'rounded-4 shadow-lg border-0 overflow-hidden p-0'
             }
-        }).then(() => {
-            // Just refresh the badge count without full page reload
-            _refreshNotifBadge();
         });
 
     } catch (e) {
+        console.error("Error showAllNotifications:", e);
         Swal.fire('Lỗi', 'Không thể lấy danh sách thông báo.', 'error');
     }
 }
 
-function _refreshNotifBadge() {
-    // Refresh just the notification badge counter without full page reload
-    fetch('/api/notifications')
-        .then(r => r.json())
-        .then(data => {
-            const unread = data.filter(n => !n.is_read).length;
-            // Update all badge elements on page
-            document.querySelectorAll('.notif-badge, [data-notif-count]').forEach(el => {
-                if (unread > 0) {
-                    el.textContent = unread;
-                    el.style.display = '';
-                } else {
-                    el.style.display = 'none';
+// Real-time Live Synchronization for Notifications & Invitee Actions
+async function syncNotificationsLive(immediate = false) {
+    try {
+        const res = await fetch('/api/notifications/sync');
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        // 1. Update bell badge counter
+        const totalBadge = data.total_badge_count || 0;
+        document.querySelectorAll('#notifBellBadge, .notif-badge, [data-notif-count]').forEach(el => {
+            el.textContent = totalBadge;
+            el.style.display = totalBadge > 0 ? '' : 'none';
+        });
+
+        // 2. Cập nhật cache thông báo toàn cục (không tự ý bắn toast đè mất modal của người dùng)
+        if (data.notifications && data.notifications.length > 0) {
+            window._allNotifications = window._allNotifications || {};
+            data.notifications.forEach(n => {
+                window._allNotifications[n.id] = n.content;
+                if (window._seenNotifIds) {
+                    window._seenNotifIds.add(n.id);
                 }
             });
-        })
-        .catch(() => {});
+        }
+        window._notifInitDone = true;
+
+        // 3. Live update the dropdown list container (#notifDropdownList)
+        const listEl = document.getElementById('notifDropdownList');
+        if (listEl && (immediate || !listEl.closest('.dropdown-menu.show'))) {
+            let itemsHtml = '';
+            
+            // Render invitations (Chỉ hiển thị lời mời đang chờ phản hồi - pending)
+            if (data.invitations && data.invitations.length > 0) {
+                data.invitations.forEach(inv => {
+                    const isPending = inv.status === 'pending' || inv.status === 'invited';
+                    if (!isPending) return;
+                    const isAccepted = inv.status === 'accepted' || inv.status === 'joined';
+                    const iconClass = isAccepted ? 'fa-check' : (isPending ? 'fa-users' : 'fa-xmark');
+                    const iconBg = isAccepted ? 'bg-success text-white' : (isPending ? 'bg-warning text-dark' : 'bg-secondary-subtle text-secondary');
+                    const badgeHtml = isAccepted ? 
+                        '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill" style="font-size: 10px;"><i class="fa-solid fa-check me-1"></i>Đã chấp nhận</span>' :
+                        (isPending ? '<span class="badge bg-warning text-dark rounded-pill" style="font-size: 10px;">Chờ phản hồi</span>' :
+                                    '<span class="badge bg-secondary-subtle text-secondary rounded-pill" style="font-size: 10px;">Đã từ chối</span>');
+
+                    let actionHtml = '';
+                    if (isPending) {
+                        actionHtml = `
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-dark rounded-pill px-3 py-1" style="font-size: 11px;" onclick="handleGroupInvitation(${inv.group_id}, 'accepted')">
+                                    <i class="fa-solid fa-check me-1"></i> Đồng ý
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1" style="font-size: 11px;" onclick="handleGroupInvitation(${inv.group_id}, 'rejected')">
+                                    <i class="fa-solid fa-xmark me-1"></i> Từ chối
+                                </button>
+                            </div>
+                        `;
+                    } else if (isAccepted) {
+                        actionHtml = `<div class="text-success small fw-semibold" style="font-size: 11px;"><i class="fa-solid fa-circle-check me-1"></i> Đã chấp nhận lời mời tham gia nhóm.</div>`;
+                    } else {
+                        actionHtml = `<div class="text-muted small fst-italic" style="font-size: 11px;"><i class="fa-solid fa-ban me-1"></i> Đã từ chối lời mời này.</div>`;
+                    }
+
+                    itemsHtml += `
+                        <li>
+                            <div class="dropdown-item p-3 border-bottom ${isPending ? 'bg-warning-subtle' : 'bg-white'}" data-inv-group-id="${inv.group_id}">
+                                <div class="d-flex gap-3 align-items-start">
+                                    <div class="${iconBg} rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;">
+                                        <i class="fa-solid ${iconClass}"></i>
+                                    </div>
+                                    <div class="flex-grow-1" style="white-space: normal;">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="fw-bold small text-dark">Lời mời tham gia nhóm NCKH</span>
+                                            ${badgeHtml}
+                                        </div>
+                                        <div class="small text-muted mb-2" style="line-height: 1.4;">
+                                            Bạn được mời vào nhóm <strong>${inv.group_name}</strong>
+                                            ${inv.topic_title ? ` - Đề tài: <em>${inv.topic_title}</em>` : ''}
+                                        </div>
+                                        ${actionHtml}
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                    `;
+                });
+            }
+
+            // Render system notifications
+            if (data.notifications && data.notifications.length > 0) {
+                data.notifications.forEach(notif => {
+                    const temp = document.createElement("div");
+                    temp.innerHTML = notif.content.split('|||')[0];
+                    const cleanText = (temp.textContent || temp.innerText || "").trim();
+                    const snippet = cleanText.length > 80 ? cleanText.substring(0, 80) + '...' : cleanText;
+                    const encodedContent = encodeURIComponent(notif.content);
+
+                    window._allNotifications = window._allNotifications || {};
+                    window._allNotifications[notif.id] = notif.content;
+
+                    const isFacultyApproved = notif.content.includes('Khoa') && (notif.content.includes('phê duyệt') || notif.content.includes('ĐÃ PHÊ DUYỆT'));
+                    const isFacultyRevision = notif.content.includes('Khoa') && (notif.content.includes('chỉnh sửa') || notif.content.includes('YÊU CẦU'));
+                    const isLecturerReview = notif.content.includes('Giảng viên') || notif.content.includes('GV') || notif.content.includes('đánh giá') || notif.content.includes('hướng dẫn');
+
+                    let iconClass = 'fa-regular fa-bell';
+                    let iconBg = 'bg-secondary-subtle text-secondary';
+                    let titleHtml = '<span class="text-dark">Thông báo hệ thống</span>';
+
+                    if (isFacultyApproved) {
+                        iconClass = 'fa-solid fa-stamp';
+                        iconBg = 'bg-success-subtle text-success';
+                        titleHtml = '<span class="text-success fw-bold"><i class="fa-solid fa-circle-check me-1"></i>Khoa đã phê duyệt</span>';
+                    } else if (isFacultyRevision) {
+                        iconClass = 'fa-solid fa-triangle-exclamation';
+                        iconBg = 'bg-danger-subtle text-danger';
+                        titleHtml = '<span class="text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation me-1"></i>Khoa yêu cầu sửa</span>';
+                    } else if (isLecturerReview) {
+                        iconClass = 'fa-solid fa-chalkboard-user';
+                        iconBg = 'bg-primary-subtle text-primary';
+                        titleHtml = '<span class="text-primary fw-bold"><i class="fa-solid fa-user-tie me-1"></i>Đánh giá từ GVHD</span>';
+                    }
+
+                    itemsHtml += `
+                        <li>
+                            <a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start notif-dropdown-item ${!notif.is_read ? 'bg-light' : ''}" 
+                               href="javascript:void(0)" 
+                               data-notif-id="${notif.id}"
+                               onclick="event.preventDefault(); readNotification(${notif.id}, null, false)">
+                                <div class="${iconBg} rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;">
+                                    <i class="${iconClass}"></i>
+                                </div>
+                                <div class="flex-grow-1" style="min-width: 0;">
+                                    <div class="fw-bold small mb-1 d-flex align-items-center justify-content-between">
+                                        ${titleHtml}
+                                        ${!notif.is_read ? '<span class="badge bg-danger rounded-circle p-1" style="width:8px; height:8px;"></span>' : ''}
+                                    </div>
+                                    <div class="small text-muted mb-1" style="line-height: 1.4; white-space: normal;">${snippet}</div>
+                                    <div class="text-muted" style="font-size: 10px;">${notif.created_at}</div>
+                                </div>
+                            </a>
+                        </li>
+                    `;
+                });
+            }
+
+            if (!itemsHtml) {
+                itemsHtml = '<li class="p-4 text-center text-muted small">Không có thông báo nào</li>';
+            }
+
+            listEl.innerHTML = itemsHtml;
+        }
+
+        // 4. Live update group member statuses on the leader's screen
+        if (data.group_data && data.group_data.members) {
+            data.group_data.members.forEach(member => {
+                const row = document.getElementById(`reg-member-row-${member.student_id}`) ||
+                            Array.from(document.querySelectorAll('#regMembersTableBody tr')).find(r => 
+                                r.textContent.includes(member.code) || r.textContent.includes(member.name)
+                            );
+                if (row) {
+                    const statusTd = row.children[3] || row.querySelector('td:nth-child(4)');
+                    if (statusTd) {
+                        const isAccepted = member.status === 'accepted' || member.status === 'joined';
+                        if (isAccepted && !statusTd.innerHTML.includes('Đã tham gia')) {
+                            statusTd.innerHTML = '<span class="badge bg-success-subtle text-success rounded-pill px-2.5 py-1 small"><i class="fa-solid fa-check me-1"></i>Đã tham gia</span>';
+                        }
+                    }
+                }
+            });
+
+            // Update topic status if topic was promoted to pending
+            if (data.group_data.topic && data.group_data.topic.status) {
+                const topicBadge = document.querySelector('#view-s-register .badge.bg-warning-subtle, #view-s-register .badge.bg-primary-subtle');
+                if (topicBadge && data.group_data.topic.status_label && topicBadge.textContent !== data.group_data.topic.status_label) {
+                    topicBadge.textContent = data.group_data.topic.status_label;
+                }
+            }
+        }
+    } catch(err) {
+        // Silently catch background sync errors
+    }
 }
+
+function _refreshNotifBadge() {
+    syncNotificationsLive(true);
+}
+
+// Automatically start background live polling on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', () => {
+    if (!window._liveSyncTimer) {
+        syncNotificationsLive();
+        window._liveSyncTimer = setInterval(syncNotificationsLive, 4000);
+    }
+});
+
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+        syncNotificationsLive(true);
+    }
+});
 
 function _openNotifDetail(id) {
     const content = window._allNotifications[id];
@@ -1256,4 +2001,209 @@ async function deleteAllReadNotifications() {
         Swal.fire('Lỗi', 'Có lỗi kết nối', 'error');
     }
 }
+
+// Đảm bảo các hàm thông báo luôn khả dụng trên window phạm vi toàn cục
+window.readNotification = readNotification;
+window.showAllNotifications = showAllNotifications;
+window._openNotifDetail = _openNotifDetail;
+window.deleteAllReadNotifications = deleteAllReadNotifications;
+window.handleNotifItemClick = function(el, e) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    const id = el.getAttribute('data-notif-id');
+    let content = el.getAttribute('data-notif-content');
+    if (!content && window._allNotifications && window._allNotifications[id]) {
+        content = window._allNotifications[id];
+    }
+    if (id) {
+        window.readNotification(id, content, false);
+    }
+};
+
+// ==========================================
+// HIỂN THỊ DANH SÁCH THÀNH VIÊN NHÓM (MODAL)
+// ==========================================
+window.showGroupMembersModal = async function(groupId) {
+    if (typeof Swal === 'undefined') return;
+    if (window._loadingGroupMembers) return; // Tránh bấm nhiều lần liên tiếp
+
+    window._loadingGroupMembers = true;
+    window._isOpeningMembersModal = true;
+
+    // Hiển thị trạng thái đang tải nhẹ nhàng trên nút nếu có
+    const targetBtn = document.activeElement && (document.activeElement.tagName === 'BUTTON' || document.activeElement.tagName === 'A')
+        ? document.activeElement
+        : null;
+    let oldBtnHtml = '';
+    if (targetBtn && targetBtn.textContent.includes('thành viên')) {
+        oldBtnHtml = targetBtn.innerHTML;
+        targetBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Đang mở...';
+        targetBtn.style.pointerEvents = 'none';
+    }
+
+    try {
+        let url = groupId ? `/api/groups/${groupId}` : '/api/groups/my_group';
+        let resp = await fetch(url);
+        let data = await resp.json();
+
+        // Fallback sang my_group nếu groupId không tìm thấy
+        if ((!data.success || !data.group) && groupId) {
+            resp = await fetch('/api/groups/my_group');
+            data = await resp.json();
+        }
+
+        if (!data.success || !data.group) {
+            window._isOpeningMembersModal = false;
+            Swal.fire('Thông báo', data.error || 'Chưa tìm thấy thông tin nhóm nghiên cứu.', 'info');
+            return;
+        }
+
+        const group = data.group;
+        const members = group.members || [];
+        
+        let membersRows = '';
+        if (members.length === 0) {
+            membersRows = `<tr><td colspan="5" class="text-center text-muted py-3">Chưa có thành viên nào khác.</td></tr>`;
+        } else {
+            members.forEach((m) => {
+                const isLeader = (m.user_id === group.leader_id);
+                const roleBadge = isLeader 
+                    ? `<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 small fw-bold">Trưởng nhóm</span>`
+                    : `<span class="badge bg-secondary-subtle text-secondary border rounded-pill px-2.5 py-1 small">Thành viên</span>`;
+
+                let statusBadge = '';
+                const st = (m.status || '').toLowerCase();
+                if (st === 'accepted' || st === 'joined' || isLeader) {
+                    statusBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 small fw-bold"><i class="fa-solid fa-circle-check me-1"></i>Đã tham gia</span>`;
+                } else if (st === 'pending' || st === 'invited') {
+                    statusBadge = `<span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-2.5 py-1 small fw-bold"><i class="fa-solid fa-clock me-1"></i>Đang chờ xác nhận</span>`;
+                } else if (st === 'rejected' || st === 'declined') {
+                    statusBadge = `<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1 small fw-bold"><i class="fa-solid fa-circle-xmark me-1"></i>Đã từ chối</span>`;
+                } else {
+                    statusBadge = `<span class="badge bg-light text-dark border rounded-pill px-2 py-1 small">${m.status || '-'}</span>`;
+                }
+
+                const initials = (m.full_name || 'SV').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+
+                membersRows += `
+                    <tr>
+                        <td class="text-start">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle ${isLeader ? 'bg-primary text-white' : 'bg-primary-subtle text-primary'} d-flex align-items-center justify-content-center fw-bold small" style="width: 32px; height: 32px; min-width: 32px; font-size: 11px;">
+                                    ${initials}
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-dark small mb-0">${m.full_name || 'Chưa cập nhật'}</div>
+                                    <div class="text-muted" style="font-size: 11px;">${m.email || ''}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="font-monospace small fw-semibold text-secondary">${m.student_id || '-'}</td>
+                        <td class="small text-muted">${m.faculty || '-'}</td>
+                        <td class="text-center">${roleBadge}</td>
+                        <td class="text-end">${statusBadge}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        const modalHtml = `
+            <div class="text-start mb-3 pb-2 border-bottom">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <span class="badge bg-primary text-white rounded-pill px-3 py-1 small mb-1">
+                            <i class="fa-solid fa-users me-1"></i> ${group.name}
+                        </span>
+                        <div class="fw-bold text-dark fs-6 mt-1">${group.topic_title || 'Đề tài NCKH (Chưa đặt tên)'}</div>
+                    </div>
+                    <span class="badge bg-light text-muted border px-2.5 py-1 small">
+                        ${members.length} thành viên
+                    </span>
+                </div>
+                ${group.mentor_name ? `
+                    <div class="small text-muted">
+                        <i class="fa-solid fa-chalkboard-user text-primary me-1"></i> GVHD: <strong>${group.mentor_name}</strong> 
+                        ${group.mentor_faculty ? `<span class="text-secondary">(${group.mentor_faculty})</span>` : ''}
+                    </div>
+                ` : ''}
+            </div>
+
+            <div class="table-responsive rounded-3 border bg-white" style="max-height: 320px; overflow-y: auto;">
+                <table class="table table-hover align-middle mb-0 text-start">
+                    <thead class="table-light text-muted small position-sticky top-0" style="z-index: 1;">
+                        <tr>
+                            <th>HỌ & TÊN</th>
+                            <th>MSSV</th>
+                            <th>KHOA</th>
+                            <th class="text-center">VAI TRÒ</th>
+                            <th class="text-end">TRẠNG THÁI</th>
+                        </tr>
+                    </thead>
+                    <tbody class="small">
+                        ${membersRows}
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        Swal.fire({
+            title: 'Danh sách Thành viên Nhóm',
+            html: modalHtml,
+            width: '680px',
+            showCancelButton: true,
+            showDenyButton: !!window._lastNotifModal,
+            confirmButtonText: '<i class="fa-solid fa-diagram-project me-1"></i> Đi đến Nhóm NCKH',
+            denyButtonText: '<i class="fa-solid fa-arrow-left me-1"></i> Quay lại',
+            cancelButtonText: 'Đóng',
+            confirmButtonColor: '#4f46e5',
+            denyButtonColor: '#4b5563',
+            cancelButtonColor: '#9ca3af'
+        }).then((result) => {
+            window._isOpeningMembersModal = false;
+            if (result.isConfirmed) {
+                if (typeof switchTab === 'function') {
+                    const groupNav = document.querySelector('a[href*="s-group"]');
+                    switchTab('s-group', groupNav);
+                } else {
+                    window.location.hash = '#s-group';
+                }
+            } else if (result.isDenied && window._lastNotifModal) {
+                readNotification(window._lastNotifModal.id, window._lastNotifModal.content, window._lastNotifModal.fromAll);
+            }
+        });
+
+    } catch (err) {
+        console.error('Error fetching group members:', err);
+        window._isOpeningMembersModal = false;
+        Swal.fire('Lỗi', 'Không thể lấy thông tin thành viên nhóm.', 'error');
+    } finally {
+        window._loadingGroupMembers = false;
+        if (targetBtn && oldBtnHtml) {
+            targetBtn.innerHTML = oldBtnHtml;
+            targetBtn.style.pointerEvents = '';
+        }
+    }
+};
+
+// Global click interceptor bắt sự kiện click nút "Xem thành viên nhóm"
+document.addEventListener('click', function (e) {
+    const el = e.target.closest('a, button');
+    if (!el) return;
+    const text = (el.textContent || '').trim();
+    if (text.includes('Xem thành viên nhóm') || text.includes('Quản lý nhóm')) {
+        const onclickAttr = el.getAttribute('onclick') || '';
+        if (onclickAttr.includes('showGroupMembersModal')) {
+            // Đã có inline onclick xử lý, không gọi trùng lặp
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        let m = onclickAttr.match(/showGroupMembersModal\((\d+)\)/);
+        let gid = m ? parseInt(m[1]) : null;
+        window.showGroupMembersModal(gid);
+    }
+});
+
 

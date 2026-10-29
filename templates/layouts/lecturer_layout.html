@@ -27,22 +27,41 @@
                     <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg p-0 mt-3" style="width: 320px; border-radius: 12px; overflow: hidden;">
                         <li class="p-3 bg-white border-bottom d-flex justify-content-between align-items-center">
                             <h6 class="fw-bold mb-0 text-dark">Thông báo</h6>
-                            <a href="#" class="small text-primary fw-bold text-decoration-none" onclick="showAllNotifications()">Xem tất cả</a>
+                            <a href="javascript:void(0)" class="small text-primary fw-bold text-decoration-none" onclick="event.preventDefault(); window.showAllNotifications()">Xem tất cả</a>
                         </li>
                         <div style="max-height: 360px; overflow-y: auto;">
                             {% if notifications %}
                                 {% for notif in notifications %}
+                                {% set is_faculty_approved = 'Khoa' in notif.content and ('phê duyệt' in notif.content or 'ĐÃ PHÊ DUYỆT' in notif.content) %}
+                                {% set is_faculty_revision = 'Khoa' in notif.content and ('chỉnh sửa' in notif.content or 'YÊU CẦU' in notif.content) %}
+                                {% set is_lecturer_review = 'Giảng viên' in notif.content or 'GV' in notif.content or 'đánh giá' in notif.content or 'hướng dẫn' in notif.content %}
                                 <li>
-                                    <a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start {% if not notif.is_read %}bg-light{% endif %}" href="#" onclick="readNotification({{ notif.id }}, decodeURIComponent('{{ notif.content | urlencode }}'), false)">
-                                        <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;"><i class="fa-regular fa-bell"></i></div>
-                                        <div>
-                                            <div class="fw-bold small text-dark mb-1 d-flex align-items-center justify-content-between">
-                                                <span>Thông báo hệ thống</span>
+                                    <a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start notif-dropdown-item {% if not notif.is_read %}bg-light{% endif %}" 
+                                       href="javascript:void(0)" 
+                                       data-notif-id="{{ notif.id }}" 
+                                       data-notif-content="{{ notif.content | e }}" 
+                                       onclick="event.preventDefault(); window.handleNotifItemClick(this, event)">
+                                        <div class="{% if is_faculty_approved %}bg-success-subtle text-success{% elif is_faculty_revision %}bg-danger-subtle text-danger{% elif is_lecturer_review %}bg-primary-subtle text-primary{% else %}bg-secondary-subtle text-secondary{% endif %} rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;">
+                                            <i class="{% if is_faculty_approved %}fa-solid fa-stamp{% elif is_faculty_revision %}fa-solid fa-triangle-exclamation{% elif is_lecturer_review %}fa-solid fa-chalkboard-user{% else %}fa-regular fa-bell{% endif %}"></i>
+                                        </div>
+                                        <div class="flex-grow-1" style="min-width: 0;">
+                                            <div class="fw-bold small mb-1 d-flex align-items-center justify-content-between">
+                                                <span class="{% if is_faculty_approved %}text-success{% elif is_faculty_revision %}text-danger{% elif is_lecturer_review %}text-primary{% else %}text-dark{% endif %}">
+                                                    {% if is_faculty_approved %}
+                                                        <i class="fa-solid fa-circle-check me-1"></i>Khoa đã phê duyệt
+                                                    {% elif is_faculty_revision %}
+                                                        <i class="fa-solid fa-triangle-exclamation me-1"></i>Khoa yêu cầu sửa
+                                                    {% elif is_lecturer_review %}
+                                                        <i class="fa-solid fa-user-tie me-1"></i>Đánh giá bài nộp
+                                                    {% else %}
+                                                        Thông báo hệ thống
+                                                    {% endif %}
+                                                </span>
                                                 {% if not notif.is_read %}
                                                     <span class="badge bg-danger rounded-circle p-1" style="width:8px; height:8px;"></span>
                                                 {% endif %}
                                             </div>
-                                            <div class="small text-muted mb-1" style="line-height: 1.4; white-space: normal;">{{ notif.content.split('|||')[0] | striptags | truncate(80) }}</div>
+                                            <div class="small text-muted mb-1" style="line-height: 1.4; white-space: normal;">{{ notif.content.split('|||')[0] | striptags | replace('\n', ' ') | truncate(85) }}</div>
                                             <div class="text-muted" style="font-size: 10px;">{{ notif.created_at.strftime('%d/%m/%Y %H:%M') if notif.created_at else '' }}</div>
                                         </div>
                                     </a>
@@ -53,8 +72,8 @@
                             {% endif %}
                         </div>
                         <li class="p-2 bg-light text-center border-top d-flex justify-content-between px-3">
-                            <a href="#" class="small text-muted fw-bold text-decoration-none" style="font-size: 11px;" onclick="showAllNotifications()">Xem tất cả</a>
-                            <a href="#" class="small text-danger fw-bold text-decoration-none" style="font-size: 11px;" onclick="deleteAllReadNotifications()"><i class="fa-solid fa-trash me-1"></i> Xóa thư đã đọc</a>
+                            <a href="javascript:void(0)" class="small text-muted fw-bold text-decoration-none" style="font-size: 11px;" onclick="event.preventDefault(); window.showAllNotifications()">Xem tất cả</a>
+                            <a href="javascript:void(0)" class="small text-danger fw-bold text-decoration-none" style="font-size: 11px;" onclick="event.preventDefault(); window.deleteAllReadNotifications()"><i class="fa-solid fa-trash me-1"></i> Xóa thư đã đọc</a>
                         </li>
                     </ul>
                 </div>
@@ -108,28 +127,191 @@
     </div>
 
     <div class="modal fade" id="modalConfirmGuide" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg rounded-4">
-                <div class="modal-header bg-primary text-white"><h5 class="modal-title fw-bold">Xác nhận Hướng dẫn</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-circle-check me-2"></i>Xác nhận Hướng dẫn</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
                 <div class="modal-body p-4">
-                    <p class="mb-3">Bạn có chắc chắn muốn nhận hướng dẫn đề tài:<br><strong id="approveTopicName">...</strong>?</p>
-                    <div class="mb-0"><label class="form-label">Ghi chú (tuỳ chọn)</label><textarea id="approveNote" class="form-control" rows="2" placeholder="Ví dụ: Học máy, IoT, Blockchain..."></textarea></div>
+                    <p class="mb-3 fs-6">Bạn có chắc chắn muốn nhận hướng dẫn đề tài:<br><strong id="approveTopicName" class="text-primary">...</strong>?</p>
+                    <div class="mb-0">
+                        <label class="form-label fw-bold text-dark small mb-1.5"><i class="fa-solid fa-pen-to-square me-1 text-primary"></i> GHI CHÚ (TUỲ CHỌN)</label>
+                        
+                        <!-- Rich Text Editor Word-like -->
+                        <div class="word-editor-container">
+                            <!-- Toolbar -->
+                            <div class="word-editor-toolbar">
+                                <!-- Phông chữ & Cỡ chữ -->
+                                <select class="tool-select" onchange="formatApproveNoteDoc('fontName', this.value)" title="Phông chữ">
+                                    <option value="Segoe UI" selected>Segoe UI</option>
+                                    <option value="Arial">Arial</option>
+                                    <option value="Times New Roman">Times New Roman</option>
+                                    <option value="Calibri">Calibri</option>
+                                    <option value="Roboto">Roboto</option>
+                                </select>
+                                <select class="tool-select" onchange="formatApproveNoteDoc('fontSize', this.value)" title="Cỡ chữ">
+                                    <option value="1">10pt (Nhỏ)</option>
+                                    <option value="2">11pt (Vừa)</option>
+                                    <option value="3" selected>12pt (Chuẩn)</option>
+                                    <option value="4">14pt (Lớn)</option>
+                                    <option value="5">18pt (Tiêu đề)</option>
+                                </select>
+
+                                <div class="tool-separator"></div>
+
+                                <!-- Định dạng chữ -->
+                                <button type="button" class="btn-tool" onclick="formatApproveNoteDoc('bold')" title="In đậm (Ctrl+B)">
+                                    <i class="fa-solid fa-bold"></i>
+                                </button>
+                                <button type="button" class="btn-tool" onclick="formatApproveNoteDoc('italic')" title="In nghiêng (Ctrl+I)">
+                                    <i class="fa-solid fa-italic"></i>
+                                </button>
+                                <button type="button" class="btn-tool" onclick="formatApproveNoteDoc('underline')" title="Gạch chân (Ctrl+U)">
+                                    <i class="fa-solid fa-underline"></i>
+                                </button>
+                                <button type="button" class="btn-tool" onclick="formatApproveNoteDoc('strikeThrough')" title="Gạch ngang chữ">
+                                    <i class="fa-solid fa-strikethrough"></i>
+                                </button>
+
+                                <div class="tool-separator"></div>
+
+                                <!-- Màu chữ & Highlight màu nền -->
+                                <label class="btn-tool mb-0 cursor-pointer position-relative" title="Màu chữ">
+                                    <i class="fa-solid fa-font text-danger"></i>
+                                    <input type="color" onchange="formatApproveNoteDoc('foreColor', this.value)"
+                                        style="position: absolute; opacity: 0; width: 100%; height: 100%; top: 0; left: 0; cursor: pointer;">
+                                </label>
+                                <label class="btn-tool mb-0 cursor-pointer position-relative" title="Màu nền / Tô sáng (Highlight)">
+                                    <i class="fa-solid fa-highlighter text-warning"></i>
+                                    <input type="color" value="#ffffaa" onchange="formatApproveNoteDoc('hiliteColor', this.value)"
+                                        style="position: absolute; opacity: 0; width: 100%; height: 100%; top: 0; left: 0; cursor: pointer;">
+                                </label>
+
+                                <div class="tool-separator"></div>
+
+                                <!-- Căn lề / Chỉnh dòng -->
+                                <button type="button" class="btn-tool" onclick="formatApproveNoteDoc('justifyLeft')" title="Căn lề trái">
+                                    <i class="fa-solid fa-align-left"></i>
+                                </button>
+                                <button type="button" class="btn-tool" onclick="formatApproveNoteDoc('justifyCenter')" title="Căn giữa">
+                                    <i class="fa-solid fa-align-center"></i>
+                                </button>
+                                <button type="button" class="btn-tool" onclick="formatApproveNoteDoc('justifyRight')" title="Căn lề phải">
+                                    <i class="fa-solid fa-align-right"></i>
+                                </button>
+                                <button type="button" class="btn-tool" onclick="formatApproveNoteDoc('justifyFull')" title="Căn đều hai bên">
+                                    <i class="fa-solid fa-align-justify"></i>
+                                </button>
+
+                                <div class="tool-separator"></div>
+
+                                <!-- Danh sách -->
+                                <button type="button" class="btn-tool" onclick="formatApproveNoteDoc('insertUnorderedList')" title="Danh sách dấu chấm">
+                                    <i class="fa-solid fa-list-ul"></i>
+                                </button>
+                                <button type="button" class="btn-tool" onclick="formatApproveNoteDoc('insertOrderedList')" title="Danh sách đánh số">
+                                    <i class="fa-solid fa-list-ol"></i>
+                                </button>
+
+                                <div class="tool-separator"></div>
+
+                                <!-- Undo / Redo & Clear format -->
+                                <button type="button" class="btn-tool" onclick="formatApproveNoteDoc('undo')" title="Hoàn tác (Ctrl+Z)">
+                                    <i class="fa-solid fa-rotate-left"></i>
+                                </button>
+                                <button type="button" class="btn-tool" onclick="formatApproveNoteDoc('redo')" title="Làm lại (Ctrl+Y)">
+                                    <i class="fa-solid fa-rotate-right"></i>
+                                </button>
+                                <button type="button" class="btn-tool" onclick="formatApproveNoteDoc('removeFormat')" title="Xóa toàn bộ định dạng">
+                                    <i class="fa-solid fa-eraser text-secondary"></i>
+                                </button>
+                            </div>
+
+                            <!-- Editable Area -->
+                            <div id="approveNoteEditor" class="word-editor-content" contenteditable="true"
+                                data-placeholder="Ví dụ: Học máy, IoT, Blockchain, định hướng đề tài hoặc dặn dò nhóm sinh viên..."
+                                oninput="syncApproveNoteFromEditor()" onblur="syncApproveNoteFromEditor()"
+                                style="min-height: 120px; max-height: 250px;"></div>
+
+                            <!-- Hidden textarea for backward compatibility -->
+                            <textarea id="approveNote" class="d-none"></textarea>
+
+                            <!-- Footer -->
+                            <div class="word-editor-footer d-flex justify-content-between align-items-center py-1.5 px-3 bg-light border-top text-muted" style="font-size: 11px;">
+                                <span><i class="fa-regular fa-keyboard me-1 text-primary"></i> <strong>Ctrl+B</strong> (Đậm), <strong>Ctrl+I</strong> (Nghiêng), <strong>Ctrl+U</strong> (Gạch chân)</span>
+                                <span id="approveNoteWordCount" class="fw-medium">0 từ • 0 ký tự</span>
+                            </div>
+                        </div>
+                    </div>
                     <input type="hidden" id="approveTopicId" value="">
                 </div>
-                <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy</button><button id="btnApproveTopic" class="btn btn-primary fw-bold px-4" onclick="doApprove()">Đồng ý</button></div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button class="btn btn-light fw-bold rounded-3 px-4" data-bs-dismiss="modal">Hủy</button>
+                    <button id="btnApproveTopic" class="btn btn-primary fw-bold px-4 rounded-3 shadow-sm" onclick="doApprove()">
+                        <i class="fa-solid fa-check me-1"></i> Đồng ý
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
     <div class="modal fade" id="modalRejectGuide" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg rounded-4">
-                <div class="modal-header bg-danger text-white"><h5 class="modal-title fw-bold">Từ chối Hướng dẫn</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-circle-xmark me-2"></i>Từ chối Hướng dẫn</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
                 <div class="modal-body p-4">
                     <input type="hidden" id="rejectTopicId" value="">
-                    <div class="mb-0"><label class="form-label">Lý do từ chối (Bắt buộc)</label><textarea id="rejectNote" class="form-control" rows="3" placeholder="VD: Đề tài không phù hợp chuyên môn, đã đủ số lượng nhóm..."></textarea></div>
+                    <div class="mb-0">
+                        <label class="form-label fw-bold text-dark small mb-1.5"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i> Lý do từ chối & Hướng dẫn sinh viên (Bắt buộc)</label>
+                        
+                        <!-- Rich Text Editor Word-like -->
+                        <div class="word-editor-container">
+                            <div class="word-editor-toolbar">
+                                <select class="tool-select" onchange="formatRejectNoteDoc('fontName', this.value)" title="Phông chữ">
+                                    <option value="Segoe UI" selected>Segoe UI</option>
+                                    <option value="Arial">Arial</option>
+                                    <option value="Times New Roman">Times New Roman</option>
+                                    <option value="Calibri">Calibri</option>
+                                    <option value="Roboto">Roboto</option>
+                                </select>
+                                <select class="tool-select" onchange="formatRejectNoteDoc('fontSize', this.value)" title="Cỡ chữ">
+                                    <option value="1">10pt (Nhỏ)</option>
+                                    <option value="2">11pt (Vừa)</option>
+                                    <option value="3" selected>12pt (Chuẩn)</option>
+                                    <option value="4">14pt (Lớn)</option>
+                                </select>
+                                <div class="tool-separator"></div>
+                                <button type="button" class="btn-tool" onclick="formatRejectNoteDoc('bold')" title="In đậm"><i class="fa-solid fa-bold"></i></button>
+                                <button type="button" class="btn-tool" onclick="formatRejectNoteDoc('italic')" title="In nghiêng"><i class="fa-solid fa-italic"></i></button>
+                                <button type="button" class="btn-tool" onclick="formatRejectNoteDoc('underline')" title="Gạch chân"><i class="fa-solid fa-underline"></i></button>
+                                <div class="tool-separator"></div>
+                                <button type="button" class="btn-tool" onclick="formatRejectNoteDoc('insertUnorderedList')" title="Danh sách dấu chấm"><i class="fa-solid fa-list-ul"></i></button>
+                                <button type="button" class="btn-tool" onclick="formatRejectNoteDoc('insertOrderedList')" title="Danh sách đánh số"><i class="fa-solid fa-list-ol"></i></button>
+                                <div class="tool-separator"></div>
+                                <button type="button" class="btn-tool" onclick="formatRejectNoteDoc('removeFormat')" title="Xóa toàn bộ định dạng"><i class="fa-solid fa-eraser text-secondary"></i></button>
+                            </div>
+                            <div id="rejectNoteEditor" class="word-editor-content" contenteditable="true"
+                                data-placeholder="VD: Đề tài chưa phù hợp chuyên môn của Thầy/Cô, nhóm đã đủ số lượng, gợi ý nhóm liên hệ bộ môn khác..."
+                                oninput="syncRejectNoteFromEditor()" onblur="syncRejectNoteFromEditor()"
+                                style="min-height: 120px; max-height: 250px;"></div>
+                            <textarea id="rejectNote" class="d-none"></textarea>
+                            <div class="word-editor-footer d-flex justify-content-between align-items-center py-1.5 px-3 bg-light border-top text-muted" style="font-size: 11px;">
+                                <span><i class="fa-regular fa-keyboard me-1 text-primary"></i> <strong>Ctrl+B</strong> (Đậm), <strong>Ctrl+I</strong> (Nghiêng), <strong>Ctrl+U</strong> (Gạch chân)</span>
+                                <span id="rejectNoteWordCount" class="fw-medium">0 từ • 0 ký tự</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="modal-footer border-0 px-4 pb-4"><button class="btn btn-danger w-100 fw-bold" onclick="doReject()">Gửi phản hồi</button></div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button class="btn btn-light fw-bold rounded-3 px-4" data-bs-dismiss="modal">Hủy</button>
+                    <button class="btn btn-danger fw-bold rounded-3 px-4 shadow-sm" onclick="doReject()">
+                        <i class="fa-solid fa-paper-plane me-1"></i> Gửi phản hồi
+                    </button>
+                </div>
             </div>
         </div>
     </div>

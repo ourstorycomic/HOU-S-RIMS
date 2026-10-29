@@ -15,9 +15,34 @@ function getCurrentUserId() {
     return meta ? parseInt(meta.getAttribute('content')) : null;
 }
 
+const CHAT_POLL_ACTIVE_MS = 500; // 0.5 giây: cực nhanh, phản hồi tin nhắn gần như tức thì
+const CHAT_POLL_HIDDEN_MS = 3000; // 3 giây: tiết kiệm tài nguyên khi người dùng rời khỏi tab
+
+function restartChatPolling(intervalMs) {
+    if (chatPollInterval) clearInterval(chatPollInterval);
+    if (activeChatId) {
+        chatPollInterval = setInterval(fetchChatMessages, intervalMs);
+    }
+}
+
+// Tự động điều chỉnh chu kỳ polling theo trạng thái tab trình duyệt
+if (typeof document !== 'undefined' && !window.__chatVisibilityBound) {
+    window.__chatVisibilityBound = true;
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            restartChatPolling(CHAT_POLL_HIDDEN_MS);
+        } else if (activeChatId) {
+            fetchChatMessages();
+            restartChatPolling(CHAT_POLL_ACTIVE_MS);
+        }
+    });
+}
+
 function startChatPolling(groupId) {
     if (!groupId) return; // Never poll without a valid group
     activeChatId = groupId;
+    window.activeChatId = groupId;
+    window.activeChatType = activeChatType;
     lastMessageCount = -1; // Reset so messages re-render on group switch
     if (document.getElementById('chat-sidebar')?.classList.contains('active')) {
         fetchChatMedia();
@@ -26,7 +51,7 @@ function startChatPolling(groupId) {
     if (chatPollInterval) clearInterval(chatPollInterval);
 
     fetchChatMessages();
-    chatPollInterval = setInterval(fetchChatMessages, 3000);
+    chatPollInterval = setInterval(fetchChatMessages, CHAT_POLL_ACTIVE_MS);
 }
 
 function stopChatPolling() {
@@ -35,20 +60,24 @@ function stopChatPolling() {
         chatPollInterval = null;
     }
     activeChatId = null;
+    window.activeChatId = null;
 }
 
 let currentSearchQuery = '';
-async function fetchChatMessages() {
+let isFetchingChat = false;
+async function fetchChatMessages(forceRender = false) {
     if (!activeChatId) return;
+    if (isFetchingChat && !forceRender) return;
 
+    isFetchingChat = true;
     try {
-        const endpoint = activeChatType === "group" ? activeChatType === "group" ? `/api/chat/${activeChatId}/messages` : `/api/chat/private/${activeChatId}/messages` : `/api/chat/private/${activeChatId}/messages`;
+        const endpoint = activeChatType === "group" ? `/api/chat/${activeChatId}/messages` : `/api/chat/private/${activeChatId}/messages`;
         const response = await fetch(endpoint);
         if (!response.ok) return;
 
         const messages = await response.json();
 
-        if (messages.length !== lastMessageCount) {
+        if (messages.length !== lastMessageCount || forceRender) {
             renderChatMessages(messages);
             lastMessageCount = messages.length;
             if (activeChatType === 'private') {
@@ -57,6 +86,8 @@ async function fetchChatMessages() {
         }
     } catch (error) {
         console.error('Error fetching chat messages:', error);
+    } finally {
+        isFetchingChat = false;
     }
 }
 
@@ -207,7 +238,7 @@ function showProfilePopup(userId, userName) {
                 <h5 class="fw-bold mt-2 mb-0">${userName}</h5>
                 <p class="text-muted small mb-3">Thành viên</p>
                 <div class="d-flex gap-2 justify-content-center">
-                    <a href="/profile/${userId}" target="_blank" class="btn btn-outline-primary rounded-pill px-3 py-2 fw-bold">
+                    <a href="/profile/${userId}" class="btn btn-outline-primary rounded-pill px-3 py-2 fw-bold">
                         <i class="fa-regular fa-id-badge me-1"></i> Xem Profile
                     </a>
                     <button class="btn btn-primary rounded-pill px-3 py-2 fw-bold" onclick="document.getElementById('profile-popup-overlay').remove(); startPrivateChat(${userId}, '${userName}')">
@@ -263,15 +294,65 @@ async function sendChatMessage(groupId) {
     
     if (!content && !pendingUploadFile) return;
 
-    // Determine message type
+    const messageContent = content;
+    const fileToUpload = pendingUploadFile;
+
+    // 1. Xóa nội dung ô nhập ngay lập tức để người dùng có thể gõ tiếp (không phải chờ)
+    if (inputField) inputField.value = '';
+    cancelChatUpload();
+
+    // 2. Optimistic UI: Hiển thị bong bóng tin nhắn lên khung chat ngay tức thì (0ms)
+    const container = document.getElementById('chat-messages-container');
+    const myUserId = getCurrentUserId();
+    const now = new Date();
+    const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+
+    if (container) {
+        const placeholder = container.querySelector('.text-center.py-5');
+        if (placeholder) placeholder.remove();
+    }
+
+    let optimisticContent = messageContent;
+    let tempBlobUrl = null;
+
+    if (fileToUpload) {
+        const ext = fileToUpload.name.split('.').pop().toLowerCase();
+        if (['jpg','jpeg','png','gif','webp'].includes(ext)) {
+            tempBlobUrl = URL.createObjectURL(fileToUpload);
+            optimisticContent = `${messageContent ? `<div>${messageContent}</div>` : ''}<img src="${tempBlobUrl}" class="img-fluid rounded mt-2" style="max-height: 200px;">`;
+        } else if (['mp4','webm','ogg'].includes(ext)) {
+            tempBlobUrl = URL.createObjectURL(fileToUpload);
+            optimisticContent = `${messageContent ? `<div>${messageContent}</div>` : ''}<video src="${tempBlobUrl}" controls class="w-100 rounded mt-2" style="max-height: 250px;"></video>`;
+        } else {
+            optimisticContent = `${messageContent ? `<div>${messageContent}</div>` : ''}<div class="mt-2 p-2 bg-light rounded text-dark d-flex align-items-center"><i class="fa-solid fa-file me-2 fs-3 text-primary"></i> <span class="text-truncate" style="max-width:150px;">${fileToUpload.name}</span></div>`;
+        }
+    }
+
+    let tempBubble = null;
+    if (container) {
+        tempBubble = document.createElement('div');
+        tempBubble.className = 'd-flex gap-3 mb-4 flex-row-reverse';
+        tempBubble.innerHTML = `
+            <div style="max-width: 70%;">
+                <div class="text-end"><small class="text-muted fw-bold me-1">Bạn - ${timeStr}</small></div>
+                <div class="mt-1 text-start p-3 rounded-3 chat-bubble-content bg-primary text-white shadow-sm" style="background-color:#6366f1!important; word-break: break-word;">
+                    ${optimisticContent}
+                </div>
+                <div class="text-end mt-1"><small class="text-muted" style="font-size:10px;"><i class="fa-regular fa-clock me-1"></i>Đang gửi...</small></div>
+            </div>
+        `;
+        container.appendChild(tempBubble);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    // 3. Xử lý upload file (nếu có đính kèm)
     let messageType = 'text';
     let fileUrl = null;
     let fileName = null;
 
-    if (pendingUploadFile) {
-        // Upload the file first
+    if (fileToUpload) {
         const formData = new FormData();
-        formData.append('file', pendingUploadFile);
+        formData.append('file', fileToUpload);
 
         try {
             const uploadRes = await fetch(activeChatType === "group" ? `/api/chat/${targetGroup}/upload` : `/api/chat/private/${targetGroup}/upload`, {
@@ -280,6 +361,7 @@ async function sendChatMessage(groupId) {
             });
 
             if (!uploadRes.ok) {
+                if (tempBubble) tempBubble.remove();
                 const err = await uploadRes.json();
                 Swal.fire('Lỗi upload', err.error || 'Lỗi khi tải file lên', 'error');
                 return;
@@ -289,7 +371,6 @@ async function sendChatMessage(groupId) {
             fileUrl = uploadData.file_url;
             fileName = uploadData.file_name;
 
-            // detect type
             const ext = fileName.split('.').pop().toLowerCase();
             if (['jpg','jpeg','png','gif','webp'].includes(ext)) {
                 messageType = 'image';
@@ -300,41 +381,59 @@ async function sendChatMessage(groupId) {
             }
         } catch (error) {
             console.error('Error uploading file:', error);
+            if (tempBubble) tempBubble.remove();
             Swal.fire('Lỗi upload', 'Lỗi kết nối khi tải file lên', 'error');
             return;
+        } finally {
+            if (tempBlobUrl) {
+                URL.revokeObjectURL(tempBlobUrl);
+            }
         }
     }
 
-    // Clear UI early for better UX
-    if (inputField) inputField.value = '';
-    cancelChatUpload();
-
+    // 4. Gửi tin nhắn ngầm tới server
     try {
+        const payload = { 
+            content: messageContent,
+            message_type: messageType,
+            file_url: fileUrl,
+            file_name: fileName
+        };
+        if (myUserId) payload.sender_id = myUserId;
+
         const response = await fetch(activeChatType === "group" ? `/api/chat/${targetGroup}/messages` : `/api/chat/private/${targetGroup}/messages`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                content: content,
-                message_type: messageType,
-                file_url: fileUrl,
-                file_name: fileName
-            })
+            body: JSON.stringify(payload)
         });
 
         if (response.ok) {
-            fetchChatMessages();
+            if (tempBubble) {
+                const statusEl = tempBubble.querySelector('.text-end.mt-1');
+                if (statusEl) {
+                    statusEl.innerHTML = '<small class="text-muted" style="font-size:10px;"><i class="fa-solid fa-check text-muted me-1"></i>Đã gửi</small>';
+                }
+            }
+            // Đồng bộ dữ liệu chính thức từ server
+            await fetchChatMessages(true);
+            if (activeChatType === 'private') {
+                fetchPrivateConversations();
+            }
         } else {
+            if (tempBubble) tempBubble.remove();
             const err = await response.json();
             Swal.fire('Lỗi', err.error || 'Không gửi được tin nhắn', 'error');
         }
     } catch (error) {
+        if (tempBubble) tempBubble.remove();
         console.error('Error sending message:', error);
     }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+function initChatUI() {
     var inputField = document.getElementById('chat-input-field');
-    if (inputField) {
+    if (inputField && !inputField.dataset.bound) {
+        inputField.dataset.bound = 'true';
         inputField.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -346,7 +445,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // File input handler
     const fileInput = document.getElementById('chat-file-input');
-    if (fileInput) {
+    if (fileInput && !fileInput.dataset.bound) {
+        fileInput.dataset.bound = 'true';
         fileInput.addEventListener('change', function(e) {
             if (e.target.files.length > 0) {
                 pendingUploadFile = e.target.files[0];
@@ -376,7 +476,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const emojiBtn = document.getElementById('emoji-picker-btn');
     const emojiContainer = document.getElementById('emoji-picker-container');
     
-    if (emojiBtn && emojiContainer) {
+    if (emojiBtn && emojiContainer && !emojiBtn.dataset.bound) {
+        emojiBtn.dataset.bound = 'true';
         emojiBtn.addEventListener('click', function(e) {
             e.stopPropagation();
             emojiContainer.classList.toggle('d-none');
@@ -407,9 +508,10 @@ document.addEventListener('DOMContentLoaded', function() {
             item.addEventListener('click', function(e) {
                 e.stopPropagation();
                 const emoji = this.textContent;
-                if (inputField) {
-                    inputField.value += emoji;
-                    inputField.focus();
+                const f = document.getElementById('chat-input-field');
+                if (f) {
+                    f.value += emoji;
+                    f.focus();
                 }
             });
         });
@@ -424,23 +526,55 @@ document.addEventListener('DOMContentLoaded', function() {
                 const stickerUrl = this.getAttribute('data-url');
                 if (!stickerUrl || !activeChatId) return;
                 
-                // Send sticker directly
+                // Send sticker directly with optimistic display
+                const container = document.getElementById('chat-messages-container');
+                const now = new Date();
+                const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+                let tempSticker = null;
+                if (container) {
+                    const placeholder = container.querySelector('.text-center.py-5');
+                    if (placeholder) placeholder.remove();
+                    tempSticker = document.createElement('div');
+                    tempSticker.className = 'd-flex gap-3 mb-4 flex-row-reverse';
+                    tempSticker.innerHTML = `
+                        <div style="max-width: 70%;">
+                            <div class="text-end"><small class="text-muted fw-bold me-1">Bạn - ${timeStr}</small></div>
+                            <div class="mt-1 text-start p-3 rounded-3 chat-bubble-content bg-transparent">
+                                <img src="${stickerUrl}" class="img-fluid" style="width: 120px; height: 120px; object-fit: contain;">
+                            </div>
+                            <div class="text-end mt-1"><small class="text-muted" style="font-size:10px;"><i class="fa-regular fa-clock me-1"></i>Đang gửi...</small></div>
+                        </div>
+                    `;
+                    container.appendChild(tempSticker);
+                    container.scrollTop = container.scrollHeight;
+                }
+
                 try {
+                    const myId = getCurrentUserId();
+                    const sPayload = { 
+                        content: 'Đã gửi một nhãn dán',
+                        message_type: 'sticker',
+                        file_url: stickerUrl,
+                        file_name: 'sticker.png'
+                    };
+                    if (myId) sPayload.sender_id = myId;
+
                     const response = await fetch(activeChatType === "group" ? `/api/chat/${activeChatId}/messages` : `/api/chat/private/${activeChatId}/messages`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            content: 'Đã gửi một nhãn dán',
-                            message_type: 'sticker',
-                            file_url: stickerUrl,
-                            file_name: 'sticker.png'
-                        })
+                        body: JSON.stringify(sPayload)
                     });
 
                     if (response.ok) {
-                        fetchChatMessages();
+                        await fetchChatMessages(true);
+                        if (activeChatType === 'private') {
+                            fetchPrivateConversations();
+                        }
+                    } else if (tempSticker) {
+                        tempSticker.remove();
                     }
                 } catch (error) {
+                    if (tempSticker) tempSticker.remove();
                     console.error('Error sending sticker:', error);
                 }
             });
@@ -454,17 +588,203 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Auto-start polling is disabled on page load — user must click a group
-    window.addEventListener('beforeunload', stopChatPolling);
-});
+    // Search toggle and debounce
+    const chatSearchBtn = document.getElementById('chat-search-btn');
+    const chatSearchContainer = document.getElementById('chat-search-container');
+    const chatSearchInput = document.getElementById('chat-search-input');
 
-function updateChatHeader(chatName, chatId, chatType="group") {
+    if (chatSearchBtn && chatSearchContainer && chatSearchInput && !chatSearchBtn.dataset.bound) {
+        chatSearchBtn.dataset.bound = 'true';
+        chatSearchBtn.addEventListener('click', () => {
+            const isClosed = chatSearchContainer.style.width === '0px' || chatSearchContainer.style.width === '';
+            if (isClosed) {
+                chatSearchContainer.style.width = '250px';
+                chatSearchContainer.style.opacity = '1';
+                setTimeout(() => chatSearchInput.focus(), 300);
+            } else {
+                chatSearchContainer.style.width = '0px';
+                chatSearchContainer.style.opacity = '0';
+                chatSearchInput.value = '';
+                
+                const bubbles = document.querySelectorAll('.chat-bubble-content');
+                bubbles.forEach(el => {
+                    if (el.dataset.originalBg) {
+                        el.style.backgroundColor = el.dataset.originalBg;
+                        el.style.color = el.dataset.originalColor;
+                        el.dataset.originalBg = '';
+                    }
+                });
+                const container = document.getElementById('chat-messages-container');
+                if (container) container.scrollTop = container.scrollHeight;
+            }
+        });
+
+        let searchTimeout = null;
+        chatSearchInput.addEventListener('input', (e) => {
+            if (searchTimeout) clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const query = e.target.value.trim().toLowerCase();
+                const bubbles = document.querySelectorAll('.chat-bubble-content');
+                let firstMatch = null;
+                
+                bubbles.forEach(el => {
+                    if (el.dataset.originalBg) {
+                        el.style.backgroundColor = el.dataset.originalBg;
+                        el.style.color = el.dataset.originalColor;
+                        el.dataset.originalBg = '';
+                    }
+                    
+                    if (query && el.textContent.toLowerCase().includes(query)) {
+                        if (!firstMatch) firstMatch = el;
+                        el.dataset.originalBg = el.style.backgroundColor || '';
+                        el.dataset.originalColor = el.style.color || '';
+                        el.style.backgroundColor = '#ffeb3b';
+                        el.style.color = '#000';
+                    }
+                });
+                
+                if (firstMatch) {
+                    firstMatch.scrollIntoView({behavior: 'smooth', block: 'center'});
+                }
+            }, 300);
+        });
+    }
+
+    // Sidebar toggle logic
+    const chatInfoBtn = document.getElementById('chat-info-btn');
+    const chatSidebar = document.getElementById('chat-sidebar');
+    const mainChatArea = document.getElementById('main-chat-area');
+
+    if (chatInfoBtn && chatSidebar && mainChatArea && !chatInfoBtn.dataset.bound) {
+        chatInfoBtn.dataset.bound = 'true';
+        chatInfoBtn.addEventListener('click', () => {
+            chatSidebar.classList.toggle('active');
+            if (chatSidebar.classList.contains('active')) {
+                if (mainChatArea.classList.contains('col-md-9')) {
+                    mainChatArea.classList.replace('col-md-9', 'col-md-6');
+                } else if (mainChatArea.classList.contains('col-md-8')) {
+                    mainChatArea.classList.replace('col-md-8', 'col-md-5');
+                }
+                if (activeChatId) fetchChatMedia();
+            } else {
+                if (mainChatArea.classList.contains('col-md-6')) {
+                    mainChatArea.classList.replace('col-md-6', 'col-md-9');
+                } else if (mainChatArea.classList.contains('col-md-5')) {
+                    mainChatArea.classList.replace('col-md-5', 'col-md-8');
+                }
+            }
+        });
+    }
+
+    // User Search Autocomplete
+    const userSearchInput = document.getElementById('user-search-input');
+    const userSearchDropdown = document.getElementById('user-search-dropdown');
+
+    if (userSearchInput && userSearchDropdown && !userSearchInput.dataset.bound) {
+        userSearchInput.dataset.bound = 'true';
+        let userSearchTimeout = null;
+        userSearchInput.addEventListener('input', (e) => {
+            const q = e.target.value.trim();
+            if (!q) {
+                userSearchDropdown.classList.remove('show');
+                return;
+            }
+            
+            if (userSearchTimeout) clearTimeout(userSearchTimeout);
+            userSearchTimeout = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/api/chat/users/search?q=${encodeURIComponent(q)}`);
+                    const users = await res.json();
+                    if (users.length === 0) {
+                        userSearchDropdown.innerHTML = '<div class="px-3 py-2 text-muted small">Không tìm thấy kết quả</div>';
+                    } else {
+                        userSearchDropdown.innerHTML = users.map(u => `
+                            <a href="javascript:void(0)" class="dropdown-item py-2 border-bottom" onclick="startPrivateChat(${u.id}, '${u.name}'); document.getElementById('user-search-input').value=''; document.getElementById('user-search-dropdown').classList.remove('show');">
+                                <div class="fw-bold">${u.name}</div>
+                                <small class="text-muted">${u.code} - ${u.role}</small>
+                            </a>
+                        `).join('');
+                    }
+                    userSearchDropdown.classList.add('show');
+                } catch (err) {
+                    console.error(err);
+                }
+            }, 300);
+        });
+        
+        document.addEventListener('click', (e) => {
+            if (!userSearchInput.contains(e.target) && !userSearchDropdown.contains(e.target)) {
+                userSearchDropdown.classList.remove('show');
+            }
+        });
+    }
+
+    // Fetch on load if tabs exist
+    const privateTabBtn = document.getElementById('private-tab');
+    if (privateTabBtn && !privateTabBtn.dataset.bound) {
+        privateTabBtn.dataset.bound = 'true';
+        privateTabBtn.addEventListener('shown.bs.tab', () => {
+            fetchPrivateConversations();
+            // When in private tab, always hide "Cập nhật tên đề tài"
+            const btn = document.getElementById('btnChatUpdateTopicTitle');
+            if (btn) btn.classList.add('d-none');
+        });
+    }
+
+    const groupsTabBtn = document.getElementById('groups-tab');
+    if (groupsTabBtn && !groupsTabBtn.dataset.bound) {
+        groupsTabBtn.dataset.bound = 'true';
+        groupsTabBtn.addEventListener('shown.bs.tab', () => {
+            const activeGroup = document.querySelector('.chat-group-item.border-primary') || document.querySelector('.chat-group-item');
+            if (activeGroup) {
+                const gId = activeGroup.getAttribute('data-group-id');
+                const isAppr = activeGroup.getAttribute('data-is-approved') === 'true';
+                const name = (activeGroup.querySelector('span')?.textContent || '').trim();
+                updateChatHeader(name, gId, 'group', isAppr);
+            }
+        });
+    }
+}
+
+window.initChatUI = initChatUI;
+document.addEventListener('DOMContentLoaded', initChatUI);
+window.addEventListener('beforeunload', stopChatPolling);
+
+function updateChatHeader(chatName, chatId, chatType="group", isApproved=null) {
     activeChatType = chatType;
+    window.activeChatType = chatType;
     var headerName = document.getElementById('chat-header-name');
     var headerAvatar = document.getElementById('chat-header-avatar');
-    if (headerName) headerName.textContent = chatName;
+    if (headerName) {
+        headerName.textContent = chatName;
+        if (headerName.nextElementSibling) {
+            headerName.nextElementSibling.innerHTML = chatType === 'group' 
+                ? '<i class="fa-solid fa-circle text-success" style="font-size: 8px;"></i> Nhóm NCKH' 
+                : 'Trò chuyện riêng';
+        }
+    }
     if (headerAvatar) {
         headerAvatar.innerHTML = chatType === 'group' ? '<i class="fa-solid fa-users"></i>' : '<i class="fa-solid fa-user"></i>';
+    }
+    
+    // Toggle "Cập nhật tên đề tài": CHỈ hiện trong nhóm khi đề tài đã được Khoa phê duyệt chính thức
+    const updateTitleBtn = document.getElementById('btnChatUpdateTopicTitle');
+    if (updateTitleBtn) {
+        if (chatType === 'group') {
+            let approved = isApproved;
+            if (approved === null || approved === undefined) {
+                const activeItem = document.querySelector(`.chat-group-item[data-group-id="${chatId}"]`);
+                approved = activeItem ? (activeItem.getAttribute('data-is-approved') === 'true') : false;
+            }
+            if (approved) {
+                updateTitleBtn.classList.remove('d-none');
+            } else {
+                updateTitleBtn.classList.add('d-none');
+            }
+        } else {
+            // Khi chat cá nhân hoặc không phải nhóm -> Luôn ẩn
+            updateTitleBtn.classList.add('d-none');
+        }
     }
     
     // Switch UI tab based on type
@@ -496,19 +816,54 @@ function updateChatHeader(chatName, chatId, chatType="group") {
 }
 
 function startPrivateChat(userId, userName) {
+    const myUserId = getCurrentUserId();
+    if (userId === myUserId) return; // Can't chat with self
+
     // Pin this target so fetchPrivateConversations always keeps them in the list
     pinnedPrivateTarget = { id: userId, name: userName };
+    activeChatType = "private";
+    window.activeChatType = "private";
     
-    // Switch to private tab first
-    const privateTabBtn = document.getElementById('private-tab');
-    if (privateTabBtn) {
-        const bsTab = new bootstrap.Tab(privateTabBtn);
-        bsTab.show();
+    // Hide "Cập nhật tên đề tài" in private chat
+    const updateTitleBtn = document.getElementById('btnChatUpdateTopicTitle');
+    if (updateTitleBtn) {
+        updateTitleBtn.classList.add('d-none');
     }
     
-    // Inject target user into private list if not already there
+    // 1. Switch to private tab
+    const privateTabBtn = document.getElementById('private-tab');
+    if (privateTabBtn) {
+        try {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+                bootstrap.Tab.getOrCreateInstance(privateTabBtn).show();
+            } else {
+                privateTabBtn.click();
+            }
+        } catch (e) {
+            privateTabBtn.click();
+        }
+    }
+    
+    // 2. Update Header
+    const headerName = document.getElementById('chat-header-name');
+    if (headerName) {
+        headerName.textContent = userName;
+        if (headerName.nextElementSibling) {
+            headerName.nextElementSibling.textContent = 'Trò chuyện riêng';
+        }
+    }
+    const headerAvatar = document.getElementById('chat-header-avatar');
+    if (headerAvatar) {
+        headerAvatar.innerHTML = '<i class="fa-solid fa-user"></i>';
+    }
+
+    // 3. Start polling for this specific user's private messages
+    startChatPolling(userId);
+
+    // 4. Update sidebar list immediately and fetch conversation list
     const list = document.getElementById('private-chat-list');
     if (list) {
+        list.querySelectorAll('.list-group-item').forEach(el => el.classList.remove('active', 'bg-light', 'border-start', 'border-primary', 'border-4'));
         const existingItem = list.querySelector(`[data-user-id="${userId}"]`);
         if (!existingItem) {
             const placeholder = list.querySelector('.text-center');
@@ -533,105 +888,25 @@ function startPrivateChat(userId, userName) {
                 </div>`;
             list.prepend(newItem);
         } else {
-            // Highlight existing
-            list.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
             existingItem.classList.add('active');
         }
     }
     
-    updateChatHeader(userName, userId, "private");
+    fetchPrivateConversations();
 }
 
-
-// Search toggle and debounce
-const chatSearchBtn = document.getElementById('chat-search-btn');
-const chatSearchContainer = document.getElementById('chat-search-container');
-const chatSearchInput = document.getElementById('chat-search-input');
-
-if (chatSearchBtn && chatSearchContainer && chatSearchInput) {
-    chatSearchBtn.addEventListener('click', () => {
-        const isClosed = chatSearchContainer.style.width === '0px' || chatSearchContainer.style.width === '';
-        if (isClosed) {
-            chatSearchContainer.style.width = '250px';
-            chatSearchContainer.style.opacity = '1';
-            setTimeout(() => chatSearchInput.focus(), 300);
-        } else {
-            chatSearchContainer.style.width = '0px';
-            chatSearchContainer.style.opacity = '0';
-            chatSearchInput.value = '';
-            
-            const bubbles = document.querySelectorAll('.chat-bubble-content');
-            bubbles.forEach(el => {
-                if (el.dataset.originalBg) {
-                    el.style.backgroundColor = el.dataset.originalBg;
-                    el.style.color = el.dataset.originalColor;
-                    el.dataset.originalBg = '';
-                }
-            });
-            const container = document.getElementById('chat-messages-container');
-            if (container) container.scrollTop = container.scrollHeight;
-        }
-    });
-
-
-    let searchTimeout = null;
-    chatSearchInput.addEventListener('input', (e) => {
-        if (searchTimeout) clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            const query = e.target.value.trim().toLowerCase();
-            const bubbles = document.querySelectorAll('.chat-bubble-content');
-            let firstMatch = null;
-            
-            bubbles.forEach(el => {
-                // Restore original if we modified it before
-                if (el.dataset.originalBg) {
-                    el.style.backgroundColor = el.dataset.originalBg;
-                    el.style.color = el.dataset.originalColor;
-                    el.dataset.originalBg = '';
-                }
-                
-                if (query && el.textContent.toLowerCase().includes(query)) {
-                    if (!firstMatch) firstMatch = el;
-                    el.dataset.originalBg = el.style.backgroundColor || '';
-                    el.dataset.originalColor = el.style.color || '';
-                    el.style.backgroundColor = '#ffeb3b';
-                    el.style.color = '#000';
-                }
-            });
-            
-            if (firstMatch) {
-                firstMatch.scrollIntoView({behavior: 'smooth', block: 'center'});
-            }
-        }, 300);
-    });
-
-}
-
-// Sidebar toggle logic
-const chatInfoBtn = document.getElementById('chat-info-btn');
-const chatSidebar = document.getElementById('chat-sidebar');
-const mainChatArea = document.getElementById('main-chat-area');
-
-if (chatInfoBtn && chatSidebar && mainChatArea) {
-    chatInfoBtn.addEventListener('click', () => {
-        chatSidebar.classList.toggle('active');
-        if (chatSidebar.classList.contains('active')) {
-            // Adjust columns if needed
-            if (mainChatArea.classList.contains('col-md-9')) {
-                mainChatArea.classList.replace('col-md-9', 'col-md-6');
-            } else if (mainChatArea.classList.contains('col-md-8')) {
-                mainChatArea.classList.replace('col-md-8', 'col-md-5');
-            }
-            if (activeChatId) fetchChatMedia();
-        } else {
-            if (mainChatArea.classList.contains('col-md-6')) {
-                mainChatArea.classList.replace('col-md-6', 'col-md-9');
-            } else if (mainChatArea.classList.contains('col-md-5')) {
-                mainChatArea.classList.replace('col-md-5', 'col-md-8');
-            }
-        }
-    });
-}
+window.openPrivateChatWithUser = function(userId, userName) {
+    if (!userId) return;
+    if (typeof switchTab === 'function') {
+        const chatNav = document.querySelector('a[href*="s-chat"]');
+        switchTab('s-chat', chatNav);
+    } else {
+        window.location.hash = '#s-chat';
+    }
+    setTimeout(() => {
+        startPrivateChat(userId, userName);
+    }, 120);
+};
 
 async function fetchChatMedia() {
     if (!activeChatId) return;
@@ -694,71 +969,6 @@ async function fetchChatMedia() {
     }
 }
 
-function startPrivateChat(userId, userName) {
-    const myUserId = getCurrentUserId();
-    if (userId === myUserId) return; // Can't chat with self
-    
-    activeChatType = "private";
-    startChatPolling(userId);
-    
-    // Switch UI to private tab
-    const privateTabBtn = document.getElementById('private-tab');
-    if(privateTabBtn) {
-        const bsTab = new bootstrap.Tab(privateTabBtn);
-        bsTab.show();
-    }
-    
-    // Update Header
-    document.getElementById('chat-header-name').textContent = userName;
-    document.getElementById('chat-header-name').nextElementSibling.textContent = 'Trò chuyện riêng';
-    document.getElementById('chat-header-avatar').innerHTML = '<i class="fa-solid fa-user"></i>';
-    
-    fetchPrivateConversations();
-}
-
-// User Search Autocomplete
-const userSearchInput = document.getElementById('user-search-input');
-const userSearchDropdown = document.getElementById('user-search-dropdown');
-let userSearchTimeout = null;
-
-if (userSearchInput && userSearchDropdown) {
-    userSearchInput.addEventListener('input', (e) => {
-        const q = e.target.value.trim();
-        if (!q) {
-            userSearchDropdown.classList.remove('show');
-            return;
-        }
-        
-        if (userSearchTimeout) clearTimeout(userSearchTimeout);
-        userSearchTimeout = setTimeout(async () => {
-            try {
-                const res = await fetch(`/api/chat/users/search?q=${encodeURIComponent(q)}`);
-                const users = await res.json();
-                if (users.length === 0) {
-                    userSearchDropdown.innerHTML = '<div class="px-3 py-2 text-muted small">Không tìm thấy kết quả</div>';
-                } else {
-                    userSearchDropdown.innerHTML = users.map(u => `
-                        <a href="javascript:void(0)" class="dropdown-item py-2 border-bottom" onclick="startPrivateChat(${u.id}, '${u.name}'); document.getElementById('user-search-input').value=''; document.getElementById('user-search-dropdown').classList.remove('show');">
-                            <div class="fw-bold">${u.name}</div>
-                            <small class="text-muted">${u.code} - ${u.role}</small>
-                        </a>
-                    `).join('');
-                }
-                userSearchDropdown.classList.add('show');
-            } catch (err) {
-                console.error(err);
-            }
-        }, 300);
-    });
-    
-    // Hide dropdown on click outside
-    document.addEventListener('click', (e) => {
-        if (!userSearchInput.contains(e.target) && !userSearchDropdown.contains(e.target)) {
-            userSearchDropdown.classList.remove('show');
-        }
-    });
-}
-
 // pinnedPrivateTarget: { id, name } - set when opening chat from profile
 let pinnedPrivateTarget = null;
 
@@ -794,7 +1004,7 @@ async function fetchPrivateConversations() {
         const activeId = activeChatType === 'private' ? activeChatId : null;
         
         list.innerHTML = items.map(c => `
-            <a href="javascript:void(0)" class="list-group-item list-group-item-action py-3 border-0 border-bottom ${activeId == c.id ? 'active' : ''}" data-user-id="${c.id}" onclick="startPrivateChat(${c.id}, '${c.name}')">
+            <a href="javascript:void(0)" class="list-group-item list-group-item-action py-3 border-0 border-bottom ${activeId == c.id ? 'active' : ''}" data-user-id="${c.id}" onclick="startPrivateChat(${c.id}, '${(c.name || '').replace(/'/g, "\\'")}')">
                 <div class="d-flex w-100 justify-content-between align-items-center">
                     <div class="d-flex align-items-center gap-3">
                         <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 45px; height: 45px;">
@@ -815,10 +1025,8 @@ async function fetchPrivateConversations() {
     }
 }
 
-// Fetch on load if tabs exist
-const privateTabBtn = document.getElementById('private-tab');
-if (privateTabBtn) {
-    privateTabBtn.addEventListener('shown.bs.tab', fetchPrivateConversations);
-}
-
+// (Private tab shown handler is integrated into initChatUI above)
+window.fetchPrivateConversations = fetchPrivateConversations;
+window.loadPrivateConversations = fetchPrivateConversations;
+window.startPrivateChat = startPrivateChat;
 

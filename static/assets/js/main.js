@@ -63,31 +63,8 @@ async function approveTopic(topicId, status) {
 
 // Khi DOM load xong, gán sự kiện cho các nút nếu có
 document.addEventListener('DOMContentLoaded', () => {
-    // Gán sự kiện cho nút đăng ký trong student.html
-    const btnRegister = document.getElementById('btnSubmitRegister');
-    if (btnRegister) {
-        btnRegister.addEventListener('click', () => {
-            const nameField = document.getElementById('topicName');
-            if (!nameField || !nameField.value.trim()) {
-                Swal.fire('Lỗi', 'Vui lòng nhập tên đề tài!', 'warning');
-                return;
-            }
-
-            const topicData = {
-                name: document.getElementById('topicName').value.trim(),
-                description: document.getElementById('topicDesc').value.trim(),
-                batch_id: parseInt(document.getElementById('batchId').value),
-                mentor_id: parseInt(document.getElementById('mentorId').value),
-                group_id: parseInt(document.getElementById('groupId').value)
-            };
-
-            registerTopic(topicData).then((res) => {
-                if (res && res.topic_id) {
-                    if(typeof showToast === 'function') showToast('Đã gửi hồ sơ đăng ký thành công qua API!');
-                }
-            });
-        });
-    }
+// Lưu ý: Sự kiện đăng ký đề tài chính đã được xử lý đầy đủ cùng danh sách thành viên trong app.js
+    // Tránh gán đè trùng lặp tại đây gây tạo 2 đề tài song song
 
     // Gán sự kiện cho nút Duyệt trong lecturer.html
     const btnApprove = document.getElementById('btnApproveTopic');
@@ -143,4 +120,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Global safety handler: tự động dọn dẹp lớp overlay backdrop bị kẹt khi đóng modal
+    document.addEventListener('hidden.bs.modal', () => {
+        if (!document.querySelector('.modal.show')) {
+            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
+        }
+    });
 });
+

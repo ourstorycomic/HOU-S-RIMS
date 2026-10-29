@@ -35,88 +35,299 @@
                                 </div>
                             </div>
                             
-                            <!-- Approval timeline -->
+                            <!-- Chu trình tiến độ thực của đề tài NCKH (5 giai đoạn) -->
                             <div class="position-relative mb-4 mt-3 px-2">
-                                {% set pct_timeline = (step - 1) * 50 %}
-                                <div class="progress position-absolute" style="height: 4px; top: 10px; left: 24px; width: calc(100% - 48px); z-index: 1;">
-                                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ pct_timeline }}%"></div>
+                                <div class="progress position-absolute" style="height: 5px; top: 12px; left: 30px; width: calc(100% - 60px); z-index: 1;">
+                                    <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ t.total_progress }}%; transition: width 0.6s ease;"></div>
                                 </div>
                                 <div class="d-flex justify-content-between position-relative" style="z-index: 2;">
-                                    <!-- Step 1: SV đăng ký -->
-                                    <div class="text-center">
-                                        <div class="{% if step >= 1 %}bg-success{% else %}bg-white border{% endif %} text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" style="width:24px;height:24px; font-size:10px;">
-                                            {% if step >= 1 %}<i class="fa-solid fa-check"></i>{% else %}<span class="text-muted">1</span>{% endif %}
+                                    <!-- Mốc 1: Phê duyệt đề tài -->
+                                    <div class="text-center" style="width: 19%;">
+                                        <div class="{% if t.status == 'approved' %}bg-success text-white shadow-sm{% elif t.status == 'faculty_pending' %}bg-warning text-dark{% else %}bg-primary text-white{% endif %} rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" 
+                                             style="width:26px; height:26px; font-size:11px;">
+                                            {% if t.status == 'approved' %}<i class="fa-solid fa-check"></i>
+                                            {% elif t.status == 'faculty_pending' %}<i class="fa-solid fa-hourglass-half"></i>
+                                            {% else %}<i class="fa-solid fa-spinner fa-spin"></i>{% endif %}
                                         </div>
-                                        <div class="small fw-bold" style="font-size:11px;">SV đăng ký</div>
+                                        <div class="fw-bold text-dark" style="font-size:11.5px;">1. Duyệt đề tài</div>
+                                        <div class="text-muted" style="font-size:10px;">
+                                            {% if t.status == 'approved' %}<span class="text-success fw-semibold">Khoa đã duyệt</span>
+                                            {% elif t.status == 'faculty_pending' %}Chờ Khoa duyệt
+                                            {% else %}Chờ GV duyệt{% endif %}
+                                        </div>
                                     </div>
-                                    <!-- Step 2: GV duyệt -->
-                                    <div class="text-center">
-                                        <div class="{% if step >= 2 %}bg-success{% elif step == 1 %}bg-primary{% else %}bg-white border{% endif %} text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" style="width:24px;height:24px; font-size:10px;">
-                                            {% if step >= 2 %}<i class="fa-solid fa-check"></i>{% else %}<i class="fa-solid fa-hourglass-half" style="font-size:9px;"></i>{% endif %}
+
+                                    <!-- Mốc 2: Đề cương chi tiết -->
+                                    <div class="text-center" style="width: 20%;">
+                                        <div class="{% if t.outline_status == 'approved' %}bg-success text-white shadow-sm{% elif t.outline_status == 'submitted' %}bg-primary text-white shadow-sm{% else %}bg-white border text-muted{% endif %} rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" 
+                                             style="width:26px; height:26px; font-size:11px;">
+                                            {% if t.outline_status == 'approved' %}<i class="fa-solid fa-check"></i>
+                                            {% elif t.outline_status == 'submitted' %}<i class="fa-solid fa-book-bookmark"></i>
+                                            {% else %}<span>2</span>{% endif %}
                                         </div>
-                                        <div class="small fw-bold {% if step == 1 %}text-primary{% endif %}" style="font-size:11px;">GV duyệt</div>
+                                        <div class="fw-bold {% if t.outline_status in ['approved', 'submitted'] %}text-dark{% else %}text-muted{% endif %}" style="font-size:11.5px;">2. Đề cương chi tiết</div>
+                                        <div class="text-muted" style="font-size:10px;">
+                                            {% if t.outline_status == 'approved' %}<span class="text-success fw-semibold">Đã duyệt đạt</span>
+                                            {% elif t.outline_status == 'submitted' %}<span class="text-primary fw-semibold">Đã nộp v{{ t.submissions[0].version if t.submissions else 1 }}</span>
+                                            {% else %}Chưa nộp{% endif %}
+                                        </div>
                                     </div>
-                                    <!-- Step 3: Khoa duyệt -->
-                                    <div class="text-center">
-                                        <div class="{% if step >= 3 %}bg-success{% elif step == 2 %}bg-primary{% else %}bg-white border{% endif %} text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" style="width:24px;height:24px; font-size:10px;">
-                                            {% if step >= 3 %}<i class="fa-solid fa-check"></i>{% elif step == 2 %}<i class="fa-solid fa-hourglass-half" style="font-size:9px;"></i>{% else %}<span class="text-muted">3</span>{% endif %}
+
+                                    <!-- Mốc 3: Báo cáo tiến độ -->
+                                    <div class="text-center" style="width: 20%;">
+                                        <div class="{% if t.progress_status == 'approved' %}bg-success text-white shadow-sm{% elif t.progress_status == 'submitted' or (t.milestones_list and t.total_progress > 40) %}bg-primary text-white shadow-sm{% else %}bg-white border text-muted{% endif %} rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" 
+                                             style="width:26px; height:26px; font-size:11px;">
+                                            {% if t.progress_status == 'approved' %}<i class="fa-solid fa-check"></i>
+                                            {% elif t.progress_status == 'submitted' or (t.milestones_list and t.total_progress > 40) %}<i class="fa-solid fa-chart-line"></i>
+                                            {% else %}<span>3</span>{% endif %}
                                         </div>
-                                        <div class="small fw-bold {% if step == 2 %}text-primary{% endif %}" style="font-size:11px;">Khoa duyệt</div>
+                                        <div class="fw-bold {% if t.progress_status in ['approved', 'submitted'] or (t.milestones_list and t.total_progress > 40) %}text-dark{% else %}text-muted{% endif %}" style="font-size:11.5px;">3. Báo cáo tiến độ</div>
+                                        <div class="text-muted" style="font-size:10px;">
+                                            {% if t.progress_status == 'approved' %}<span class="text-success fw-semibold">Đã thông qua</span>
+                                            {% elif t.progress_status == 'submitted' %}<span class="text-primary fw-semibold">Đã nộp báo cáo</span>
+                                            {% elif t.milestones_list %}{{ t.milestones_list|length }} mốc tiến độ
+                                            {% else %}Thực hiện NC{% endif %}
+                                        </div>
+                                    </div>
+
+                                    <!-- Mốc 4: Báo cáo tổng kết -->
+                                    <div class="text-center" style="width: 20%;">
+                                        <div class="{% if t.final_status == 'approved' %}bg-success text-white shadow-sm{% elif t.final_status == 'submitted' %}bg-primary text-white shadow-sm{% else %}bg-white border text-muted{% endif %} rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" 
+                                             style="width:26px; height:26px; font-size:11px;">
+                                            {% if t.final_status == 'approved' %}<i class="fa-solid fa-check"></i>
+                                            {% elif t.final_status == 'submitted' %}<i class="fa-solid fa-file-lines"></i>
+                                            {% else %}<span>4</span>{% endif %}
+                                        </div>
+                                        <div class="fw-bold {% if t.final_status in ['approved', 'submitted'] %}text-dark{% else %}text-muted{% endif %}" style="font-size:11.5px;">4. Báo cáo tổng kết</div>
+                                        <div class="text-muted" style="font-size:10px;">
+                                            {% if t.final_status == 'approved' %}<span class="text-success fw-semibold">Đã thông qua</span>
+                                            {% elif t.final_status == 'submitted' %}<span class="text-primary fw-semibold">Đã nộp</span>
+                                            {% else %}Báo cáo & Slide{% endif %}
+                                        </div>
+                                    </div>
+
+                                    <!-- Mốc 5: Nghiệm thu & Bảo vệ -->
+                                    <div class="text-center" style="width: 19%;">
+                                        <div class="{% if t.is_evaluated %}bg-success text-white shadow-sm{% elif t.total_progress >= 85 %}bg-primary text-white shadow-sm{% else %}bg-white border text-muted{% endif %} rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" 
+                                             style="width:26px; height:26px; font-size:11px;">
+                                            {% if t.is_evaluated %}<i class="fa-solid fa-award"></i>
+                                            {% elif t.total_progress >= 85 %}<i class="fa-solid fa-scale-balanced"></i>
+                                            {% else %}<span>5</span>{% endif %}
+                                        </div>
+                                        <div class="fw-bold {% if t.is_evaluated or t.total_progress >= 85 %}text-dark{% else %}text-muted{% endif %}" style="font-size:11.5px;">5. Nghiệm thu</div>
+                                        <div class="text-muted" style="font-size:10px;">
+                                            {% if t.is_evaluated %}<span class="text-success fw-semibold">Đã nghiệm thu</span>
+                                            {% elif t.total_progress >= 85 %}Chờ hội đồng
+                                            {% else %}Hội đồng đánh giá{% endif %}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                             
-                            {% if t.status == 'approved' %}
-                            <div class="mt-4">
+                            <!-- SECTION 1: TÀI LIỆU & BÁO CÁO ĐÃ NỘP (Đề cương chi tiết, Báo cáo tiến độ, Slide...) -->
+                            <div class="mt-4 pt-3 border-top">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h6 class="fw-bold mb-0 small"><i class="fa-solid fa-list-check me-2"></i>Danh sách Cột mốc (Milestones)</h6>
-                                    <button class="btn btn-sm btn-outline-primary rounded-pill fw-bold" onclick="openAddMilestoneModal({{ t.id }})">+ Thêm Mốc</button>
+                                    <h6 class="fw-bold mb-0 text-dark">
+                                        <i class="fa-solid fa-file-signature me-2 text-primary"></i>Tài liệu & Đề cương / Báo cáo sinh viên đã nộp
+                                    </h6>
+                                    <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-1 fw-bold">
+                                        {{ t.submissions|length if t.submissions else 0 }} tệp
+                                    </span>
                                 </div>
                                 
-                                <div class="mt-4">
-                                    <h6 class="fw-bold mb-3 small"><i class="fa-solid fa-file-arrow-down me-2"></i>Báo cáo đã nộp</h6>
-                                    {% if t.submissions %}
-                                        <div class="list-group list-group-flush border rounded-3">
-                                        {% for sub in t.submissions %}
-                                            <div class="list-group-item p-3">
-                                                <div class="d-flex justify-content-between align-items-start">
-                                                    <div>
-                                                        <div class="fw-bold text-dark">Báo cáo {{ sub.submitted_at.strftime('%d/%m/%Y %H:%M') }}</div>
-                                                        <small class="text-muted">Sinh viên nộp (ID: {{ sub.uploader_id }})
-                                                        {% if sub.milestone %} | Cột mốc: <span class="fw-bold text-primary">{{ sub.milestone.name }}</span>{% endif %}
-                                                        </small>
-                                                        {% if sub.feedback_list %}
-                                                        <div class="mt-3">
-                                                            <div class="small fw-bold text-warning-emphasis mb-2"><i class="fa-solid fa-note-sticky text-warning me-1"></i>Lịch sử ghi chú:</div>
-                                                            <div class="d-flex flex-column gap-2">
-                                                                {% for fb in sub.feedback_list %}
-                                                                <div class="p-2 rounded-3 bg-warning-subtle border border-warning-subtle position-relative">
-                                                                    <div class="small text-dark" style="white-space: pre-wrap;">{{ fb.text }}</div>
-                                                                    {% if fb.time %}
-                                                                    <div class="text-muted mt-1" style="font-size:10px;"><i class="fa-regular fa-clock me-1"></i>{{ fb.time }}</div>
-                                                                    {% endif %}
-                                                                </div>
-                                                                {% endfor %}
-                                                            </div>
-                                                        </div>
+                                {% if t.submissions %}
+                                    <div class="list-group list-group-flush border rounded-3 overflow-hidden shadow-sm">
+                                    {% for sub in t.submissions %}
+                                        <div class="list-group-item p-3 border-bottom {% if not sub.is_latest %}bg-light bg-opacity-75{% endif %}"
+                                             style="{% if not sub.is_latest %}background-color: #f8fafc; border-left: 4px solid #cbd5e1;{% else %}border-left: 4px solid #3b82f6;{% endif %}">
+                                            <div class="d-flex justify-content-between align-items-start gap-3">
+                                                <div class="flex-grow-1">
+                                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                                                        {% if sub.is_latest %}
+                                                        <span class="badge bg-primary text-white border border-primary fw-bold d-inline-flex align-items-center gap-1 px-2.5 py-1.5 rounded-pill" style="font-size: 12px;">
+                                                            <i class="fa-solid fa-code-branch"></i>
+                                                            <span>v{{ sub.version or 1 }}</span>
+                                                        </span>
+                                                        <span class="badge bg-success text-white px-2.5 py-1.5 rounded-pill fw-bold d-inline-flex align-items-center gap-1 shadow-xs" style="font-size: 11px;">
+                                                            <i class="fa-solid fa-sparkles"></i>
+                                                            <span>Bản mới nhất</span>
+                                                        </span>
+                                                        {% else %}
+                                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle fw-bold d-inline-flex align-items-center gap-1 px-2.5 py-1.5 rounded-pill" style="font-size: 12px;">
+                                                            <i class="fa-solid fa-code-branch"></i>
+                                                            <span>v{{ sub.version or 1 }}</span>
+                                                        </span>
+                                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2.5 py-1.5 rounded-pill fw-semibold d-inline-flex align-items-center gap-1.5" style="font-size: 11px;">
+                                                            <i class="fa-solid fa-clock-rotate-left text-muted"></i>
+                                                            <span>Bản nộp cũ (Đã nộp lại v{{ sub.latest_version }})</span>
+                                                        </span>
                                                         {% endif %}
+
+                                                        {% if sub.type == 'outline' %}
+                                                        <span class="badge rounded-pill fw-bold d-inline-flex align-items-center gap-2 px-3 py-1.5 shadow-sm text-white" 
+                                                              style="background: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%); font-size: 13px; letter-spacing: 0.2px;">
+                                                            <i class="fa-solid fa-book-bookmark fs-6"></i>
+                                                            <span>Đề cương chi tiết</span>
+                                                        </span>
+                                                        {% elif sub.type == 'final' %}
+                                                        <span class="badge rounded-pill fw-bold d-inline-flex align-items-center gap-2 px-3 py-1.5 shadow-sm text-white" 
+                                                              style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); font-size: 13px; letter-spacing: 0.2px;">
+                                                            <i class="fa-solid fa-award fs-6"></i>
+                                                            <span>Báo cáo tổng kết</span>
+                                                        </span>
+                                                        {% elif sub.type == 'slide' %}
+                                                        <span class="badge rounded-pill fw-bold d-inline-flex align-items-center gap-2 px-3 py-1.5 shadow-sm text-white" 
+                                                              style="background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); font-size: 13px; letter-spacing: 0.2px;">
+                                                            <i class="fa-solid fa-file-powerpoint fs-6"></i>
+                                                            <span>Slide & Phụ lục</span>
+                                                        </span>
+                                                        {% else %}
+                                                        <span class="badge rounded-pill fw-bold d-inline-flex align-items-center gap-2 px-3 py-1.5 shadow-sm text-white" 
+                                                              style="background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%); font-size: 13px; letter-spacing: 0.2px;">
+                                                            <i class="fa-solid fa-chart-line fs-6"></i>
+                                                            <span>Báo cáo tiến độ</span>
+                                                        </span>
+                                                        {% endif %}
+                                                        
+                                                        {% if sub.status == 'approved' %}
+                                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1.5 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5" style="font-size: 12px;">
+                                                            <i class="fa-solid fa-circle-check text-success"></i>
+                                                            <span>GVHD: Đạt yêu cầu</span>
+                                                        </span>
+                                                        {% elif sub.status == 'revision_required' %}
+                                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1.5 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5" style="font-size: 12px;">
+                                                            <i class="fa-solid fa-triangle-exclamation text-danger"></i>
+                                                            <span>GVHD: Cần chỉnh sửa</span>
+                                                        </span>
+                                                        {% else %}
+                                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2.5 py-1.5 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5" style="font-size: 12px;">
+                                                            <i class="fa-solid fa-clock text-warning"></i>
+                                                            <span>Chờ GVHD đánh giá</span>
+                                                        </span>
+                                                        {% endif %}
+
+                                                        {% if sub.faculty_status == 'approved' %}
+                                                        <span class="badge bg-primary text-white border border-primary px-2.5 py-1.5 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5" style="font-size: 12px;">
+                                                            <i class="fa-solid fa-stamp"></i>
+                                                            <span>Khoa đã duyệt</span>
+                                                        </span>
+                                                        {% elif sub.faculty_status == 'revision_required' %}
+                                                        <span class="badge bg-danger text-white border border-danger px-2.5 py-1.5 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5" style="font-size: 12px;">
+                                                            <i class="fa-solid fa-triangle-exclamation"></i>
+                                                            <span>Khoa yêu cầu sửa</span>
+                                                        </span>
+                                                        {% endif %}
+
+                                                        <span class="text-muted small ms-auto d-inline-flex align-items-center gap-1.5"><i class="fa-regular fa-clock"></i><span>{{ sub.submitted_at.strftime('%d/%m/%Y %H:%M') if sub.submitted_at else '' }}</span></span>
                                                     </div>
-                                                    <div class="d-flex gap-2 flex-shrink-0 ms-3">
-                                                        <button class="btn btn-sm btn-outline-warning rounded-pill fw-bold" 
-                                                            onclick="openFeedbackModal({{ sub.id }}, '{{ sub.feedback_list|tojson|forceescape if sub.feedback_list else '[]' }}')">
-                                                            <i class="fa-solid fa-pen me-1"></i> Ghi chú
-                                                        </button>
-                                                        <a href="/api/submissions/download/{{ sub.id }}" class="btn btn-sm btn-outline-primary rounded-pill fw-bold">
-                                                            <i class="fa-solid fa-download me-1"></i> Tải về
+
+                                                    {% if not sub.is_latest %}
+                                                    <div class="alert alert-secondary py-1.5 px-3 mt-1.5 mb-2 rounded-3 small d-flex align-items-center gap-2 border-0 bg-secondary bg-opacity-10 text-secondary" style="font-size: 11.5px;">
+                                                        <i class="fa-solid fa-lock text-secondary flex-shrink-0"></i>
+                                                        <span>Sinh viên đã nộp lại bản chỉnh sửa mới hơn (<strong>v{{ sub.latest_version }}</strong>). Phần nhận xét &amp; đánh giá của bản nộp này đã bị làm mờ và khóa chỉnh sửa.</span>
+                                                    </div>
+                                                    {% endif %}
+
+                                                    <div class="fw-bold text-dark mt-1">
+                                                        <i class="fa-solid fa-file-lines me-1 text-primary"></i>{{ sub.file_name or 'Tài liệu nộp' }}
+                                                    </div>
+
+                                                    <small class="text-muted d-block mt-1">
+                                                        Sinh viên nộp: <strong>{{ sub.uploader.full_name if sub.uploader else 'ID: ' ~ sub.uploader_id }}</strong>
+                                                        {% if sub.milestone %} | Cột mốc: <span class="fw-bold text-primary">{{ sub.milestone.name }}</span>{% endif %}
+                                                    </small>
+
+                                                    {% if sub.external_link %}
+                                                    <div class="mt-2">
+                                                        <a href="{{ sub.external_link }}" target="_blank" rel="noopener noreferrer" 
+                                                           class="badge bg-info-subtle text-info text-decoration-none border px-2 py-1 rounded-pill d-inline-flex align-items-center gap-1">
+                                                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                                                            <span>Link bổ trợ: {{ sub.external_link[:40] }}...</span>
                                                         </a>
                                                     </div>
+                                                    {% endif %}
+
+                                                    {% if sub.notes %}
+                                                    <div class="mt-2 p-2.5 rounded-3 bg-light border small text-muted">
+                                                        <strong class="text-dark d-block mb-1"><i class="fa-solid fa-file-word text-primary me-1"></i>Ghi chú của SV:</strong>
+                                                        <div class="rich-content-display text-dark" style="font-size: 12px; line-height: 1.5;">{{ sub.notes | safe }}</div>
+                                                    </div>
+                                                    {% endif %}
+
+                                                    {% if sub.feedback_list %}
+                                                    <div class="mt-3 {% if not sub.is_latest %}opacity-75{% endif %}" {% if not sub.is_latest %}style="filter: grayscale(15%);"{% endif %}>
+                                                        <div class="small fw-bold {% if sub.is_latest %}text-warning-emphasis{% else %}text-muted{% endif %} mb-2 d-flex align-items-center gap-1.5">
+                                                            <i class="fa-solid {% if sub.is_latest %}fa-note-sticky text-warning{% else %}fa-clock-rotate-left text-muted{% endif %}"></i>
+                                                            <span>{% if sub.is_latest %}Lịch sử nhận xét của bạn:{% else %}Lịch sử nhận xét bản cũ (Đã khóa):{% endif %}</span>
+                                                        </div>
+                                                        <div class="d-flex flex-column gap-2">
+                                                            {% for fb in sub.feedback_list %}
+                                                            <div class="p-2.5 rounded-3 {% if sub.is_latest %}bg-warning-subtle border border-warning-subtle{% else %}bg-light border border-secondary-subtle{% endif %} position-relative shadow-2xs">
+                                                                <div class="small {% if sub.is_latest %}text-dark{% else %}text-muted{% endif %} rich-content-display">{{ fb.text | safe }}</div>
+                                                                {% if fb.time %}
+                                                                <div class="text-muted mt-1 d-flex align-items-center gap-1" style="font-size:10px;"><i class="fa-regular fa-clock"></i><span>{{ fb.time }}</span></div>
+                                                                {% endif %}
+                                                            </div>
+                                                            {% endfor %}
+                                                        </div>
+                                                    </div>
+                                                    {% endif %}
+                                                    {% if sub.faculty_feedback %}
+                                                    <div class="mt-3 p-3 rounded-3 {% if sub.faculty_status == 'approved' %}bg-primary-subtle border border-primary-subtle{% else %}bg-danger-subtle border border-danger-subtle{% endif %}">
+                                                        <div class="d-flex align-items-center justify-content-between mb-1">
+                                                            <div class="small fw-bold {% if sub.faculty_status == 'approved' %}text-primary{% else %}text-danger{% endif %}">
+                                                                <i class="fa-solid fa-stamp me-1"></i>Ý kiến chỉ đạo từ Cấp Khoa:
+                                                            </div>
+                                                            {% if sub.faculty_reviewed_at %}
+                                                            <div class="text-muted" style="font-size: 10px;"><i class="fa-regular fa-clock me-1"></i>{{ sub.faculty_reviewed_at.strftime('%d/%m/%Y %H:%M') }}</div>
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="text-dark small" style="white-space: pre-wrap; line-height: 1.5;">{{ sub.faculty_feedback }}</div>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+
+                                                <div class="d-flex flex-column gap-2 flex-shrink-0 ms-2">
+                                                    {% if sub.is_latest %}
+                                                    <button type="button" class="btn btn-sm btn-outline-warning rounded-pill fw-bold text-nowrap d-inline-flex align-items-center justify-content-center gap-1.5 px-3 py-1.5 shadow-sm" 
+                                                        data-sub-id="{{ sub.id }}"
+                                                        data-feedbacks='{{ sub.feedback_list|tojson if sub.feedback_list else "[]" }}'
+                                                        data-status="{{ sub.status or 'submitted' }}"
+                                                        onclick="handleFeedbackClick(this)">
+                                                        <i class="fa-solid fa-star-half-stroke text-warning"></i>
+                                                        <span>Nhận xét & Đánh giá</span>
+                                                    </button>
+                                                    {% else %}
+                                                    <button type="button" class="btn btn-sm btn-light border text-muted rounded-pill fw-bold text-nowrap d-inline-flex align-items-center justify-content-center gap-1.5 px-3 py-1.5 disabled" 
+                                                        disabled 
+                                                        style="opacity: 0.45; cursor: not-allowed; background-color: #f1f5f9; border-color: #cbd5e1 !important;"
+                                                        title="Bản nộp cũ đã bị làm mờ và khóa. Vui lòng nhận xét &amp; đánh giá ở bản nộp mới nhất (v{{ sub.latest_version }}).">
+                                                        <i class="fa-solid fa-lock text-muted"></i>
+                                                        <span>Đã khóa đánh giá</span>
+                                                    </button>
+                                                    {% endif %}
+                                                    <a href="/api/submissions/download/{{ sub.id }}" class="btn btn-sm btn-outline-primary rounded-pill fw-bold text-nowrap d-inline-flex align-items-center justify-content-center gap-1.5 px-3 py-1.5">
+                                                        <i class="fa-solid fa-download"></i>
+                                                        <span>Tải về xem</span>
+                                                    </a>
                                                 </div>
                                             </div>
-                                        {% endfor %}
                                         </div>
-                                    {% else %}
-                                        <div class="text-center p-3 border rounded-3 bg-light text-muted small">Chưa có báo cáo nào được nộp.</div>
-                                    {% endif %}
+                                    {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="text-center p-3 border rounded-3 bg-light text-muted small">
+                                        <i class="fa-regular fa-folder-open me-1"></i> Chưa có tài liệu/báo cáo nào được sinh viên nộp cho đề tài này.
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- SECTION 2: CỘT MỐC TIẾN ĐỘ (MILESTONES) -->
+                            <div class="mt-4 pt-3 border-top">
+                                {% if t.status == 'approved' %}
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-list-check me-2 text-success"></i>Cột mốc tiến độ (Milestones)</h6>
+                                    <button class="btn btn-sm btn-outline-primary rounded-pill fw-bold" onclick="openAddMilestoneModal({{ t.id }})">+ Thêm Mốc</button>
                                 </div>
                                 {% if t.milestones_list %}
                                 <div class="list-group list-group-flush border rounded-3">
@@ -139,16 +350,20 @@
                                     {% endfor %}
                                 </div>
                                 {% else %}
-                                    <div class="text-center p-4 border rounded-3 bg-light text-muted small">
-                                        Đề tài này chưa thiết lập cột mốc nào.
+                                    <div class="text-center p-3 border rounded-3 bg-light text-muted small">
+                                        Đề tài này chưa thiết lập cột mốc nào. Nhấn "+ Thêm Mốc" để tạo các hạn nộp tiến độ.
                                     </div>
                                 {% endif %}
+                                {% else %}
+                                <div class="p-3 border rounded-3 bg-light text-muted small d-flex align-items-center gap-2">
+                                    <i class="fa-solid fa-circle-info text-primary fs-5"></i>
+                                    <div>
+                                        Đề tài đang ở trạng thái <strong>{{ 'Chờ GV duyệt' if t.status == 'pending' else 'GV đã duyệt - Chờ Khoa phê duyệt' }}</strong>.
+                                        Sau khi Khoa phê duyệt chính thức, bạn có thể thiết lập các Cột mốc tiến độ theo từng giai đoạn.
+                                    </div>
+                                </div>
+                                {% endif %}
                             </div>
-                            {% else %}
-                            <div class="mt-2 text-center p-4 border rounded-3 bg-light text-muted small">
-                                Đề tài đang chờ Khoa/Viện phê duyệt chính thức. Bạn chưa thể thiết lập Cột mốc tiến độ cho đề tài này.
-                            </div>
-                            {% endif %}
                         </div>
                         {% endfor %}
                     {% else %}
@@ -160,33 +375,188 @@
                     {% endif %}
                 </div>
         </div>
-{% endblock %}
 
-{% block modals %}
-<!-- Feedback Modal -->
+<!-- Feedback & Review Modal -->
 <div class="modal fade" id="modalFeedback" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold"><i class="fa-solid fa-note-sticky me-2 text-warning"></i>Thêm ghi chú cho bài nộp</h5>
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 pb-0 pt-4 px-4">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-warning-subtle text-warning p-2 rounded-3">
+                        <i class="fa-solid fa-star-half-stroke fs-6"></i>
+                    </span>
+                    <h5 class="modal-title fw-bold text-dark">Đánh giá & Nhận xét bài nộp</h5>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body px-4 pb-0">
+            
+            <div class="modal-body px-4 py-3">
+                <!-- Evaluation Status Radio Cards (Chỉ giữ Đạt yêu cầu và Cần chỉnh sửa) -->
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted mb-2">KẾT QUẢ ĐÁNH GIÁ <span class="text-danger">*</span></label>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="card h-100 p-3 border rounded-3 cursor-pointer text-center status-option" 
+                                   style="cursor: pointer; transition: all 0.2s;" id="label-status-approved">
+                                <input type="radio" name="reviewStatus" value="approved" class="d-none" checked>
+                                <div class="text-success mb-1 fs-4"><i class="fa-solid fa-circle-check"></i></div>
+                                <div class="fw-bold text-dark">Đạt yêu cầu</div>
+                                <div class="text-muted" style="font-size: 11.5px;">Đồng ý thông qua bài nộp</div>
+                            </label>
+                        </div>
+                        <div class="col-6">
+                            <label class="card h-100 p-3 border rounded-3 cursor-pointer text-center status-option" 
+                                   style="cursor: pointer; transition: all 0.2s;" id="label-status-revision_required">
+                                <input type="radio" name="reviewStatus" value="revision_required" class="d-none">
+                                <div class="text-danger mb-1 fs-4"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                                <div class="fw-bold text-dark">Cần chỉnh sửa</div>
+                                <div class="text-muted" style="font-size: 11.5px;">Yêu cầu nộp lại bản mới</div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Existing feedback history -->
                 <div id="feedbackHistory" class="mb-3" style="display:none;">
-                    <div class="small fw-bold text-muted mb-2"><i class="fa-solid fa-history me-1"></i>Ghi chú trước đó:</div>
-                    <div id="feedbackHistoryContent" class="p-3 rounded-3 bg-light border" style="font-size:13px; white-space:pre-wrap; max-height:150px; overflow-y:auto;"></div>
+                    <div class="small fw-bold text-muted mb-2"><i class="fa-solid fa-history me-1"></i>Lịch sử nhận xét trước đó:</div>
+                    <div id="feedbackHistoryContent" class="p-3 rounded-3 bg-light border" style="font-size:13px; max-height:150px; overflow-y:auto;"></div>
                 </div>
-                <!-- New note input -->
-                <p class="text-muted small mb-2">Nhập ghi chú mới để thêm vào lịch sử nhận xét:</p>
-                <textarea id="feedbackText" class="form-control" rows="4" placeholder="Ví dụ: Cần bổ sung phần tổng quan, format tài liệu chưa đúng..."></textarea>
-                <input type="hidden" id="feedbackSubId">
-                <input type="hidden" id="feedbackOldContent">
+
+                <!-- New note input (Word-like Editor) -->
+                <div class="mb-2">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <label class="form-label small fw-bold text-muted mb-0">
+                            <i class="fa-solid fa-file-word me-1 text-primary"></i> Ý KIẾN / HƯỚNG DẪN CỤ THỂ CHO SINH VIÊN
+                        </label>
+                        <span class="badge bg-light text-secondary border px-2 py-0.5" style="font-size: 10px;">
+                            <i class="fa-solid fa-pen-nib me-1 text-primary"></i>Soạn thảo kiểu Word
+                        </span>
+                    </div>
+
+                    <div class="word-editor-container shadow-2xs">
+                        <!-- Toolbar kiểu Word -->
+                        <div class="word-editor-toolbar" id="feedbackWordToolbar">
+                            <!-- Font family -->
+                            <select class="tool-select" id="toolFeedbackFontFamily" onchange="formatWordDoc('fontName', this.value, 'feedbackTextEditor')" title="Kiểu chữ">
+                                <option value="inherit">Kiểu chữ: Mặc định</option>
+                                <option value="'Segoe UI', Tahoma, sans-serif">Segoe UI</option>
+                                <option value="Roboto, sans-serif">Roboto</option>
+                                <option value="Arial, sans-serif">Arial</option>
+                                <option value="'Times New Roman', serif">Times New Roman</option>
+                                <option value="Tahoma, sans-serif">Tahoma</option>
+                            </select>
+
+                            <!-- Font size -->
+                            <select class="tool-select" id="toolFeedbackFontSize" onchange="formatWordDocFontSize(this.value, 'feedbackTextEditor')" title="Cỡ chữ">
+                                <option value="">Cỡ chữ</option>
+                                <option value="12px">12px (Nhỏ)</option>
+                                <option value="13px" selected>13px (Chuẩn)</option>
+                                <option value="15px">15px (Vừa)</option>
+                                <option value="17px">17px (Lớn)</option>
+                            </select>
+
+                            <div class="tool-separator"></div>
+
+                            <!-- Định dạng cơ bản: In đậm, in nghiêng, gạch chân, gạch ngang -->
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('bold', null, 'feedbackTextEditor')" title="In đậm (Ctrl+B)">
+                                <i class="fa-solid fa-bold"></i>
+                            </button>
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('italic', null, 'feedbackTextEditor')" title="In nghiêng (Ctrl+I)">
+                                <i class="fa-solid fa-italic"></i>
+                            </button>
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('underline', null, 'feedbackTextEditor')" title="Gạch chân (Ctrl+U)">
+                                <i class="fa-solid fa-underline"></i>
+                            </button>
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('strikeThrough', null, 'feedbackTextEditor')" title="Gạch ngang chữ">
+                                <i class="fa-solid fa-strikethrough"></i>
+                            </button>
+
+                            <div class="tool-separator"></div>
+
+                            <!-- Màu chữ & Highlight màu nền -->
+                            <label class="btn-tool mb-0 cursor-pointer position-relative" title="Màu chữ">
+                                <i class="fa-solid fa-font text-danger"></i>
+                                <input type="color" id="toolFeedbackTextColor" onchange="formatWordDoc('foreColor', this.value, 'feedbackTextEditor')"
+                                    style="position: absolute; opacity: 0; width: 100%; height: 100%; top: 0; left: 0; cursor: pointer;">
+                            </label>
+                            <label class="btn-tool mb-0 cursor-pointer position-relative" title="Màu nền / Tô sáng (Highlight)">
+                                <i class="fa-solid fa-highlighter text-warning"></i>
+                                <input type="color" id="toolFeedbackBgColor" value="#ffffaa" onchange="formatWordDoc('hiliteColor', this.value, 'feedbackTextEditor')"
+                                    style="position: absolute; opacity: 0; width: 100%; height: 100%; top: 0; left: 0; cursor: pointer;">
+                            </label>
+
+                            <div class="tool-separator"></div>
+
+                            <!-- Căn lề / Chỉnh dòng -->
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('justifyLeft', null, 'feedbackTextEditor')" title="Căn lề trái">
+                                <i class="fa-solid fa-align-left"></i>
+                            </button>
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('justifyCenter', null, 'feedbackTextEditor')" title="Căn giữa">
+                                <i class="fa-solid fa-align-center"></i>
+                            </button>
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('justifyRight', null, 'feedbackTextEditor')" title="Căn lề phải">
+                                <i class="fa-solid fa-align-right"></i>
+                            </button>
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('justifyFull', null, 'feedbackTextEditor')" title="Căn đều hai bên">
+                                <i class="fa-solid fa-align-justify"></i>
+                            </button>
+
+                            <div class="tool-separator"></div>
+
+                            <!-- Danh sách & thụt lề -->
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('insertUnorderedList', null, 'feedbackTextEditor')" title="Danh sách dấu chấm">
+                                <i class="fa-solid fa-list-ul"></i>
+                            </button>
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('insertOrderedList', null, 'feedbackTextEditor')" title="Danh sách đánh số">
+                                <i class="fa-solid fa-list-ol"></i>
+                            </button>
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('outdent', null, 'feedbackTextEditor')" title="Giảm thụt lề">
+                                <i class="fa-solid fa-outdent"></i>
+                            </button>
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('indent', null, 'feedbackTextEditor')" title="Tăng thụt lề">
+                                <i class="fa-solid fa-indent"></i>
+                            </button>
+
+                            <div class="tool-separator"></div>
+
+                            <!-- Undo / Redo & Clear format -->
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('undo', null, 'feedbackTextEditor')" title="Hoàn tác (Ctrl+Z)">
+                                <i class="fa-solid fa-rotate-left"></i>
+                            </button>
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('redo', null, 'feedbackTextEditor')" title="Làm lại (Ctrl+Y)">
+                                <i class="fa-solid fa-rotate-right"></i>
+                            </button>
+                            <button type="button" class="btn-tool" onclick="formatWordDoc('removeFormat', null, 'feedbackTextEditor')" title="Xóa toàn bộ định dạng">
+                                <i class="fa-solid fa-eraser text-secondary"></i>
+                            </button>
+                        </div>
+
+                        <!-- Khung soạn thảo văn bản -->
+                        <div id="feedbackTextEditor" class="word-editor-content" contenteditable="true"
+                            style="min-height: 120px; max-height: 220px; font-size: 13px;"
+                            data-placeholder="Ví dụ: Đã duyệt phần tổng quan, đề tài cần chú ý bổ sung số liệu khảo sát thực tế (hỗ trợ in đậm, in nghiêng, màu sắc, danh sách giống Word)..."
+                            oninput="syncFeedbackTextFromEditor()" onblur="syncFeedbackTextFromEditor()"></div>
+
+                        <!-- Hidden textarea cho form / saveFeedback() -->
+                        <textarea id="feedbackText" name="feedback" style="display:none;"></textarea>
+
+                        <!-- Footer thanh trạng thái & đếm từ -->
+                        <div class="word-editor-footer py-1 px-2.5 d-flex justify-content-between align-items-center">
+                            <span class="d-flex align-items-center gap-1.5" style="font-size: 11px;">
+                                <i class="fa-regular fa-keyboard text-muted"></i>
+                                <span class="text-muted">Ctrl+B: Đậm | Ctrl+I: Nghiêng | Ctrl+U: Gạch chân</span>
+                            </span>
+                            <span id="feedbackWordCount" class="text-muted fw-medium" style="font-size: 11px;">0 từ · 0 ký tự</span>
+                        </div>
+                    </div>
+                    <input type="hidden" id="feedbackSubId">
+                </div>
             </div>
-            <div class="modal-footer border-0 px-4 pb-4">
-                <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-warning fw-bold text-white" onclick="saveFeedback()">
-                    <i class="fa-solid fa-paper-plane me-2"></i>Thêm & Thông báo SV
+
+            <div class="modal-footer border-0 px-4 pb-4 pt-0">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Hủy bỏ</button>
+                <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm" id="btn-save-review" onclick="saveFeedback()">
+                    <i class="fa-solid fa-paper-plane me-2"></i>Lưu đánh giá & Thông báo SV
                 </button>
             </div>
         </div>
@@ -196,10 +566,80 @@
 
 {% block extra_js %}
 <script>
-function openFeedbackModal(subId, feedbackListJson) {
+window.syncFeedbackTextFromEditor = function() {
+    const editor = document.getElementById('feedbackTextEditor');
+    const hiddenTextarea = document.getElementById('feedbackText');
+    const wordCountSpan = document.getElementById('feedbackWordCount');
+    if (!editor || !hiddenTextarea) return;
+
+    const html = editor.innerHTML;
+    const plainText = editor.innerText.trim();
+    if (!plainText && (html === '<br>' || html === '<div><br></div>' || html === '<p><br></p>' || !html.trim())) {
+        hiddenTextarea.value = '';
+        if (wordCountSpan) wordCountSpan.textContent = '0 từ · 0 ký tự';
+        return;
+    }
+
+    hiddenTextarea.value = html;
+
+    if (wordCountSpan) {
+        const words = plainText ? plainText.split(/\s+/).filter(Boolean).length : 0;
+        const chars = plainText.length;
+        wordCountSpan.textContent = `${words} từ · ${chars} ký tự`;
+    }
+}
+
+function selectStatusOption(statusValue) {
+    document.querySelectorAll('.status-option').forEach(el => {
+        el.classList.remove('border-primary', 'bg-primary-subtle', 'border-success', 'bg-success-subtle', 'border-danger', 'bg-danger-subtle');
+    });
+    const validStatus = (statusValue === 'revision_required') ? 'revision_required' : 'approved';
+    const radio = document.querySelector(`input[name="reviewStatus"][value="${validStatus}"]`);
+    if (radio) {
+        radio.checked = true;
+        const parentCard = radio.closest('.status-option');
+        if (parentCard) {
+            if (validStatus === 'approved') {
+                parentCard.classList.add('border-success', 'bg-success-subtle');
+            } else {
+                parentCard.classList.add('border-danger', 'bg-danger-subtle');
+            }
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.status-option').forEach(card => {
+        card.addEventListener('click', () => {
+            const radio = card.querySelector('input[type="radio"]');
+            if (radio) selectStatusOption(radio.value);
+        });
+    });
+});
+
+function handleFeedbackClick(btn) {
+    if (!btn || btn.disabled || btn.hasAttribute('disabled') || btn.classList.contains('disabled')) {
+        return;
+    }
+    const subId = btn.getAttribute('data-sub-id');
+    const feedbackListJson = btn.getAttribute('data-feedbacks');
+    const currentStatus = btn.getAttribute('data-status');
+    openFeedbackModal(subId, feedbackListJson, currentStatus);
+}
+
+function openFeedbackModal(subId, feedbackListJson, currentStatus) {
     document.getElementById('feedbackSubId').value = subId;
-    document.getElementById('feedbackText').value = '';
     
+    const editor = document.getElementById('feedbackTextEditor');
+    if (editor) editor.innerHTML = '';
+    const hidden = document.getElementById('feedbackText');
+    if (hidden) hidden.value = '';
+    const wordCount = document.getElementById('feedbackWordCount');
+    if (wordCount) wordCount.textContent = '0 từ · 0 ký tự';
+
+    // Mặc định chọn Đạt yêu cầu trừ khi trạng thái hiện tại là cần chỉnh sửa
+    selectStatusOption(currentStatus === 'revision_required' ? 'revision_required' : 'approved');
+
     const historyBox = document.getElementById('feedbackHistory');
     const historyContent = document.getElementById('feedbackHistoryContent');
     
@@ -212,8 +652,8 @@ function openFeedbackModal(subId, feedbackListJson) {
         let html = '<div class="d-flex flex-column gap-2">';
         feedbackList.forEach(fb => {
             html += `
-                <div class="p-2 rounded-3 bg-white border shadow-sm">
-                    <div class="small text-dark" style="white-space: pre-wrap;">${fb.text}</div>
+                <div class="p-2.5 rounded-3 bg-white border shadow-2xs">
+                    <div class="small text-dark rich-content-display">${fb.text || ''}</div>
                     ${fb.time ? `<div class="text-muted mt-1" style="font-size:10px;"><i class="fa-regular fa-clock me-1"></i>${fb.time}</div>` : ''}
                 </div>
             `;
@@ -229,30 +669,51 @@ function openFeedbackModal(subId, feedbackListJson) {
 }
 
 function saveFeedback() {
+    syncFeedbackTextFromEditor();
     const subId = document.getElementById('feedbackSubId').value;
     const newNote = document.getElementById('feedbackText').value.trim();
-    
-    if (!newNote) {
-        showToast('Vui lòng nhập nội dung ghi chú mới!');
+    const checkedStatus = document.querySelector('input[name="reviewStatus"]:checked');
+    const status = checkedStatus ? checkedStatus.value : 'approved';
+
+    if (status === 'revision_required' && !newNote) {
+        showToast('Vui lòng nhập ý kiến / hướng dẫn cụ thể để sinh viên biết cần chỉnh sửa gì!', 'warning');
+        const editor = document.getElementById('feedbackTextEditor');
+        if (editor) editor.focus();
         return;
     }
 
-    fetch(`/api/submissions/${subId}/feedback`, {
+    const saveBtn = document.getElementById('btn-save-review');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Đang lưu...';
+    }
+
+    fetch(`/api/submissions/${subId}/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ feedback: newNote })
+        body: JSON.stringify({ status: status, feedback: newNote })
     })
     .then(r => r.json())
     .then(data => {
         if (data.success) {
             bootstrap.Modal.getInstance(document.getElementById('modalFeedback')).hide();
-            showToast('Đã thêm ghi chú và thông báo cho sinh viên!');
-            setTimeout(() => location.reload(), 1500);
+            showToast('Đã lưu đánh giá và gửi thông báo cho sinh viên thành công!', 'success');
+            setTimeout(() => location.reload(), 1200);
         } else {
-            showToast(data.message || 'Có lỗi xảy ra!');
+            showToast(data.error || data.message || 'Có lỗi xảy ra!', 'error');
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fa-solid fa-paper-plane me-2"></i>Lưu đánh giá & Thông báo SV';
+            }
         }
     })
-    .catch(() => showToast('Lỗi kết nối server!'));
+    .catch(() => {
+        showToast('Lỗi kết nối server!', 'error');
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-paper-plane me-2"></i>Lưu đánh giá & Thông báo SV';
+        }
+    });
 }
 </script>
 {% endblock %}

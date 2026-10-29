@@ -20,6 +20,32 @@ class User(db.Model):
     topics_mentored = db.relationship('Topic', backref='mentor', lazy=True)
     group_memberships = db.relationship('GroupMember', backref='student', lazy=True)
 
+    @property
+    def password(self):
+        return self.password_hash
+
+    @password.setter
+    def password(self, val):
+        self.password_hash = val
+
+    @property
+    def name(self):
+        return self.full_name
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'role': self.role,
+            'name': self.full_name,
+            'full_name': self.full_name,
+            'email': self.email,
+            'bio': self.bio,
+            'phone': self.phone,
+            'student_id': self.student_id,
+            'faculty': self.faculty
+        }
+
 class Batch(db.Model):
     __tablename__ = 'batches'
     id = db.Column(db.Integer, primary_key=True)
@@ -40,22 +66,56 @@ class Batch(db.Model):
 class Group(db.Model):
     __tablename__ = 'groups'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
+    name = db.Column(db.String(100), nullable=True, default='Nhóm NCKH')
     batch_id = db.Column(db.Integer, db.ForeignKey('batches.id'), nullable=True)
     leader_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     mentor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    status = db.Column(db.String(20), default='active')
+    status = db.Column(db.String(30), default='draft') # 'draft', 'pending_mentor', 'approved', 'rejected'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    members = db.relationship('GroupMember', backref='group', lazy=True)
+    # Relationships
+    leader = db.relationship('User', foreign_keys=[leader_id], backref='led_groups', lazy=True)
+    mentor = db.relationship('User', foreign_keys=[mentor_id], backref='mentored_groups', lazy=True)
+    members = db.relationship('GroupMember', backref='group', cascade='all, delete-orphan', lazy=True)
     topics = db.relationship('Topic', backref='group', lazy=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'batch_id': self.batch_id,
+            'leader_id': self.leader_id,
+            'leader_name': self.leader.full_name if self.leader else None,
+            'leader_student_id': self.leader.student_id if self.leader else (self.leader.username if self.leader else None),
+            'mentor_id': self.mentor_id,
+            'mentor_name': self.mentor.full_name if self.mentor else None,
+            'mentor_faculty': self.mentor.faculty if self.mentor else None,
+            'status': self.status,
+            'created_at': self.created_at.strftime('%d/%m/%Y %H:%M') if self.created_at else None,
+            'topic_id': self.topics[0].id if self.topics else None,
+            'topic_title': self.topics[0].title if self.topics else None,
+            'topic_status': self.topics[0].status if self.topics else None,
+            'members': [m.to_dict() for m in self.members] if self.members else []
+        }
 
 class GroupMember(db.Model):
     __tablename__ = 'group_members'
     id = db.Column(db.Integer, primary_key=True)
     group_id = db.Column(db.Integer, db.ForeignKey('groups.id'), nullable=False)
     student_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    status = db.Column(db.String(20), default='accepted') # 'accepted', 'pending'
+    status = db.Column(db.String(20), default='invited') # 'invited', 'joined', 'declined', 'accepted', 'pending'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'group_id': self.group_id,
+            'user_id': self.student_id,
+            'student_id': self.student.student_id if self.student and self.student.student_id else (self.student.username if self.student else str(self.student_id)),
+            'full_name': self.student.full_name if self.student else '',
+            'email': self.student.email if self.student else '',
+            'faculty': self.student.faculty if self.student else '',
+            'status': self.status
+        }
 
 class Topic(db.Model):
     __tablename__ = 'topics'
@@ -95,6 +155,18 @@ class Meeting(db.Model):
     topic_id = db.Column(db.Integer, db.ForeignKey('topics.id'), nullable=True)
     status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+            'start_time': self.start_time.strftime('%Y-%m-%d %H:%M:%S') if self.start_time else None,
+            'end_time': self.end_time.strftime('%Y-%m-%d %H:%M:%S') if self.end_time else None,
+            'organizer_id': self.organizer_id,
+            'topic_id': self.topic_id,
+            'status': self.status
+        }
+
 class Message(db.Model):
     __tablename__ = 'messages'
     id = db.Column(db.Integer, primary_key=True)
@@ -112,6 +184,22 @@ class Message(db.Model):
 
     sender = db.relationship('User', foreign_keys=[sender_id])
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.sender_id,
+            'sender_id': self.sender_id,
+            'receiver_id': self.receiver_id,
+            'group_id': self.group_id,
+            'text': self.content,
+            'content': self.content,
+            'message_type': self.message_type,
+            'file_url': self.file_url,
+            'file_name': self.file_name,
+            'is_read': self.is_read,
+            'created_at': self.timestamp.strftime('%Y-%m-%d %H:%M:%S') if self.timestamp else None
+        }
+
 class Notification(db.Model):
     __tablename__ = 'notifications'
     id = db.Column(db.Integer, primary_key=True)
@@ -128,11 +216,29 @@ class Submission(db.Model):
     milestone_id = db.Column(db.Integer, db.ForeignKey('milestones.id'), nullable=True)
     uploader_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     file_url = db.Column(db.String(255), nullable=False)
-    type = db.Column(db.String(50), nullable=False)
+    file_name = db.Column(db.String(255), nullable=True)
+    type = db.Column(db.String(50), nullable=False) # 'outline', 'progress', 'final', 'slide'
+    external_link = db.Column(db.String(500), nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(30), default='submitted') # 'submitted', 'approved', 'revision_required'
+    version = db.Column(db.Integer, default=1)
+    reviewer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
     feedback = db.Column(db.Text, nullable=True)
     feedback_at = db.Column(db.DateTime, nullable=True)
+    
+    # Khoa (Faculty) Approval fields
+    faculty_status = db.Column(db.String(30), default='pending') # 'pending', 'approved', 'revision_required'
+    faculty_feedback = db.Column(db.Text, nullable=True)
+    faculty_reviewed_at = db.Column(db.DateTime, nullable=True)
+    faculty_reviewer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
+    # Relationships
     milestone = db.relationship('Milestone', backref='submissions')
+    uploader = db.relationship('User', foreign_keys=[uploader_id])
+    reviewer = db.relationship('User', foreign_keys=[reviewer_id])
+    faculty_reviewer = db.relationship('User', foreign_keys=[faculty_reviewer_id])
+    topic = db.relationship('Topic', backref='submissions')
 
     @property
     def feedback_list(self):
@@ -158,6 +264,34 @@ class Submission(db.Model):
                 time_part = self.feedback_at.strftime('%d/%m/%Y %H:%M') if self.feedback_at else ""
                 notes.append({'time': time_part, 'text': block.strip()})
         return notes
+
+    def to_dict(self):
+        import os
+        return {
+            'id': self.id,
+            'topic_id': self.topic_id,
+            'milestone_id': self.milestone_id,
+            'milestone_name': self.milestone.name if self.milestone else None,
+            'uploader_id': self.uploader_id,
+            'uploader_name': self.uploader.full_name if self.uploader else None,
+            'file_url': self.file_url,
+            'file_name': self.file_name or (os.path.basename(self.file_url) if self.file_url else 'Tài liệu'),
+            'type': self.type,
+            'external_link': self.external_link,
+            'notes': self.notes,
+            'status': self.status or 'submitted',
+            'version': self.version or 1,
+            'reviewer_id': self.reviewer_id,
+            'reviewer_name': self.reviewer.full_name if self.reviewer else None,
+            'feedback': self.feedback,
+            'feedback_list': self.feedback_list,
+            'feedback_at': self.feedback_at.strftime('%d/%m/%Y %H:%M') if self.feedback_at else None,
+            'submitted_at': self.submitted_at.strftime('%d/%m/%Y %H:%M') if self.submitted_at else None,
+            'faculty_status': self.faculty_status or 'pending',
+            'faculty_feedback': self.faculty_feedback,
+            'faculty_reviewed_at': self.faculty_reviewed_at.strftime('%d/%m/%Y %H:%M') if self.faculty_reviewed_at else None,
+            'faculty_reviewer_name': self.faculty_reviewer.full_name if self.faculty_reviewer else None
+        }
 
 class DocumentTemplate(db.Model):
     __tablename__ = 'documents'

@@ -27,22 +27,41 @@
                     <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg p-0 mt-3" style="width: 320px; border-radius: 12px; overflow: hidden;">
                         <li class="p-3 bg-white border-bottom d-flex justify-content-between align-items-center">
                             <h6 class="fw-bold mb-0 text-dark">Thông báo</h6>
-                            <a href="#" class="small text-primary fw-bold text-decoration-none" onclick="showAllNotifications()">Xem tất cả</a>
+                            <a href="javascript:void(0)" class="small text-primary fw-bold text-decoration-none" onclick="event.preventDefault(); window.showAllNotifications()">Xem tất cả</a>
                         </li>
                         <div style="max-height: 360px; overflow-y: auto;">
                             {% if notifications %}
                                 {% for notif in notifications %}
+                                {% set is_faculty_approved = 'Khoa' in notif.content and ('phê duyệt' in notif.content or 'ĐÃ PHÊ DUYỆT' in notif.content) %}
+                                {% set is_faculty_revision = 'Khoa' in notif.content and ('chỉnh sửa' in notif.content or 'YÊU CẦU' in notif.content) %}
+                                {% set is_lecturer_review = 'Giảng viên' in notif.content or 'GV' in notif.content or 'đánh giá' in notif.content or 'hướng dẫn' in notif.content %}
                                 <li>
-                                    <a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start {% if not notif.is_read %}bg-light{% endif %}" href="#" onclick="readNotification({{ notif.id }}, decodeURIComponent('{{ notif.content | urlencode }}'), false)">
-                                        <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;"><i class="fa-regular fa-bell"></i></div>
-                                        <div>
-                                            <div class="fw-bold small text-dark mb-1 d-flex align-items-center justify-content-between">
-                                                <span>Thông báo hệ thống</span>
+                                    <a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start notif-dropdown-item {% if not notif.is_read %}bg-light{% endif %}" 
+                                       href="javascript:void(0)" 
+                                       data-notif-id="{{ notif.id }}" 
+                                       data-notif-content="{{ notif.content | e }}" 
+                                       onclick="event.preventDefault(); window.handleNotifItemClick(this, event)">
+                                        <div class="{% if is_faculty_approved %}bg-success-subtle text-success{% elif is_faculty_revision %}bg-danger-subtle text-danger{% elif is_lecturer_review %}bg-primary-subtle text-primary{% else %}bg-secondary-subtle text-secondary{% endif %} rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;">
+                                            <i class="{% if is_faculty_approved %}fa-solid fa-stamp{% elif is_faculty_revision %}fa-solid fa-triangle-exclamation{% elif is_lecturer_review %}fa-solid fa-chalkboard-user{% else %}fa-regular fa-bell{% endif %}"></i>
+                                        </div>
+                                        <div class="flex-grow-1" style="min-width: 0;">
+                                            <div class="fw-bold small mb-1 d-flex align-items-center justify-content-between">
+                                                <span class="{% if is_faculty_approved %}text-success{% elif is_faculty_revision %}text-danger{% elif is_lecturer_review %}text-primary{% else %}text-dark{% endif %}">
+                                                    {% if is_faculty_approved %}
+                                                        <i class="fa-solid fa-circle-check me-1"></i>Khoa đã phê duyệt
+                                                    {% elif is_faculty_revision %}
+                                                        <i class="fa-solid fa-triangle-exclamation me-1"></i>Khoa yêu cầu sửa
+                                                    {% elif is_lecturer_review %}
+                                                        <i class="fa-solid fa-user-tie me-1"></i>Đánh giá bài nộp
+                                                    {% else %}
+                                                        Thông báo hệ thống
+                                                    {% endif %}
+                                                </span>
                                                 {% if not notif.is_read %}
                                                     <span class="badge bg-danger rounded-circle p-1" style="width:8px; height:8px;"></span>
                                                 {% endif %}
                                             </div>
-                                            <div class="small text-muted mb-1" style="line-height: 1.4; white-space: normal;">{{ notif.content.split('|||')[0] | striptags | truncate(80) }}</div>
+                                            <div class="small text-muted mb-1" style="line-height: 1.4; white-space: normal;">{{ notif.content.split('|||')[0] | striptags | replace('\n', ' ') | truncate(85) }}</div>
                                             <div class="text-muted" style="font-size: 10px;">{{ notif.created_at.strftime('%d/%m/%Y %H:%M') if notif.created_at else '' }}</div>
                                         </div>
                                     </a>
@@ -53,19 +72,20 @@
                             {% endif %}
                         </div>
                         <li class="p-2 bg-light text-center border-top d-flex justify-content-between px-3">
-                            <a href="#" class="small text-muted fw-bold text-decoration-none" style="font-size: 11px;" onclick="showAllNotifications()">Xem tất cả</a>
-                            <a href="#" class="small text-danger fw-bold text-decoration-none" style="font-size: 11px;" onclick="deleteAllReadNotifications()"><i class="fa-solid fa-trash me-1"></i> Xóa thư đã đọc</a>
+                            <a href="javascript:void(0)" class="small text-muted fw-bold text-decoration-none" style="font-size: 11px;" onclick="event.preventDefault(); window.showAllNotifications()">Xem tất cả</a>
+                            <a href="javascript:void(0)" class="small text-danger fw-bold text-decoration-none" style="font-size: 11px;" onclick="event.preventDefault(); window.deleteAllReadNotifications()"><i class="fa-solid fa-trash me-1"></i> Xóa thư đã đọc</a>
                         </li>
                     </ul>
                 </div>
                 <div class="dropdown">
                     <button class="year-select dropdown-toggle" type="button" data-bs-toggle="dropdown" style="background: #f1f5f9; border: none; padding: 8px 16px; border-radius: 20px; color: #2563eb; font-weight: 600; font-size: 13px;">
-                        <i class="fa-regular fa-calendar me-2"></i> {{ session.get('academic_year', '2025-2026') }}
+                        <i class="fa-regular fa-calendar me-2"></i> {{ current_academic_year or session.get('academic_year', '2027-2028') }}
                     </button>
-                    {% set current_yr = session.get('academic_year', '2025-2026') %}
+                    {% set current_yr = current_academic_year or session.get('academic_year', '2027-2028') %}
                     <ul class="dropdown-menu border-0 shadow mt-2">
-                        <li><a class="dropdown-item {% if current_yr == '2025-2026' %}fw-bold text-primary{% endif %} year-option" href="#" data-year="2025-2026">2025-2026</a></li>
-                        <li><a class="dropdown-item {% if current_yr == '2024-2025' %}fw-bold text-primary{% endif %} year-option" href="#" data-year="2024-2025">2024-2025</a></li>
+                        {% for yr in (available_academic_years or [current_yr]) %}
+                        <li><a class="dropdown-item {% if current_yr == yr %}fw-bold text-primary{% endif %} year-option" href="#" data-year="{{ yr }}">{{ yr }}</a></li>
+                        {% endfor %}
                     </ul>
                 </div>
 
@@ -105,7 +125,17 @@
                 <div class="modal-body p-4">
                     <div class="row g-3 mb-3">
                         <div class="col-md-8"><label class="form-label">Tên đợt triển khai</label><input type="text" id="createBatchName" class="form-control" placeholder="VD: NCKH Sinh viên 2025 - Đợt 2"></div>
-                        <div class="col-md-4"><label class="form-label">Năm học áp dụng</label><select id="createBatchYear" class="form-select"><option value="2025-2026">2025-2026</option><option value="2026-2027">2026-2027</option><option value="2024-2025">2024-2025</option></select></div>
+                        <div class="col-md-4">
+                            <label class="form-label">Năm học áp dụng</label>
+                            <input type="text" id="createBatchYear" class="form-control" placeholder="VD: 2025-2026" value="2025-2026" list="faculty-year-options">
+                            <datalist id="faculty-year-options">
+                                <option value="2024-2025"></option>
+                                <option value="2025-2026"></option>
+                                <option value="2026-2027"></option>
+                                <option value="2027-2028"></option>
+                                <option value="2028-2029"></option>
+                            </datalist>
+                        </div>
                     </div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-12"><label class="form-label">Loại hình</label><select id="createBatchType" class="form-select"><option value="NCKH Standard" selected>Nghiên cứu khoa học (Chuẩn)</option><option value="Khởi nghiệp sáng tạo">Khởi nghiệp sáng tạo</option></select></div>
@@ -135,7 +165,10 @@
                     <input type="hidden" id="editBatchId">
                     <div class="row g-3 mb-3">
                         <div class="col-md-8"><label class="form-label">Tên đợt triển khai</label><input type="text" id="editBatchName" class="form-control"></div>
-                        <div class="col-md-4"><label class="form-label">Năm học áp dụng</label><select id="editBatchYear" class="form-select"><option value="2025-2026">2025-2026</option><option value="2026-2027">2026-2027</option><option value="2024-2025">2024-2025</option></select></div>
+                        <div class="col-md-4">
+                            <label class="form-label">Năm học áp dụng</label>
+                            <input type="text" id="editBatchYear" class="form-control" placeholder="VD: 2025-2026" list="faculty-year-options">
+                        </div>
                     </div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-8"><label class="form-label">Loại hình</label><select id="editBatchType" class="form-select"><option value="NCKH Standard">Nghiên cứu khoa học (Chuẩn)</option><option value="Khởi nghiệp sáng tạo">Khởi nghiệp sáng tạo</option></select></div>
@@ -199,8 +232,11 @@
                         <input type="text" id="editTopicTitle" class="form-control" readonly>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Mô tả tóm tắt</label>
-                        <textarea id="editTopicDesc" class="form-control" rows="3" readonly></textarea>
+                        <label class="form-label fw-semibold text-dark">Mô tả tóm tắt</label>
+                        <div id="editTopicDescDisplay" class="bg-light p-3 rounded-3 border rich-content-display text-dark small" style="min-height: 80px; max-height: 200px; overflow-y: auto; line-height: 1.6;">
+                            (Chưa có mô tả)
+                        </div>
+                        <input type="hidden" id="editTopicDesc">
                     </div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">

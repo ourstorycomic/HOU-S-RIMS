@@ -19,12 +19,21 @@
                                     ĐÃ HỦY ({{ topics|selectattr('status', 'equalto', 'rejected')|list|length }})
                                 </button>
                             </div>
-                            <input type="text" class="form-control rounded-pill bg-light border-0 px-4 small" placeholder="Tìm tên đề tài..." style="width: 300px;">
+                            <input type="text" id="topicSearchInput" oninput="searchTopics(this.value)" class="form-control rounded-pill bg-light border-0 px-4 small" placeholder="Tìm tên đề tài, mã đề tài, giảng viên..." style="width: 300px;">
                         </div>
                     </div>
                     <div class="card-body p-0">
                         <table class="table table-hover mb-0 align-middle">
-                            <thead class="bg-light text-muted small text-uppercase fw-bold"><tr><th class="ps-4 py-3">Mã đề tài</th><th>Tên đề tài & Nhóm</th><th>Giảng viên HD</th><th>Trạng thái</th><th class="text-end pe-4">Thao tác</th></tr></thead>
+                            <thead class="bg-light text-muted small text-uppercase fw-bold">
+                                <tr>
+                                    <th class="ps-4 py-3">Mã đề tài</th>
+                                    <th>Tên đề tài & Nhóm</th>
+                                    <th>Giảng viên HD</th>
+                                    <th>Hồ sơ Báo cáo</th>
+                                    <th>Trạng thái</th>
+                                    <th class="text-end pe-4">Thao tác</th>
+                                </tr>
+                            </thead>
                             <tbody>
                                 {% if topics %}
                                     {% for t in topics %}
@@ -32,11 +41,53 @@
                                         <td class="ps-4 fw-bold text-primary">DT-00{{ t.id }}</td>
                                         <td>
                                             <div class="fw-bold text-dark">{{ t.title }}</div>
+                                            {% if t.description %}
+                                            <div class="small text-secondary bg-light p-2 rounded-2 border mt-1 mb-1 rich-content-display" style="max-width: 500px; word-break: break-word; max-height: 120px; overflow-y: auto;">
+                                                <i class="fa-solid fa-align-left text-primary me-1"></i><strong>Mô tả:</strong> {{ t.description | safe }}
+                                            </div>
+                                            {% endif %}
                                             <small class="text-muted">Nhóm ID: {{ t.group_id }}</small>
                                         </td>
                                         <td class="fw-bold text-dark small">
                                             {% for m in mentors %}{% if m.id == t.mentor_id %}{{ m.full_name }}{% endif %}{% endfor %}
                                             {% if not t.mentor_id %}Chưa phân công{% endif %}
+                                        </td>
+                                        <td>
+                                            {% if t.approved_submission_types and t.approved_submission_types|length > 0 %}
+                                            <div class="d-flex flex-column align-items-start gap-2 py-1" style="gap: 8px !important;">
+                                                {% for item in t.approved_submission_types %}
+                                                <button type="button" class="btn btn-sm rounded-pill px-3 py-1.5 fw-bold shadow-2xs d-inline-flex align-items-center text-nowrap" 
+                                                        style="background: {{ item.bg }}; color: {{ item.color }}; border: 1px solid {{ item.border }}; font-size: 12px; transition: transform 0.15s ease;"
+                                                        title="Xem chi tiết &amp; phê duyệt"
+                                                        onclick="openFacultySubmissionsModal({{ t.id }}, '{{ t.title|replace('\'', '\\\'') }}', '{{ t.status }}')">
+                                                    <i class="fa-solid {{ item.icon }} me-2"></i>
+                                                    <span>{{ item.label }}</span>
+                                                    {% if item.faculty_status == 'approved' %}
+                                                    <span class="badge bg-primary text-white ms-2 rounded-pill" style="font-size: 9px; padding: 2px 6px;">
+                                                        <i class="fa-solid fa-stamp me-0.5"></i>Khoa duyệt
+                                                    </span>
+                                                    {% elif item.faculty_status == 'revision_required' %}
+                                                    <span class="badge bg-danger text-white ms-2 rounded-pill" style="font-size: 9px; padding: 2px 6px;">
+                                                        <i class="fa-solid fa-triangle-exclamation me-0.5"></i>Khoa yêu cầu sửa
+                                                    </span>
+                                                    {% endif %}
+                                                </button>
+                                                {% endfor %}
+                                            </div>
+                                            {% elif t.submissions and (t.submissions|selectattr('status', 'equalto', 'approved')|list)|length > 0 %}
+                                            {% set approved_subs = t.submissions|selectattr('status', 'equalto', 'approved')|list %}
+                                            <button type="button" class="btn btn-sm rounded-pill px-3 py-1.5 fw-bold shadow-2xs d-inline-flex align-items-center text-nowrap" 
+                                                    style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 12px;"
+                                                    onclick="openFacultySubmissionsModal({{ t.id }}, '{{ t.title|replace('\'', '\\\'') }}', '{{ t.status }}')">
+                                                <i class="fa-solid fa-book-bookmark text-primary me-2"></i>
+                                                <span>Tài liệu: {% if approved_subs[0].type == 'outline' %}Đề cương chi tiết{% elif approved_subs[0].type == 'progress' %}Báo cáo tiến độ{% elif approved_subs[0].type == 'final' %}Báo cáo tổng kết{% elif approved_subs[0].type == 'slide' %}Slide &amp; Phụ lục{% else %}{{ approved_subs[0].type }}{% endif %}</span>
+                                            </button>
+                                            {% else %}
+                                            <span class="text-muted small d-inline-flex align-items-center gap-2">
+                                                <i class="fa-regular fa-clock text-muted"></i>
+                                                <span>Chưa có bản đạt</span>
+                                            </span>
+                                            {% endif %}
                                         </td>
                                         <td>
                                             <span class="badge {% if t.status == 'approved' %}bg-success-subtle text-success border-success-subtle{% elif t.status == 'pending' %}bg-secondary-subtle text-secondary border-secondary-subtle{% elif t.status == 'faculty_pending' %}bg-warning-subtle text-warning border-warning-subtle{% elif t.status == 'rejected' %}bg-danger-subtle text-danger border-danger-subtle{% else %}bg-primary-subtle text-primary border-primary-subtle{% endif %} border rounded-pill px-3 py-1 small">{{ t.status | upper }}</span>
@@ -51,7 +102,7 @@
                                     </tr>
                                     {% endfor %}
                                 {% else %}
-                                    <tr><td colspan="5" class="text-center text-muted py-4">Chưa có đề tài nào</td></tr>
+                                    <tr><td colspan="6" class="text-center text-muted py-4">Chưa có đề tài nào</td></tr>
                                 {% endif %}
                             </tbody>
                         </table>
@@ -59,48 +110,176 @@
                 </div>
         </div>
     <script>
+        let currentTopicFilterStatus = 'all';
+
         function filterTopics(status, btn) {
-            // Update button styles
+            currentTopicFilterStatus = status || 'all';
+
+            // Cập nhật trạng thái active của nút bấm
             document.querySelectorAll('.btn-filter').forEach(b => {
                 b.classList.remove('btn-primary', 'active');
                 b.classList.add('btn-light', 'text-muted');
             });
-            if(btn) {
+            if (btn) {
                 btn.classList.remove('btn-light', 'text-muted');
                 btn.classList.add('btn-primary', 'active');
             }
-            
-            // Filter rows
+
+            applyTopicFiltering();
+        }
+
+        function searchTopics(query) {
+            applyTopicFiltering();
+        }
+
+        function applyTopicFiltering() {
+            const searchInput = document.getElementById('topicSearchInput');
+            const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
             const rows = document.querySelectorAll('tbody tr');
-            let hasVisible = false;
+            let visibleCount = 0;
+            let emptyRow = document.getElementById('noFilterResultsRow');
+
             rows.forEach(row => {
-                if(row.querySelector('td[colspan]')) return; // skip empty msg
-                
-                if(status === 'all' || row.classList.contains('status-' + status)) {
+                if (row.id === 'noFilterResultsRow' || row.querySelector('td[colspan]')) return;
+
+                let statusMatch = false;
+                if (currentTopicFilterStatus === 'all') {
+                    statusMatch = true;
+                } else if (currentTopicFilterStatus === 'faculty_pending') {
+                    statusMatch = row.classList.contains('status-faculty_pending') || row.classList.contains('status-pending');
+                } else if (currentTopicFilterStatus === 'pending') {
+                    statusMatch = row.classList.contains('status-pending') || row.classList.contains('status-faculty_pending');
+                } else {
+                    statusMatch = row.classList.contains('status-' + currentTopicFilterStatus);
+                }
+
+                let searchMatch = true;
+                if (query) {
+                    const text = row.textContent.toLowerCase();
+                    searchMatch = text.includes(query);
+                }
+
+                if (statusMatch && searchMatch) {
                     row.hidden = false;
                     row.classList.remove('d-none');
                     row.style.display = '';
-                    hasVisible = true;
+                    visibleCount++;
                 } else {
                     row.hidden = true;
                     row.classList.add('d-none');
                     row.style.display = 'none';
                 }
             });
+
+            const tbody = document.querySelector('tbody');
+            if (tbody) {
+                if (visibleCount === 0) {
+                    if (!emptyRow) {
+                        emptyRow = document.createElement('tr');
+                        emptyRow.id = 'noFilterResultsRow';
+                        emptyRow.innerHTML = '<td colspan="6" class="text-center text-muted py-4"><i class="fa-regular fa-folder-open me-2"></i>Không tìm thấy đề tài nào phù hợp với bộ lọc</td>';
+                        tbody.appendChild(emptyRow);
+                    } else {
+                        emptyRow.style.display = '';
+                        emptyRow.classList.remove('d-none');
+                    }
+                } else if (emptyRow) {
+                    emptyRow.style.display = 'none';
+                    emptyRow.classList.add('d-none');
+                }
+            }
         }
+        window.applyTopicFiltering = applyTopicFiltering;
 
         async function facultyApprove(topicId) {
             try {
+                // Check mentor quota info first
+                const qResp = await fetch(`/api/topics/${topicId}/quota-info`);
+                const qData = await qResp.json();
+                
+                let newMentorId = null;
+                let changeReason = null;
+
+                if (qData.is_exceeded) {
+                    // Mentor reached quota (>= 3 groups)
+                    let optionsHtml = (qData.available_mentors || []).map(m => 
+                        `<option value="${m.id}">${m.full_name} (${m.faculty || 'Cùng Khoa'} - Đang HD: ${m.group_count}/3 nhóm)</option>`
+                    ).join('');
+
+                    const { value: formValues, isConfirmed } = await Swal.fire({
+                        title: 'Cảnh báo Giới hạn Nhóm Hướng dẫn',
+                        html: `
+                            <div class="text-start">
+                                <div class="alert alert-warning py-2 px-3 small border-0 mb-3">
+                                    <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                                    Giảng viên <strong>${qData.mentor_name}</strong> hiện đã hướng dẫn <strong>${qData.group_count}/${qData.max_groups} nhóm</strong> (đã đủ chỉ tiêu tối đa).
+                                </div>
+                                <p class="small text-muted mb-2">Khoa có thể điều chỉnh sang Giảng viên khác cùng chuyên môn hoặc vẫn duyệt nếu có trường hợp đặc cách:</p>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold">Chọn Giảng viên thay thế (cùng Khoa/chuyên môn):</label>
+                                    <select id="swal-new-mentor" class="form-select form-select-sm">
+                                        <option value="">-- Giữ nguyên ${qData.mentor_name} (Đặc cách duyệt) --</option>
+                                        ${optionsHtml}
+                                    </select>
+                                </div>
+
+                                <div class="mb-2">
+                                    <label class="form-label small fw-bold">Lý do điều chỉnh (sẽ gửi email thông báo cho GV cũ, GV mới và SV):</label>
+                                    <textarea id="swal-change-reason" class="form-control form-control-sm" rows="2" placeholder="Ví dụ: Giảng viên đã đủ chỉ tiêu 3 nhóm theo quy định NCKH, điều phối giảng viên cùng chuyên môn..."></textarea>
+                                </div>
+                            </div>
+                        `,
+                        focusConfirm: false,
+                        showCancelButton: true,
+                        confirmButtonText: 'Xác nhận Phê duyệt',
+                        cancelButtonText: 'Đóng',
+                        confirmButtonColor: '#10b981',
+                        preConfirm: () => {
+                            const selectedId = document.getElementById('swal-new-mentor').value;
+                            const reason = document.getElementById('swal-change-reason').value.trim();
+                            if (selectedId && !reason) {
+                                Swal.showValidationMessage('Vui lòng nhập lý do điều chỉnh giảng viên để gửi thông báo!');
+                                return false;
+                            }
+                            return {
+                                new_mentor_id: selectedId ? parseInt(selectedId) : null,
+                                change_reason: reason
+                            };
+                        }
+                    });
+
+                    if (!isConfirmed) return;
+                    newMentorId = formValues.new_mentor_id;
+                    changeReason = formValues.change_reason;
+                } else {
+                    const confirmRes = await Swal.fire({
+                        title: 'Phê duyệt đề tài?',
+                        text: `Phê duyệt đề tài và gửi thông báo hoàn tất đến Sinh viên & Giảng viên ${qData.mentor_name}?`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Duyệt ngay',
+                        cancelButtonText: 'Hủy',
+                        confirmButtonColor: '#10b981'
+                    });
+                    if (!confirmRes.isConfirmed) return;
+                }
+
                 const resp = await fetch(`/api/topics/${topicId}/faculty-approve`, {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        new_mentor_id: newMentorId,
+                        change_reason: changeReason
+                    })
                 });
                 const data = await resp.json();
                 if (resp.ok) {
                     await Swal.fire({
                         icon: 'success',
                         title: 'Duyệt thành công',
-                        text: 'Đề tài đã được Khoa phê duyệt.',
-                        timer: 1800,
+                        text: data.message || 'Đề tài đã được Khoa phê duyệt.',
+                        timer: 2000,
                         showConfirmButton: false
                     });
                     location.reload();
@@ -153,5 +332,470 @@
                 }
             }
         }
+
+        function forceCleanupModalBackdrops() {
+            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const facultyModalEl = document.getElementById('modalFacultySubmissions');
+            if (facultyModalEl) {
+                facultyModalEl.addEventListener('hidden.bs.modal', function() {
+                    forceCleanupModalBackdrops();
+                });
+            }
+        });
+
+        async function openFacultySubmissionsModal(topicId, topicTitle, topicStatus) {
+            const modalEl = document.getElementById('modalFacultySubmissions');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+
+            await loadFacultySubmissionsContent(topicId, topicTitle, topicStatus);
+        }
+
+        function closeFacultyModalAndApprove(topicId) {
+            const modalEl = document.getElementById('modalFacultySubmissions');
+            const modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) {
+                modalInstance.hide();
+            }
+            forceCleanupModalBackdrops();
+            facultyApprove(topicId);
+        }
+
+        async function loadFacultySubmissionsContent(topicId, topicTitle, topicStatus) {
+            document.getElementById('facultySubTopicTitle').textContent = topicTitle || `Đề tài #${topicId}`;
+            document.getElementById('facultySubTopicMeta').textContent = `Mã đề tài: DT-00${topicId} • Báo cáo & Đề cương đã được GVHD duyệt Đạt yêu cầu`;
+            
+            const bodyEl = document.getElementById('facultySubModalBody');
+            bodyEl.innerHTML = `
+                <div class="text-center py-5 text-muted">
+                    <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
+                    <div class="small">Đang tải hồ sơ bài nộp đã duyệt...</div>
+                </div>
+            `;
+
+            const actionLeft = document.getElementById('facultySubActionLeft');
+            if (topicStatus === 'faculty_pending') {
+                actionLeft.innerHTML = `
+                    <button type="button" class="btn btn-success fw-bold rounded-pill px-3 shadow-sm" onclick="closeFacultyModalAndApprove(${topicId})">
+                        <i class="fa-solid fa-circle-check me-1"></i> Phê duyệt đề tài này
+                    </button>
+                `;
+            } else {
+                actionLeft.innerHTML = '';
+            }
+
+            try {
+                const res = await fetch(`/api/submissions/topic/${topicId}?status=approved`);
+                const data = await res.json();
+                
+                // Lọc chỉ những bản nộp đã đạt yêu cầu (GVHD đã duyệt)
+                const approvedSubmissions = (data.submissions || []).filter(s => s.status === 'approved');
+
+                if (!data.success || approvedSubmissions.length === 0) {
+                    bodyEl.innerHTML = `
+                        <div class="text-center py-5 text-muted">
+                            <div class="bg-light rounded-circle d-inline-flex p-3 mb-2 text-muted">
+                                <i class="fa-solid fa-clock-rotate-left fs-2 opacity-50"></i>
+                            </div>
+                            <div class="fw-bold text-dark">Chưa có bản báo cáo nào đạt yêu cầu</div>
+                            <div class="small text-muted" style="max-width: 480px; margin: 0 auto;">
+                                Hệ thống chỉ gửi lên cấp Khoa các bản đề cương/báo cáo đã được Giảng viên hướng dẫn đánh giá <strong>Đạt yêu cầu</strong>. Các bản nháp hoặc cần sửa lại sẽ được lưu ở cấp Nhóm và GVHD.
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '<div class="d-flex flex-column gap-3">';
+                approvedSubmissions.forEach(s => {
+                    const typeLabelMap = {
+                        'outline': 'Đề cương chi tiết',
+                        'progress': 'Báo cáo tiến độ',
+                        'final': 'Báo cáo tổng kết',
+                        'slide': 'Slide & Phụ lục'
+                    };
+                    const typeName = typeLabelMap[s.type] || 'Báo cáo';
+
+                    let feedbackSection = '';
+                    if (s.feedback) {
+                        feedbackSection = `
+                            <div class="mt-2.5 p-3 rounded-3" style="background: #ecfdf5; border-left: 4px solid #10b981;">
+                                <div class="fw-bold text-dark small mb-1">
+                                    <i class="fa-solid fa-circle-check text-success me-1"></i> Đánh giá & Nhận xét của Giảng viên hướng dẫn:
+                                </div>
+                                <div class="text-dark small" style="white-space: pre-wrap; line-height: 1.5;">${s.feedback}</div>
+                            </div>
+                        `;
+                    }
+
+                    // Faculty Approval Section (INLINE FORM - NO FOCUS BLOCKING)
+                    let facultySection = '';
+                    let facultyBadge = '';
+                    if (s.faculty_status === 'approved') {
+                        facultyBadge = '<span class="badge bg-primary text-white rounded-pill px-2.5 py-1 small"><i class="fa-solid fa-stamp me-1"></i>Khoa đã phê duyệt</span>';
+                        facultySection = `
+                            <div class="mt-2.5 p-3 rounded-3" style="background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6;">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <div class="fw-bold text-dark small">
+                                        <i class="fa-solid fa-stamp text-primary me-1"></i> Quyết định & Ý kiến của Cấp Khoa:
+                                    </div>
+                                    <button type="button" class="btn btn-xs btn-outline-primary rounded-pill py-0.5 px-2.5 fw-semibold" style="font-size: 11px;" 
+                                            onclick="toggleFacultyEditBox(${s.id})">
+                                        <i class="fa-solid fa-pen-to-square me-1"></i>Chỉnh sửa ý kiến
+                                    </button>
+                                </div>
+                                <div class="text-dark small rich-content-display" id="faculty-view-text-${s.id}" style="line-height: 1.6;">${s.faculty_feedback || 'Khoa CNTT đã phê duyệt thông qua báo cáo/đề cương này.'}</div>
+                                ${s.faculty_reviewed_at ? `<div class="text-muted mt-1.5" style="font-size: 10.5px;"><i class="fa-regular fa-clock me-1"></i>Thời gian phê duyệt: ${s.faculty_reviewed_at}</div>` : ''}
+
+                                <!-- Inline Edit Box (hidden by default) -->
+                                <div id="faculty-edit-box-${s.id}" class="d-none mt-3 pt-3 border-top">
+                                    <div class="mb-2">
+                                        <label class="form-label small fw-bold text-muted">QUYẾT ĐỊNH CỦA KHOA</label>
+                                        <select id="faculty-status-${s.id}" class="form-select form-select-sm">
+                                            <option value="approved" selected>✔ Khoa phê duyệt ĐẠT (Chính thức thông qua)</option>
+                                            <option value="revision_required">⚠ Khoa yêu cầu chỉnh sửa / hoàn thiện thêm</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-2">
+                                        <div class="d-flex align-items-center justify-content-between mb-1">
+                                            <label class="form-label small fw-bold text-muted mb-0">
+                                                <i class="fa-solid fa-file-word text-primary me-1"></i> Ý KIẾN / CHỈ ĐẠO CỦA KHOA
+                                            </label>
+                                            <span class="badge bg-light text-secondary border px-2 py-0.5" style="font-size: 10px;">
+                                                <i class="fa-solid fa-file-word text-primary me-1"></i>Trình soạn thảo văn bản
+                                            </span>
+                                        </div>
+                                        ${renderFacultyWordEditorHtml(s.id, s.faculty_feedback || '', true)}
+                                    </div>
+                                    <div class="d-flex justify-content-end gap-2 pt-2">
+                                        <button type="button" class="btn btn-sm btn-light rounded-pill px-3" onclick="toggleFacultyEditBox(${s.id})">Hủy</button>
+                                        <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold shadow-sm" onclick="submitFacultyReviewInline(${s.id}, ${topicId}, '${(topicTitle || '').replace(/'/g, "\\'")}', '${topicStatus}')">
+                                            <i class="fa-solid fa-check me-1"></i> Lưu thay đổi
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        facultyBadge = '<span class="badge bg-warning text-dark rounded-pill px-2.5 py-1 small"><i class="fa-solid fa-hourglass-half me-1"></i>Chờ Khoa phê duyệt</span>';
+                        facultySection = `
+                            <div class="mt-3 p-3 bg-white rounded-3 border border-primary border-opacity-30 shadow-xs">
+                                <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                                    <div class="fw-bold text-dark small">
+                                        <i class="fa-solid fa-stamp text-primary me-1.5"></i> Phê duyệt của Khoa cho bản báo cáo này:
+                                    </div>
+                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill">Chờ duyệt</span>
+                                </div>
+
+                                <div class="mb-2.5">
+                                    <label class="form-label small fw-bold text-muted">QUYẾT ĐỊNH CỦA KHOA <span class="text-danger">*</span></label>
+                                    <select id="faculty-status-${s.id}" class="form-select form-select-sm">
+                                        <option value="approved" selected>✔ Khoa phê duyệt ĐẠT (Chính thức thông qua đề cương/báo cáo)</option>
+                                        <option value="revision_required">⚠ Khoa yêu cầu chỉnh sửa / hoàn thiện thêm</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-2.5">
+                                    <div class="d-flex align-items-center justify-content-between mb-1">
+                                        <label class="form-label small fw-bold text-muted mb-0">
+                                            <i class="fa-solid fa-file-word text-primary me-1"></i> Ý KIẾN / CHỈ ĐẠO CỦA KHOA
+                                        </label>
+                                        <span class="badge bg-light text-secondary border px-2 py-0.5" style="font-size: 10px;">
+                                            <i class="fa-solid fa-file-word text-primary me-1"></i>Trình soạn thảo văn bản
+                                        </span>
+                                    </div>
+                                    ${renderFacultyWordEditorHtml(s.id, '', false)}
+                                </div>
+
+                                <div class="d-flex justify-content-end gap-2 pt-2">
+                                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-4 py-1.5 fw-bold shadow-sm" 
+                                            onclick="submitFacultyReviewInline(${s.id}, ${topicId}, '${(topicTitle || '').replace(/'/g, "\\'")}', '${topicStatus}')">
+                                        <i class="fa-solid fa-stamp me-1.5"></i> Xác nhận phê duyệt cấp Khoa
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    html += `
+                        <div class="p-3 bg-white border border-success-subtle rounded-4 shadow-xs">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-dark rounded-pill px-2.5 py-1">v${s.version}</span>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1">${typeName}</span>
+                                    <span class="badge bg-success text-white rounded-pill px-2.5 py-1 small">
+                                        <i class="fa-solid fa-check me-1"></i> Đạt yêu cầu (GVHD đã duyệt)
+                                    </span>
+                                    ${facultyBadge}
+                                </div>
+                                <div class="text-muted small" style="font-size: 11px;">
+                                    <i class="fa-regular fa-clock me-1"></i>${s.submitted_at || ''}
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center gap-3 p-2 bg-light rounded-3 mb-2">
+                                <div class="d-flex align-items-center gap-2 text-truncate">
+                                    <i class="fa-solid fa-file-lines text-success fs-4"></i>
+                                    <div class="text-truncate">
+                                        <div class="fw-bold text-dark text-truncate small">${s.file_name}</div>
+                                        <div class="text-muted" style="font-size: 11px;">Nộp bởi: ${s.uploader ? s.uploader.full_name : 'Sinh viên'}</div>
+                                    </div>
+                                </div>
+                                <a href="/api/submissions/download/${s.id}" class="btn btn-sm btn-success rounded-pill px-3 fw-bold flex-shrink-0" target="_blank">
+                                    <i class="fa-solid fa-download me-1"></i> Tải về xem
+                                </a>
+                            </div>
+
+                            ${s.notes ? `<div class="small text-muted mb-1"><span class="fw-bold">Ghi chú của SV:</span> ${s.notes}</div>` : ''}
+                            ${s.external_link ? `<div class="small mb-1"><a href="${s.external_link}" target="_blank" class="text-decoration-underline text-primary"><i class="fa-solid fa-link me-1"></i>${s.external_link}</a></div>` : ''}
+                            ${feedbackSection}
+                            ${facultySection}
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                bodyEl.innerHTML = html;
+            } catch (err) {
+                bodyEl.innerHTML = `
+                    <div class="alert alert-danger mb-0">
+                        <i class="fa-solid fa-triangle-exclamation me-1"></i> Lỗi khi tải dữ liệu bài nộp: ${err.message}
+                    </div>
+                `;
+            }
+        }
+
+        function renderFacultyWordEditorHtml(subId, initialContent = '', isEdit = false) {
+            const editorId = isEdit ? `faculty-edit-editor-${subId}` : `faculty-feedback-editor-${subId}`;
+            const hiddenInputId = `faculty-feedback-input-${subId}`;
+            const wordCountId = isEdit ? `faculty-edit-wordcount-${subId}` : `faculty-feedback-wordcount-${subId}`;
+
+            return `
+                <div class="word-editor-container shadow-2xs mt-1">
+                    <div class="word-editor-toolbar py-1 px-2 d-flex flex-wrap align-items-center gap-1 bg-light border-bottom">
+                        <!-- Kiểu chữ -->
+                        <select class="tool-select" onchange="window.formatWordDoc('fontName', this.value, '${editorId}')" title="Kiểu chữ">
+                            <option value="inherit">Kiểu chữ: Mặc định</option>
+                            <option value="'Segoe UI', Tahoma, sans-serif">Segoe UI</option>
+                            <option value="Roboto, sans-serif">Roboto</option>
+                            <option value="Arial, sans-serif">Arial</option>
+                            <option value="'Times New Roman', serif">Times New Roman</option>
+                        </select>
+
+                        <!-- Cỡ chữ -->
+                        <select class="tool-select" onchange="window.formatWordDocFontSize(this.value, '${editorId}')" title="Cỡ chữ">
+                            <option value="">Cỡ chữ</option>
+                            <option value="12px">12px (Nhỏ)</option>
+                            <option value="13px" selected>13px (Chuẩn)</option>
+                            <option value="15px">15px (Vừa)</option>
+                            <option value="17px">17px (Lớn)</option>
+                        </select>
+
+                        <div class="tool-separator"></div>
+
+                        <!-- In đậm, nghiêng, gạch chân, gạch ngang -->
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('bold', null, '${editorId}')" title="In đậm (Ctrl+B)">
+                            <i class="fa-solid fa-bold"></i>
+                        </button>
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('italic', null, '${editorId}')" title="In nghiêng (Ctrl+I)">
+                            <i class="fa-solid fa-italic"></i>
+                        </button>
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('underline', null, '${editorId}')" title="Gạch chân (Ctrl+U)">
+                            <i class="fa-solid fa-underline"></i>
+                        </button>
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('strikeThrough', null, '${editorId}')" title="Gạch ngang chữ">
+                            <i class="fa-solid fa-strikethrough"></i>
+                        </button>
+
+                        <div class="tool-separator"></div>
+
+                        <!-- Màu chữ & Highlight màu nền -->
+                        <label class="btn-tool mb-0 cursor-pointer position-relative" title="Màu chữ">
+                            <i class="fa-solid fa-font text-danger"></i>
+                            <input type="color" onchange="window.formatWordDoc('foreColor', this.value, '${editorId}')"
+                                style="position: absolute; opacity: 0; width: 100%; height: 100%; top: 0; left: 0; cursor: pointer;">
+                        </label>
+                        <label class="btn-tool mb-0 cursor-pointer position-relative" title="Màu nền / Tô sáng (Highlight)">
+                            <i class="fa-solid fa-highlighter text-warning"></i>
+                            <input type="color" value="#ffffaa" onchange="window.formatWordDoc('hiliteColor', this.value, '${editorId}')"
+                                style="position: absolute; opacity: 0; width: 100%; height: 100%; top: 0; left: 0; cursor: pointer;">
+                        </label>
+
+                        <div class="tool-separator"></div>
+
+                        <!-- Căn lề -->
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('justifyLeft', null, '${editorId}')" title="Căn lề trái">
+                            <i class="fa-solid fa-align-left"></i>
+                        </button>
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('justifyCenter', null, '${editorId}')" title="Căn giữa">
+                            <i class="fa-solid fa-align-center"></i>
+                        </button>
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('justifyRight', null, '${editorId}')" title="Căn lề phải">
+                            <i class="fa-solid fa-align-right"></i>
+                        </button>
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('justifyFull', null, '${editorId}')" title="Căn đều hai bên">
+                            <i class="fa-solid fa-align-justify"></i>
+                        </button>
+
+                        <div class="tool-separator"></div>
+
+                        <!-- Danh sách -->
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('insertUnorderedList', null, '${editorId}')" title="Danh sách dấu chấm">
+                            <i class="fa-solid fa-list-ul"></i>
+                        </button>
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('insertOrderedList', null, '${editorId}')" title="Danh sách đánh số">
+                            <i class="fa-solid fa-list-ol"></i>
+                        </button>
+
+                        <div class="tool-separator"></div>
+
+                        <!-- Hoàn tác / Làm lại -->
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('undo', null, '${editorId}')" title="Hoàn tác (Ctrl+Z)">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </button>
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('redo', null, '${editorId}')" title="Làm lại (Ctrl+Y)">
+                            <i class="fa-solid fa-rotate-right"></i>
+                        </button>
+                        <button type="button" class="btn-tool" onclick="window.formatWordDoc('removeFormat', null, '${editorId}')" title="Xóa định dạng">
+                            <i class="fa-solid fa-eraser text-secondary"></i>
+                        </button>
+                    </div>
+
+                    <!-- Khung soạn thảo văn bản contenteditable -->
+                    <div id="${editorId}" class="word-editor-content p-3 bg-white" contenteditable="true"
+                        style="min-height: 110px; max-height: 220px; font-size: 13.5px; line-height: 1.6; outline: none;"
+                        data-placeholder="Ví dụ: Khoa đồng ý thông qua đề cương chi tiết, cho phép nhóm tiếp tục triển khai nghiên cứu..."
+                        oninput="syncFacultyFeedbackFromEditor('${subId}', '${editorId}', '${hiddenInputId}', '${wordCountId}')"
+                        onblur="syncFacultyFeedbackFromEditor('${subId}', '${editorId}', '${hiddenInputId}', '${wordCountId}')">${initialContent}</div>
+
+                    <!-- Hidden textarea lưu trữ nội dung khi submit -->
+                    <textarea id="${hiddenInputId}" class="d-none">${initialContent}</textarea>
+
+                    <!-- Footer đếm từ & phím tắt -->
+                    <div class="word-editor-footer py-1 px-3 d-flex justify-content-between align-items-center bg-light border-top" style="font-size: 11px;">
+                        <span class="d-flex align-items-center gap-1.5 text-muted">
+                            <i class="fa-regular fa-keyboard text-primary"></i>
+                            <small>Phím tắt: <strong>Ctrl+B</strong> (Đậm), <strong>Ctrl+I</strong> (Nghiêng), <strong>Ctrl+U</strong> (Gạch chân)</small>
+                        </span>
+                        <span id="${wordCountId}" class="fw-medium text-muted">0 từ • 0 ký tự</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function syncFacultyFeedbackFromEditor(subId, editorId, hiddenInputId, wordCountId) {
+            const editor = document.getElementById(editorId);
+            const hiddenInput = document.getElementById(hiddenInputId);
+            const countEl = document.getElementById(wordCountId);
+            if (!editor || !hiddenInput) return;
+
+            const htmlContent = editor.innerHTML;
+            const textContent = editor.innerText || editor.textContent || '';
+            hiddenInput.value = htmlContent.trim() === '<br>' ? '' : htmlContent;
+
+            if (countEl) {
+                const text = textContent.trim();
+                const chars = text.length;
+                const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
+                countEl.textContent = `${words} từ • ${chars} ký tự`;
+            }
+        }
+
+        async function submitFacultyReviewInline(subId, topicId, topicTitle, topicStatus) {
+            const statusEl = document.getElementById(`faculty-status-${subId}`);
+            
+            // Đồng bộ nội dung từ editor tương ứng trước khi đọc
+            const newEditor = document.getElementById(`faculty-feedback-editor-${subId}`);
+            const editEditor = document.getElementById(`faculty-edit-editor-${subId}`);
+            if (newEditor) {
+                syncFacultyFeedbackFromEditor(subId, `faculty-feedback-editor-${subId}`, `faculty-feedback-input-${subId}`, `faculty-feedback-wordcount-${subId}`);
+            }
+            if (editEditor) {
+                syncFacultyFeedbackFromEditor(subId, `faculty-edit-editor-${subId}`, `faculty-feedback-input-${subId}`, `faculty-edit-wordcount-${subId}`);
+            }
+
+            const feedbackEl = document.getElementById(`faculty-feedback-input-${subId}`);
+            
+            const faculty_status = statusEl ? statusEl.value : 'approved';
+            const faculty_feedback = feedbackEl ? feedbackEl.value.trim() : '';
+            
+            try {
+                const resp = await fetch(`/api/submissions/${subId}/faculty-review`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        faculty_status: faculty_status,
+                        faculty_feedback: faculty_feedback,
+                        approve_topic: true
+                    })
+                });
+                const resData = await resp.json();
+                if (resp.ok) {
+                    // Đóng modal một cách an toàn và dọn sạch toàn bộ backdrop
+                    const modalEl = document.getElementById('modalFacultySubmissions');
+                    const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
+                    forceCleanupModalBackdrops();
+
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Đã phê duyệt!',
+                        text: resData.message || 'Khoa đã phê duyệt báo cáo thành công.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+
+                    // Đảm bảo không còn lớp overlay backdrop nào và tải lại trang để cập nhật trạng thái
+                    forceCleanupModalBackdrops();
+                    window.location.reload();
+                } else {
+                    Swal.fire('Lỗi', resData.message || 'Không thể lưu phê duyệt', 'error');
+                }
+            } catch(e) {
+                Swal.fire('Lỗi kết nối', e.message, 'error');
+            }
+        }
+
+        function toggleFacultyEditBox(subId) {
+            const box = document.getElementById(`faculty-edit-box-${subId}`);
+            if (box) {
+                box.classList.toggle('d-none');
+            }
+        }
     </script>
+
+    <!-- Modal: Xem Hồ sơ Báo cáo & Tài liệu NCKH của Đề tài (Cấp Khoa) - KHÔNG ĐỂ tabindex="-1" ĐỂ TRÁNH CHẶN BÀN PHÍM -->
+    <div class="modal fade" id="modalFacultySubmissions" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="modal-header bg-light border-bottom p-3 px-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-3 bg-success-subtle text-success d-flex align-items-center justify-content-center" 
+                             style="width: 42px; height: 42px; font-size: 18px;">
+                            <i class="fa-solid fa-file-circle-check"></i>
+                        </div>
+                        <div>
+                            <h6 class="modal-title fw-bold text-dark mb-0" id="facultySubTopicTitle">Hồ sơ Báo cáo Đề tài</h6>
+                            <p class="text-muted small mb-0" id="facultySubTopicMeta">Danh sách các báo cáo & đề cương đã được GVHD duyệt Đạt yêu cầu</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4 bg-light bg-opacity-50" id="facultySubModalBody">
+                    <!-- Dynamic content loaded via JS -->
+                </div>
+                <div class="modal-footer border-0 bg-light px-4 py-3 d-flex justify-content-between">
+                    <div id="facultySubActionLeft"></div>
+                    <button type="button" class="btn btn-secondary px-4 fw-bold rounded-pill" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
