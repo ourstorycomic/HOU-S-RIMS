@@ -64,7 +64,10 @@ def get_events():
             'title': f'🚩 Deadline: {ms.name}',
             'start': ms.deadline.strftime('%Y-%m-%d %H:%M:%S') if ms.deadline else None,
             'end': ms.deadline.strftime('%Y-%m-%d %H:%M:%S') if ms.deadline else None,
-            'status': 'milestone'
+            'status': 'milestone',
+            'milestone_id': ms.id,
+            'topic_id': ms.topic_id,
+            'name': ms.name
         })
 
     return jsonify(result), 200

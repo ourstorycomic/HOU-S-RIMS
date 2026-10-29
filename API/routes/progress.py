@@ -1,7 +1,7 @@
 from datetime import datetime, time
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 from models import db, Milestone, Progress
 
 progress_bp = Blueprint('progress_api', __name__, url_prefix='/api/topics')
@@ -154,16 +154,92 @@ def add_milestone(topic_id):
     if deadline <= _now_local():
         return jsonify({'error': 'Hạn chót phải sau thời điểm hiện tại (tính cả giờ)'}), 400
 
+    # Chống tạo trùng (bấm đúp nút / gửi lại): cùng đề tài + cùng tên + cùng thời điểm
+    name = data['name'].strip()
+    existing = Milestone.query.filter_by(topic_id=topic_id, name=name, deadline=deadline).first()
+    if existing:
+        return jsonify({'message': 'Milestone already exists', 'id': existing.id}), 200
+
     try:
         new_milestone = Milestone(
             topic_id=topic_id,
-            name=data['name'],
+            name=name,
             deadline=deadline,
             description=data.get('description', '')
         )
         db.session.add(new_milestone)
         db.session.commit()
         return jsonify({'message': 'Milestone created', 'id': new_milestone.id}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+def _can_manage_milestone(milestone):
+    """Chỉ giảng viên hướng dẫn đề tài đó (hoặc khoa/admin) mới được sửa/xóa mốc."""
+    from models import Topic
+    if not session.get('user_id'):
+        return False, ('Unauthorized', 401)
+    role = (session.get('role') or '').lower()
+    if role in ('faculty', 'admin'):
+        return True, None
+    if role == 'lecturer':
+        topic = Topic.query.get(milestone.topic_id)
+        if topic and topic.mentor_id == session.get('user_id'):
+            return True, None
+    return False, ('Permission denied', 403)
+
+
+@progress_bp.route('/milestones/<int:milestone_id>', methods=['PUT'])
+def update_milestone(milestone_id):
+    ms = Milestone.query.get(milestone_id)
+    if not ms:
+        return jsonify({'error': 'Không tìm thấy cột mốc'}), 404
+    ok, err = _can_manage_milestone(ms)
+    if not ok:
+        return jsonify({'error': err[0]}), err[1]
+
+    data = request.get_json(silent=True) or {}
+    if 'name' in data:
+        name = (data['name'] or '').strip()
+        if not name:
+            return jsonify({'error': 'Tên cột mốc không được để trống'}), 400
+        ms.name = name
+    if 'deadline' in data:
+        deadline = _parse_deadline(data['deadline'])
+        if not deadline:
+            return jsonify({'error': 'Hạn chót không hợp lệ (định dạng YYYY-MM-DDTHH:MM)'}), 400
+        if deadline <= _now_local():
+            return jsonify({'error': 'Hạn chót phải sau thời điểm hiện tại (tính cả giờ)'}), 400
+        ms.deadline = deadline
+    if 'description' in data:
+        ms.description = data['description']
+
+    try:
+        db.session.commit()
+        return jsonify({'message': 'Milestone updated'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@progress_bp.route('/milestones/<int:milestone_id>', methods=['DELETE'])
+def delete_milestone(milestone_id):
+    from models import Submission
+    ms = Milestone.query.get(milestone_id)
+    if not ms:
+        return jsonify({'error': 'Không tìm thấy cột mốc'}), 404
+    ok, err = _can_manage_milestone(ms)
+    if not ok:
+        return jsonify({'error': err[0]}), err[1]
+
+    try:
+        # Bài nộp đã gắn mốc này thì giữ lại, chỉ bỏ liên kết
+        Submission.query.filter_by(milestone_id=ms.id).update({'milestone_id': None})
+        Progress.query.filter_by(milestone_id=ms.id).delete()
+        db.session.delete(ms)
+        db.session.commit()
+        return jsonify({'message': 'Milestone deleted'}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500

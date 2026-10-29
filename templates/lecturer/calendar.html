@@ -119,7 +119,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (modalEl) modalEl.addEventListener('show.bs.modal', calUpgradeDeadlineInput);
 });
 
+let _calSubmitting = false;
 async function submitCalendarMilestone() {
+    if (_calSubmitting) return;   // chặn bấm đúp -> tạo trùng
     const topicId = document.getElementById('calendarMilestoneTopicId').value;
     const name = document.getElementById('calendarMilestoneName').value.trim();
     const deadline = document.getElementById('calendarMilestoneDeadline').value; // YYYY-MM-DDTHH:MM
@@ -127,6 +129,9 @@ async function submitCalendarMilestone() {
     if (deadline.indexOf('T') === -1) return Swal.fire('Thiếu giờ', 'Vui lòng chọn cả ngày và giờ của hạn chót.', 'warning');
     if (new Date(deadline) <= new Date()) return Swal.fire('Thời gian không hợp lệ', 'Hạn chót phải sau thời điểm hiện tại (tính cả giờ).', 'warning');
 
+    _calSubmitting = true;
+    const btn = document.querySelector('#modalCreateEvent .btn-primary[onclick^="submitCalendarMilestone"]');
+    if (btn) btn.disabled = true;
     try {
         const res = await fetch(`/api/topics/${topicId}/milestones`, {
             method: 'POST',
@@ -142,8 +147,65 @@ async function submitCalendarMilestone() {
     } catch (e) {
         console.error(e);
         Swal.fire('Lỗi kết nối', e.message, 'error');
+    } finally {
+        _calSubmitting = false;
+        if (btn) btn.disabled = false;
     }
 }
+
+// ---------- Sửa / Xóa deadline (milestone) ----------
+function calEsc(t) { var d = document.createElement('div'); d.textContent = t == null ? '' : t; return d.innerHTML; }
+
+async function editMilestone(id, curName, curStart) {
+    var cur = new Date(curStart);
+    const { value: form } = await Swal.fire({
+        title: 'Cập nhật deadline',
+        html: '<div class="text-start">' +
+              '<label class="form-label small fw-bold text-muted">Tên cột mốc</label>' +
+              '<input id="swMsName" class="form-control mb-3" value="' + calEsc(curName).replace(/"/g, '&quot;') + '">' +
+              '<label class="form-label small fw-bold text-muted">Hạn chót (ngày + giờ)</label>' +
+              '<input id="swMsDeadline" type="datetime-local" class="form-control" value="' + calLocalDT(cur) + '" min="' + calLocalDT(new Date()) + '">' +
+              '</div>',
+        showCancelButton: true,
+        confirmButtonText: 'Lưu',
+        cancelButtonText: 'Hủy',
+        focusConfirm: false,
+        preConfirm: function() {
+            var name = document.getElementById('swMsName').value.trim();
+            var deadline = document.getElementById('swMsDeadline').value;
+            if (!name || !deadline) { Swal.showValidationMessage('Vui lòng điền đủ thông tin'); return false; }
+            if (new Date(deadline) <= new Date()) { Swal.showValidationMessage('Hạn chót phải sau thời điểm hiện tại'); return false; }
+            return { name: name, deadline: deadline };
+        }
+    });
+    if (!form) return;
+    try {
+        const res = await fetch('/api/topics/milestones/' + id, {
+            method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(form)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) Swal.fire('Thành công', 'Đã cập nhật deadline', 'success').then(() => location.reload());
+        else Swal.fire('Lỗi', data.error || 'Cập nhật thất bại', 'error');
+    } catch (e) { Swal.fire('Lỗi kết nối', e.message, 'error'); }
+}
+
+async function deleteMilestone(id, name) {
+    const r = await Swal.fire({
+        title: 'Xóa deadline?',
+        text: 'Bạn có chắc muốn xóa "' + name + '"? Tiến độ của mốc này cũng sẽ bị xóa.',
+        icon: 'warning', showCancelButton: true,
+        confirmButtonColor: '#d33', cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Đồng ý xóa', cancelButtonText: 'Không'
+    });
+    if (!r.isConfirmed) return;
+    try {
+        const res = await fetch('/api/topics/milestones/' + id, { method: 'DELETE' });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) Swal.fire('Đã xóa!', 'Deadline đã được xóa.', 'success').then(() => location.reload());
+        else Swal.fire('Lỗi', data.error || 'Xóa thất bại', 'error');
+    } catch (e) { Swal.fire('Lỗi kết nối', e.message, 'error'); }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     var calendarEl = document.getElementById('calendar');
     if (!calendarEl) return;
@@ -206,7 +268,23 @@ document.addEventListener('DOMContentLoaded', function() {
             var title = arg.event.title;
             var start = arg.event.start ? arg.event.start.toLocaleString('vi-VN') : '';
             
-            if (status === 'pending') {
+            if (status === 'milestone') {
+                var msId = arg.event.extendedProps.milestone_id;
+                var msName = arg.event.extendedProps.name || title;
+                Swal.fire({
+                    title: calEsc(msName),
+                    html: '<b>Hạn chót:</b> ' + start,
+                    icon: 'info',
+                    showCancelButton: true,
+                    showDenyButton: true,
+                    confirmButtonText: '<i class="fa-solid fa-pen me-1"></i> Sửa',
+                    denyButtonText: '<i class="fa-solid fa-trash me-1"></i> Xóa',
+                    cancelButtonText: 'Đóng'
+                }).then(function(result) {
+                    if (result.isConfirmed) editMilestone(msId, msName, arg.event.start);
+                    else if (result.isDenied) deleteMilestone(msId, msName);
+                });
+            } else if (status === 'pending') {
                 Swal.fire({
                     title: 'Yêu cầu đặt lịch',
                     html: `<b>Tiêu đề:</b> ${title}<br><b>Thời gian:</b> ${start}<br><b>Mô tả:</b> ${desc}`,
