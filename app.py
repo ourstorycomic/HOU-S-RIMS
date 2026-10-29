@@ -13,10 +13,12 @@ import os
 from models import db
 from flask_jwt_extended import JWTManager
 from flasgger import Swagger
+from academic_year import current_academic_year
 
 load_dotenv(override=True)
 
 app = Flask(__name__)
+app.jinja_env.globals['current_academic_year'] = current_academic_year
 app.secret_key = 'secret_key'
 app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
 if not os.path.exists(app.config['UPLOAD_FOLDER']): os.makedirs(app.config['UPLOAD_FOLDER'])
@@ -66,7 +68,7 @@ def view_profile(identifier):
     
     current_user = User.query.get(user_id)
     current_time = datetime.utcnow()
-    current_year = session.get('academic_year', '2025-2026')
+    current_year = current_academic_year()
     active_batch = Batch.query.filter_by(academic_year=current_year, status='active').first()
     
     context = {

@@ -52,7 +52,8 @@ def get_topics():
     for topic in topics:
         result.append({
             'id': topic.id,
-            'name': topic.name,
+            'name': topic.title,
+            'title': topic.title,
             'description': topic.description,
             'batch_id': topic.batch_id,
             'mentor_id': topic.mentor_id,

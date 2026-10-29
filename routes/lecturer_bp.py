@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, session, redirect, url_for, request
 from models import db, User, Batch, Group, Topic, TopicRegistration, Council, GroupMember, Milestone, Progress, Submission
 from datetime import datetime
+from academic_year import current_academic_year
 
 lecturer_bp = Blueprint('lecturer', __name__, url_prefix='/lecturer')
 
@@ -13,7 +14,7 @@ def require_lecturer():
 def inject_common_data():
     user_id = session.get('user_id')
     current_user = User.query.get(user_id) if user_id else None
-    current_year = session.get('academic_year', '2025-2026')
+    current_year = current_academic_year()
     active_batch = Batch.query.filter_by(academic_year=current_year, status='active').first()
     
     global_pending_topics_count = Topic.query.join(Batch).filter(Topic.mentor_id == user_id, Topic.status == 'pending', Batch.status == 'active').count() if user_id else 0

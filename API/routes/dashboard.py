@@ -1,6 +1,7 @@
 from sqlalchemy import func
 from flask import Blueprint, jsonify
 from models import Topic, Group, User
+from academic_year import current_academic_year
 
 dashboard_bp = Blueprint('dashboard_api', __name__, url_prefix='/api/dashboard')
 
@@ -17,7 +18,7 @@ def get_progress_dashboard():
     """
     from flask import session
     from models import Batch
-    current_year = session.get('academic_year', '2025-2026')
+    current_year = current_academic_year()
     total = Topic.query.join(Batch).filter(Batch.academic_year == current_year).count()
     approved = Topic.query.join(Batch).filter(Topic.status=='approved', Batch.academic_year == current_year).count()
     pending = Topic.query.join(Batch).filter(Topic.status=='pending', Batch.academic_year == current_year).count()
@@ -44,7 +45,7 @@ def get_stats():
     """
     from flask import session
     from models import Batch
-    current_year = session.get('academic_year', '2025-2026')
+    current_year = current_academic_year()
     
     total_topics = Topic.query.join(Batch).filter(Batch.academic_year == current_year).count()
     total_groups = Group.query.join(Batch).filter(Batch.academic_year == current_year).count()

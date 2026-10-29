@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, session, redirect, url_for, reques
 from models import db, User, Batch, Group, Topic, GroupMember, Notification, Milestone, Progress, Skill, Achievement, Experience
 from datetime import datetime
 from sqlalchemy import func
+from academic_year import current_academic_year
 
 student_bp = Blueprint('student', __name__, url_prefix='/student')
 
@@ -15,7 +16,7 @@ def inject_common_data():
     user_id = session.get('user_id')
     current_user = User.query.get(user_id) if user_id else None
     notifications = Notification.query.filter_by(user_id=user_id).order_by(Notification.is_read.asc(), Notification.created_at.desc()).all() if user_id else []
-    current_year = session.get('academic_year', '2025-2026')
+    current_year = current_academic_year()
     active_batch = Batch.query.filter_by(academic_year=current_year, status='active').first()
     global_my_groups_count = Group.query.join(GroupMember).join(Batch).filter(GroupMember.student_id == user_id, Batch.status == 'active').count() if user_id else 0
     all_students = User.query.filter(User.role.ilike('student')).all()
@@ -114,7 +115,7 @@ def result():
     from models import GroupMember, Group, Topic, Council, CouncilMember
     
     # Find student's group in the active batch
-    current_year = session.get('academic_year', '2025-2026')
+    current_year = current_academic_year()
     active_batch = Batch.query.filter_by(academic_year=current_year, status='active').first()
     
     my_council = None

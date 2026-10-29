@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, session, redirect, url_for
 from models import db, User, Batch, Group, Topic, TopicRegistration, Council, GroupMember, Notification, Milestone, Progress
 from datetime import datetime
 from sqlalchemy import func
+from academic_year import current_academic_year
 
 faculty_bp = Blueprint('faculty', __name__, url_prefix='/faculty')
 
@@ -14,7 +15,7 @@ def require_faculty():
 def inject_common_data():
     user_id = session.get('user_id')
     current_user = User.query.get(user_id) if user_id else None
-    current_year = session.get('academic_year', '2025-2026')
+    current_year = current_academic_year()
     global_topic_count = Topic.query.join(Batch).filter(Batch.academic_year == current_year, Batch.status != 'hidden').count()
     notifications = Notification.query.filter_by(user_id=user_id).order_by(Notification.is_read.asc(), Notification.created_at.desc()).all() if user_id else []
     return dict(current_user=current_user, current_time=datetime.utcnow(), global_topic_count=global_topic_count, notifications=notifications)
@@ -25,7 +26,7 @@ def index():
 
 @faculty_bp.route('/dashboard')
 def dashboard():
-    current_year = session.get('academic_year', '2025-2026')
+    current_year = current_academic_year()
     topics = Topic.query.join(Batch).filter(Batch.academic_year == current_year, Batch.status != 'hidden').all()
     groups = Group.query.join(Batch).filter(Batch.academic_year == current_year, Batch.status != 'hidden').all()
     mentors = User.query.filter(func.lower(User.role) == 'lecturer').all()
@@ -41,13 +42,13 @@ def dashboard():
 
 @faculty_bp.route('/batches')
 def batches():
-    current_year = session.get('academic_year', '2025-2026')
+    current_year = current_academic_year()
     all_batches = Batch.query.filter(Batch.academic_year == current_year, Batch.status != 'hidden').all()
     return render_template('faculty/batches.html', batches=all_batches)
 
 @faculty_bp.route('/topics')
 def topics():
-    current_year = session.get('academic_year', '2025-2026')
+    current_year = current_academic_year()
     all_topics = Topic.query.join(Batch).filter(Batch.academic_year == current_year, Batch.status != 'hidden').all()
     mentors = User.query.filter(func.lower(User.role) == 'lecturer').all()
     return render_template('faculty/topics.html', topics=all_topics, mentors=mentors)
@@ -55,7 +56,7 @@ def topics():
 @faculty_bp.route('/lecturers')
 def lecturers():
     all_lecturers = User.query.filter(func.lower(User.role) == 'lecturer').all()
-    current_year = session.get('academic_year', '2025-2026')
+    current_year = current_academic_year()
     all_topics = Topic.query.join(Batch).filter(Batch.academic_year == current_year).all()
     return render_template('faculty/lecturers.html', mentors=all_lecturers, topics=all_topics)
 
@@ -66,7 +67,7 @@ def students():
 
 @faculty_bp.route('/council')
 def council():
-    current_year = session.get('academic_year', '2025-2026')
+    current_year = current_academic_year()
     active_batch = Batch.query.filter_by(academic_year=current_year, status='active').first()
     councils = Council.query.join(Batch).filter(Batch.academic_year == current_year).all()
     mentors = User.query.filter(func.lower(User.role) == 'lecturer').all()
@@ -79,7 +80,7 @@ def rubric():
 
 @faculty_bp.route('/stats')
 def stats_page():
-    current_year = session.get('academic_year', '2025-2026')
+    current_year = current_academic_year()
     all_topics = Topic.query.join(Batch).filter(Batch.academic_year == current_year, Batch.status != 'hidden').all()
     return render_template('faculty/stats.html', topics=all_topics)
 

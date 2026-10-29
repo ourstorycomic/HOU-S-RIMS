@@ -11,6 +11,7 @@ Chỉ role faculty / admin (cùng quy ước với topics.py).
 """
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from academic_year import current_academic_year
 
 from flask import Blueprint, jsonify, request, session
 
@@ -36,7 +37,7 @@ def require_faculty():
 
 
 def _year():
-    return session.get('academic_year', '2025-2026')
+    return current_academic_year()
 
 
 def _err(msg, code, **extra):
