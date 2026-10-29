@@ -89,8 +89,15 @@ def create_batch():
         doc_filenames = []
         doc_paths = []
         files = request.files.getlist('guidance_doc')
-        upload_dir = os.path.join(request.environ.get('FLASK_APP_DIR', '.'), 'static', 'uploads', 'batches')
-        os.makedirs(upload_dir, exist_ok=True)
+        is_serverless = bool(os.getenv('VERCEL') or os.getenv('AWS_LAMBDA_FUNCTION_NAME') or os.getenv('LAMBDA_TASK_ROOT'))
+        if is_serverless:
+            upload_dir = '/tmp/uploads/batches'
+        else:
+            upload_dir = os.path.join(request.environ.get('FLASK_APP_DIR', '.'), 'static', 'uploads', 'batches')
+        try:
+            os.makedirs(upload_dir, exist_ok=True)
+        except Exception:
+            pass
         
         for file in files:
             if file and file.filename != '':
@@ -299,8 +306,15 @@ def update_batch(batch_id):
     files = request.files.getlist('guidance_doc')
     if files and any(f.filename for f in files):
         doc_filenames = []
-        upload_dir = os.path.join(request.environ.get('FLASK_APP_DIR', '.'), 'static', 'uploads', 'batches')
-        os.makedirs(upload_dir, exist_ok=True)
+        is_serverless = bool(os.getenv('VERCEL') or os.getenv('AWS_LAMBDA_FUNCTION_NAME') or os.getenv('LAMBDA_TASK_ROOT'))
+        if is_serverless:
+            upload_dir = '/tmp/uploads/batches'
+        else:
+            upload_dir = os.path.join(request.environ.get('FLASK_APP_DIR', '.'), 'static', 'uploads', 'batches')
+        try:
+            os.makedirs(upload_dir, exist_ok=True)
+        except Exception:
+            pass
         for file in files:
             if file and file.filename != '':
                 filename = secure_filename(file.filename)

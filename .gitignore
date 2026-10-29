@@ -84,3 +84,5 @@ Thumbs.db
 *.tmp
 temp/
 tmp/
+
+*.exe

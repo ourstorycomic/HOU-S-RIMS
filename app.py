@@ -18,11 +18,23 @@ load_dotenv(override=True)
 
 from academic_year import current_academic_year
 
+is_serverless = bool(os.getenv('VERCEL') or os.getenv('AWS_LAMBDA_FUNCTION_NAME') or os.getenv('LAMBDA_TASK_ROOT'))
+
 app = Flask(__name__)
 app.jinja_env.globals['current_academic_year'] = current_academic_year
 app.secret_key = 'secret_key'
-app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
-if not os.path.exists(app.config['UPLOAD_FOLDER']): os.makedirs(app.config['UPLOAD_FOLDER'])
+
+if is_serverless:
+    upload_folder = '/tmp/uploads'
+else:
+    upload_folder = os.path.join(os.getcwd(), 'uploads')
+
+try:
+    os.makedirs(upload_folder, exist_ok=True)
+except Exception:
+    pass
+
+app.config['UPLOAD_FOLDER'] = upload_folder
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024 # 50MB
 
 # Swagger setup
@@ -31,7 +43,28 @@ swagger = Swagger(app)
 # Database configuration
 db_url = (os.getenv('DATABASE_URL') or os.getenv('SUPABASE_DB_URL') or '').strip()
 if not db_url or '[YOUR-' in db_url:
-    db_url = 'sqlite:///database.db'
+    if is_serverless:
+        # On Vercel / AWS Lambda, repository files in /var/task are strictly read-only.
+        # SQLite database file must be placed in /tmp so write/update/delete operations succeed.
+        tmp_db_path = '/tmp/database.db'
+        if not os.path.exists(tmp_db_path):
+            import shutil
+            candidates = [
+                os.path.join(app.root_path, 'instance', 'database.db'),
+                os.path.join(os.getcwd(), 'instance', 'database.db'),
+                os.path.join(app.root_path, 'database.db'),
+                os.path.join(os.getcwd(), 'database.db'),
+            ]
+            for candidate in candidates:
+                if os.path.exists(candidate) and os.path.getsize(candidate) > 0:
+                    try:
+                        shutil.copy2(candidate, tmp_db_path)
+                        break
+                    except Exception as e:
+                        print(f"Error copying SQLite database to /tmp: {e}")
+        db_url = f'sqlite:///{tmp_db_path}'
+    else:
+        db_url = 'sqlite:///database.db'
 elif db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql+psycopg2://", 1)
 elif db_url.startswith("postgresql://") and not db_url.startswith("postgresql+"):
@@ -119,6 +152,15 @@ def view_profile(identifier):
 
 @app.route('/static/uploads/<path:filename>')
 def serve_static_uploads_fallback(filename):
+    # 0. Check in /tmp/uploads (for Vercel / serverless runtime)
+    tmp_uploads = '/tmp/uploads'
+    basename = os.path.basename(filename)
+    if os.path.isdir(tmp_uploads):
+        for sub in ['', 'batches', 'submissions', 'chat', 'feedback', 'councils/minutes']:
+            p = os.path.join(tmp_uploads, sub, basename) if sub else os.path.join(tmp_uploads, basename)
+            if os.path.isfile(p):
+                return send_from_directory(os.path.dirname(p), basename)
+
     base_uploads = os.path.join(app.root_path, 'static', 'uploads')
     
     # 1. Exact match under static/uploads

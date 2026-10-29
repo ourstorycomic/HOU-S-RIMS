@@ -13,8 +13,15 @@ ALLOWED_EXTENSIONS = {'txt', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'zip', 'rar', 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-SUBMISSIONS_UPLOAD_DIR = os.path.join('static', 'uploads', 'submissions')
-os.makedirs(SUBMISSIONS_UPLOAD_DIR, exist_ok=True)
+is_serverless = bool(os.getenv('VERCEL') or os.getenv('AWS_LAMBDA_FUNCTION_NAME') or os.getenv('LAMBDA_TASK_ROOT'))
+if is_serverless:
+    SUBMISSIONS_UPLOAD_DIR = os.path.join('/tmp', 'uploads', 'submissions')
+else:
+    SUBMISSIONS_UPLOAD_DIR = os.path.join('static', 'uploads', 'submissions')
+try:
+    os.makedirs(SUBMISSIONS_UPLOAD_DIR, exist_ok=True)
+except Exception:
+    pass
 
 TYPE_LABELS = {
     'outline': 'Đề cương nghiên cứu chi tiết',
@@ -266,8 +273,14 @@ def review_submission(sub_id):
     if feedback_file and feedback_file.filename != '':
         from werkzeug.utils import secure_filename
         filename = secure_filename(feedback_file.filename)
-        upload_dir = os.path.join(request.environ.get('FLASK_APP_DIR', '.'), 'static', 'uploads', 'submissions', 'feedback')
-        os.makedirs(upload_dir, exist_ok=True)
+        if is_serverless:
+            upload_dir = os.path.join('/tmp', 'uploads', 'submissions', 'feedback')
+        else:
+            upload_dir = os.path.join(request.environ.get('FLASK_APP_DIR', '.'), 'static', 'uploads', 'submissions', 'feedback')
+        try:
+            os.makedirs(upload_dir, exist_ok=True)
+        except Exception:
+            pass
         ts = int(datetime.utcnow().timestamp())
         unique_name = f"feedback_{sub.id}_{ts}_{filename}"
         save_path = os.path.join(upload_dir, unique_name)

@@ -136,7 +136,11 @@ def send_message(group_id):
 import os
 from werkzeug.utils import secure_filename
 
-UPLOAD_FOLDER = 'static/uploads/chat'
+is_serverless = bool(os.getenv('VERCEL') or os.getenv('AWS_LAMBDA_FUNCTION_NAME') or os.getenv('LAMBDA_TASK_ROOT'))
+if is_serverless:
+    UPLOAD_FOLDER = '/tmp/uploads/chat'
+else:
+    UPLOAD_FOLDER = 'static/uploads/chat'
 
 @chat_bp.route('/<int:group_id>/upload', methods=['POST'])
 def upload_file(group_id):

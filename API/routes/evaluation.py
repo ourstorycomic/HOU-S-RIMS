@@ -356,8 +356,15 @@ def upload_council_minutes(council_id):
     if ext not in ['.pdf', '.jpg', '.jpeg', '.png']:
         return jsonify({'error': 'Chỉ chấp nhận file scan định dạng PDF, JPG hoặc PNG!'}), 400
         
-    upload_dir = os.path.join(request.environ.get('FLASK_APP_DIR', '.'), 'static', 'uploads', 'councils', 'minutes')
-    os.makedirs(upload_dir, exist_ok=True)
+    is_serverless = bool(os.getenv('VERCEL') or os.getenv('AWS_LAMBDA_FUNCTION_NAME') or os.getenv('LAMBDA_TASK_ROOT'))
+    if is_serverless:
+        upload_dir = '/tmp/uploads/councils/minutes'
+    else:
+        upload_dir = os.path.join(request.environ.get('FLASK_APP_DIR', '.'), 'static', 'uploads', 'councils', 'minutes')
+    try:
+        os.makedirs(upload_dir, exist_ok=True)
+    except Exception:
+        pass
     
     unique_name = f"bienban_hd_{council.id}_{int(datetime.utcnow().timestamp())}{ext}"
     save_path = os.path.join(upload_dir, unique_name)
