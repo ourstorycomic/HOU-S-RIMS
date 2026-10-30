@@ -425,11 +425,10 @@ def delete_batch(batch_id):
     batch = Batch.query.get_or_404(batch_id)
     try:
         batch_name = batch.name
-        with db.session.no_autoflush:
-            cascade_delete_batch_data(batch.id)
-            db.session.delete(batch)
+        # Soft delete: Chỉ ẩn đợt đi, không xóa dữ liệu trong CSDL để lưu trữ và truy xuất khi cần
+        batch.status = 'hidden'
         db.session.commit()
-        return jsonify({'message': f'Đã xóa đợt NCKH "{batch_name}" và làm mới toàn bộ dữ liệu liên quan thành công!', 'deleted_id': batch_id}), 200
+        return jsonify({'message': f'Đã ẩn đợt NCKH "{batch_name}" thành công! Dữ liệu được bảo lưu an toàn trong hệ thống.', 'deleted_id': batch_id}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Không thể xóa đợt NCKH này do có lỗi: {str(e)}'}), 500
+        return jsonify({'error': f'Không thể ẩn đợt NCKH này do có lỗi: {str(e)}'}), 500
