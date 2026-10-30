@@ -1071,6 +1071,17 @@ async function submitCreateBatch() {
         });
         const data = await res.json();
         if (res.ok) {
+            if (year) {
+                try {
+                    await fetch('/faculty/set-academic-year', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({year: year})
+                    });
+                } catch (e) {
+                    console.error('Error updating academic year:', e);
+                }
+            }
             Swal.fire('Thành công', 'Đã tạo đợt mới thành công!', 'success').then(() => location.reload());
         } else {
             Swal.fire('Lỗi', data.error || 'Tạo đợt thất bại', 'error');

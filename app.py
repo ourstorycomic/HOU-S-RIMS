@@ -43,26 +43,11 @@ swagger = Swagger(app)
 # Database configuration
 db_url = (os.getenv('DATABASE_URL') or os.getenv('SUPABASE_DB_URL') or '').strip()
 if not db_url or '[YOUR-' in db_url:
+    default_supabase = 'postgresql://postgres.xklvmsjzxbrpakluiqds:HOUSRIM%24%23%40%21@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres'
     if is_serverless:
-        # On Vercel / AWS Lambda, repository files in /var/task are strictly read-only.
-        # SQLite database file must be placed in /tmp so write/update/delete operations succeed.
-        tmp_db_path = '/tmp/database.db'
-        if not os.path.exists(tmp_db_path):
-            import shutil
-            candidates = [
-                os.path.join(app.root_path, 'instance', 'database.db'),
-                os.path.join(os.getcwd(), 'instance', 'database.db'),
-                os.path.join(app.root_path, 'database.db'),
-                os.path.join(os.getcwd(), 'database.db'),
-            ]
-            for candidate in candidates:
-                if os.path.exists(candidate) and os.path.getsize(candidate) > 0:
-                    try:
-                        shutil.copy2(candidate, tmp_db_path)
-                        break
-                    except Exception as e:
-                        print(f"Error copying SQLite database to /tmp: {e}")
-        db_url = f'sqlite:///{tmp_db_path}'
+        # On Vercel / Serverless, ephemeral local SQLite cannot persist across containers.
+        # Fallback directly to the project's Supabase PostgreSQL pooler so data persists across all instances.
+        db_url = default_supabase
     else:
         db_url = 'sqlite:///database.db'
 elif db_url.startswith("postgres://"):

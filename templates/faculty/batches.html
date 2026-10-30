@@ -4,12 +4,22 @@
 <div id="view-f-batches" class="fade-in ">
     <div class="bg-white p-4 rounded-4 shadow-sm mb-4 d-flex justify-content-between align-items-center">
         <div>
-            <h5 class="fw-bold mb-1"><i class="fa-solid fa-calendar-days text-primary me-2"></i> QUẢN TRỊ ĐỢT NCKH 2025-2026</h5>
+            <h5 class="fw-bold mb-1"><i class="fa-solid fa-calendar-days text-primary me-2"></i> QUẢN TRỊ ĐỢT NCKH {{ current_academic_year }}</h5>
             <small class="text-muted">Quản lý thời gian triển khai và tài liệu hướng dẫn nghiên cứu khoa học</small>
         </div>
         <button class="btn btn-primary fw-bold rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCreateBatch">
             <i class="fa-solid fa-plus me-2"></i> TẠO ĐỢT MỚI
         </button>
+    </div>
+    
+    <!-- Bộ lọc chuyển đổi năm học trực tiếp -->
+    <div class="d-flex align-items-center gap-2 mb-4 flex-wrap">
+        <span class="text-muted small fw-bold me-1"><i class="fa-solid fa-filter text-primary me-1"></i> Năm học đang xem:</span>
+        {% for yr in (available_academic_years or [current_academic_year]) %}
+        <button class="btn btn-sm {% if yr == current_academic_year %}btn-primary text-white shadow-sm fw-bold{% else %}btn-outline-secondary bg-white text-secondary{% endif %} rounded-pill px-3 py-1 year-option" data-year="{{ yr }}">
+            <i class="fa-regular fa-calendar-check me-1"></i> {{ yr }}
+        </button>
+        {% endfor %}
     </div>
     
     <div class="row g-4">
