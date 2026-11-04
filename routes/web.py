@@ -1,6 +1,6 @@
 # routes/web.py
 from flask import Blueprint, render_template, session, redirect, url_for, request
-from models import User, Topic, Group, GroupMember, Batch, Notification
+from models import db, User, Topic, Group, GroupMember, Batch, Notification, Skill, Achievement, Experience
 
 web_bp = Blueprint('web', __name__)
 
@@ -75,7 +75,6 @@ def student_page():
     experiences = []
 
     if current_user:
-        from models import Skill, Achievement, Experience
         skills = Skill.query.filter_by(student_id=current_user.id).all()
         achievements = Achievement.query.filter_by(student_id=current_user.id).all()
         experiences = Experience.query.filter_by(student_id=current_user.id).all()
@@ -186,6 +185,12 @@ def student_page():
             'group_member_count': group_member_count
         })
 
+    # Dữ liệu động cho tab Khám phá ý tưởng từ DB
+    explore_topics = Topic.query.filter_by(status='approved').order_by(Topic.id.asc()).limit(9).all()
+    field_rows = db.session.query(Topic.field).distinct().filter(Topic.field.isnot(None)).all()
+    explore_fields = [f[0] for f in field_rows if f[0] and f[0].strip()]
+    explore_mentors = User.query.filter(func.lower(User.role) == 'lecturer').order_by(User.id.asc()).limit(4).all()
+
     return render_template('student.html', 
                            current_user=current_user,
                            current_group=active_group,
@@ -201,7 +206,10 @@ def student_page():
                            skills=skills,
                            achievements=achievements,
                            experiences=experiences,
-                           students_list=students_list)
+                           students_list=students_list,
+                           explore_topics=explore_topics,
+                           explore_fields=explore_fields,
+                           explore_mentors=explore_mentors)
 
 # Danh sách giảng viên hướng dẫn (Mentor List)
 @web_bp.route('/mentors')

@@ -16,9 +16,12 @@ def login():
 
         # Ánh xạ bí danh (alias) đăng nhập tiện lợi
         alias_map = {
-            'sv': 'student1',
-            'sv01': 'student1',
-            'student': 'student1',
+            'sv': '24a1001d0341',
+            'sv01': '24a1001d0341',
+            'student': '24a1001d0341',
+            'student1': '24a1001d0341',
+            'student2': '24a1001d0391',
+            'student3': '24a1001d0111',
             'gv': 'lecturer1',
             'gv1': 'lecturer1',
             'gv01': 'lecturer1',
@@ -42,7 +45,10 @@ def login():
             or_(
                 func.lower(User.username) == lookup_username.lower(),
                 func.lower(User.username) == raw_username.lower(),
-                func.lower(User.student_id) == raw_username.lower()
+                func.lower(User.student_id) == lookup_username.lower(),
+                func.lower(User.student_id) == raw_username.lower(),
+                func.lower(User.email) == lookup_username.lower(),
+                func.lower(User.email) == raw_username.lower()
             )
         ).first()
 

@@ -39,3 +39,6 @@ def init_routes(app):
     app.register_blueprint(calendar_bp)
     app.register_blueprint(chat_bp)
     app.register_blueprint(group_bp)
+
+    from .ai_ideas import ai_ideas_bp
+    app.register_blueprint(ai_ideas_bp)
