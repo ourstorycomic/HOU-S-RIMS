@@ -1639,7 +1639,7 @@
             <div class="col-md-3 col-sm-6">
                 <select id="studentMemberMajor" onchange="filterStudentMembers()"
                     class="form-select bg-white rounded-3 shadow-xs border py-2 fw-medium text-secondary">
-                    <option value="all" selected>Tất cả chuyên ngành</option>
+                    <option value="all" selected>Tất cả hướng nghiên cứu</option>
                     <option value="Kỹ thuật phần mềm">Kỹ thuật phần mềm</option>
                     <option value="Hệ thống thông tin">Hệ thống thông tin</option>
                     <option value="Khoa học máy tính">Khoa học máy tính</option>
@@ -1767,7 +1767,7 @@
         <div id="noStudentMembersFound" class="card border-0 shadow-sm rounded-4 p-5 text-center d-none mt-4">
             <div class="text-muted mb-2"><i class="fa-solid fa-user-slash fs-2"></i></div>
             <h6 class="fw-bold text-dark">Không tìm thấy thành viên phù hợp</h6>
-            <small class="text-muted">Hãy thử tìm theo từ khóa kỹ năng khác hoặc chuyển sang chuyên ngành khác.</small>
+            <small class="text-muted">Hãy thử tìm theo từ khóa kỹ năng khác hoặc chuyển sang hướng nghiên cứu khác.</small>
         </div>
     </div>
 
@@ -2033,10 +2033,10 @@
                     </div>
 
                     <div class="row g-3 mb-4">
-                        <!-- Cột Trái: Chọn Chuyên ngành -->
+                        <!-- Cột Trái: Chọn Hướng nghiên cứu -->
                         <div class="col-md-6 col-12">
                             <label class="form-label small fw-bold text-muted">
-                                <i class="fa-solid fa-graduation-cap text-primary me-1"></i> CHỌN CHUYÊN NGÀNH <span
+                                <i class="fa-solid fa-graduation-cap text-primary me-1"></i> CHỌN HƯỚNG NGHIÊN CỨU <span
                                     class="text-danger">*</span>
                             </label>
                             <div class="input-group">
@@ -2045,7 +2045,7 @@
                                 </span>
                                 <select id="registerMajorSelect" class="form-select bg-light py-2.5 border-start-0"
                                     onchange="onRegisterMajorChange(this.value)">
-                                    <option value="">-- Chọn chuyên ngành đào tạo (Khoa CNTT) --</option>
+                                    <option value="">-- Chọn hướng nghiên cứu (Khoa CNTT) --</option>
                                     <option value="Công nghệ phần mềm" selected>Công nghệ phần mềm</option>
                                     <option value="Hệ thống thông tin">Hệ thống thông tin</option>
                                     <option value="Mạng máy tính & An toàn thông tin">Mạng máy tính & An toàn thông tin</option>
@@ -2056,7 +2056,7 @@
                             </div>
                             <input type="hidden" id="registerFacultySelect" value="Khoa Công nghệ Thông tin">
                             <div class="form-text text-muted" style="font-size: 11px;">
-                                <i class="fa-solid fa-circle-info me-1 text-primary"></i> Gợi ý GVHD sẽ tự động lọc theo chuyên ngành bạn chọn.
+                                <i class="fa-solid fa-circle-info me-1 text-primary"></i> Gợi ý GVHD sẽ tự động lọc theo hướng nghiên cứu bạn chọn.
                             </div>
                         </div>
 
@@ -4168,6 +4168,71 @@
 
 {% block extra_js %}
 <script>
+    // =====================================================================
+    // TỪ CHỐI LỜI MỜI THAM GIA NHÓM: mở popup SweetAlert2 yêu cầu nhập lý do
+    // (Đồng ý -> giữ nguyên hàm gốc; Từ chối -> hỏi lý do rồi gửi kèm lên server)
+    // =====================================================================
+    // Endpoint phản hồi lời mời: chỉnh lại cho khớp backend nếu khác.
+    const INVITATION_RESPOND_URL = (groupId) => `/api/groups/${groupId}/respond`;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const originalHandler = window.handleGroupInvitation;
+
+        window.handleGroupInvitation = async function (groupId, status) {
+            if (status !== 'rejected') {
+                return typeof originalHandler === 'function'
+                    ? originalHandler.apply(this, arguments)
+                    : undefined;
+            }
+
+            const result = await Swal.fire({
+                title: 'Từ chối lời mời tham gia nhóm?',
+                text: 'Vui lòng cho Trưởng nhóm biết lý do bạn từ chối.',
+                icon: 'warning',
+                input: 'textarea',
+                inputLabel: 'Lý do từ chối',
+                inputPlaceholder: 'Ví dụ: Mình đã tham gia nhóm khác / không đủ thời gian thực hiện đề tài...',
+                inputAttributes: { maxlength: 300, 'aria-label': 'Lý do từ chối' },
+                showCancelButton: true,
+                confirmButtonText: 'Xác nhận từ chối',
+                cancelButtonText: 'Hủy',
+                confirmButtonColor: '#dc3545',
+                reverseButtons: true,
+                focusConfirm: false,
+                inputValidator: (value) => {
+                    const v = (value || '').trim();
+                    if (!v) return 'Vui lòng nhập lý do từ chối.';
+                    if (v.length < 5) return 'Lý do quá ngắn (tối thiểu 5 ký tự).';
+                }
+            });
+            if (!result.isConfirmed) return;
+
+            try {
+                const resp = await fetch(INVITATION_RESPOND_URL(groupId), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'rejected', reason: result.value.trim() })
+                });
+                const data = await resp.json().catch(() => ({}));
+                if (resp.ok && data.success !== false) {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Đã từ chối lời mời',
+                        text: 'Lý do của bạn đã được gửi tới Trưởng nhóm.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    location.reload();
+                } else {
+                    Swal.fire('Không thành công', data.error || data.message || 'Không thể từ chối lời mời.', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                Swal.fire('Lỗi kết nối', 'Không thể kết nối đến máy chủ.', 'error');
+            }
+        };
+    });
+
     // ==========================================
     // TOPIC REGISTRATION JAVASCRIPT LOGIC
     // ==========================================
@@ -4495,7 +4560,7 @@
         }
 
         if (!suppressToast && typeof showToast === 'function') {
-            showToast(`Đã chọn Thầy/Cô ${name} (Chuyên ngành: ${detectedMajor || 'CNTT'})`);
+            showToast(`Đã chọn Thầy/Cô ${name} (Hướng nghiên cứu: ${detectedMajor || 'CNTT'})`);
         }
     };
 
@@ -6107,7 +6172,7 @@
             let descParts = [];
             if (userDesc) descParts.push(userDesc);
             if (topicEn) descParts.push(`Tên tiếng Anh: ${topicEn}`);
-            if (major) descParts.push(`Chuyên ngành: ${major}`);
+            if (major) descParts.push(`Hướng nghiên cứu: ${major}`);
             const domain = document.querySelector('input[name="domain"]:checked');
             if (domain) descParts.push(`Lĩnh vực: ${domain.value || 'Kỹ thuật'}`);
             modalTopicDesc.value = descParts.join(' • ');
