@@ -272,7 +272,7 @@
                                             <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-700">Trưởng nhóm</span>
                                         </div>
                                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 mt-1.5 text-xs text-slate-600">
-                                            <div><span class="text-slate-400">Mã SV:</span> <strong class="text-slate-700 font-mono">{{ current_user.student_id or current_user.username }}</strong></div>
+                                            <div><span class="text-slate-400">MSSV:</span> <strong class="text-slate-700 font-mono">{{ current_user.student_id or current_user.username }}</strong></div>
                                             <div><span class="text-slate-400">Khoa:</span> <span class="text-slate-700 font-medium">{{ current_user.faculty or 'Khoa Công nghệ thông tin' }}</span></div>
                                             <div><span class="text-slate-400">Email:</span> <span class="text-slate-700 truncate">{{ current_user.email }}</span></div>
                                             <div><span class="text-slate-400">Vai trò:</span> <span class="text-emerald-600 font-semibold">Đã xác nhận tham gia</span></div>
@@ -298,7 +298,7 @@
                                 <!-- Input Thêm Thành Viên bằng Mã SV -->
                                 <div class="mb-5">
                                     <label class="block text-xs font-bold text-slate-700 mb-1.5">
-                                        Mời thêm thành viên vào nhóm (Nhập Mã SV):
+                                        Mời thêm thành viên vào nhóm (nhập MSSV):
                                     </label>
                                     <div class="flex gap-2">
                                         <div class="relative flex-1">
@@ -306,7 +306,7 @@
                                                 <i class="fa-solid fa-id-card text-xs"></i>
                                             </div>
                                             <input type="text" id="inputStudentCode"
-                                                   placeholder="Nhập Mã Sinh Viên (ví dụ: 24A1001D0342...)"
+                                                   placeholder="Nhập MSSV cần mời (VD: 24A1001D0342)..." autocomplete="off" maxlength="20"
                                                    onkeydown="if(event.key === 'Enter') { event.preventDefault(); handleInviteMember(); }"
                                                    class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition font-medium">
                                         </div>
@@ -317,7 +317,7 @@
                                         </button>
                                     </div>
                                     <p class="text-[11px] text-slate-400 mt-1.5">
-                                        Hệ thống sẽ tự động kiểm tra Mã SV trong cơ sở dữ liệu và gửi thông báo mời tham gia tới sinh viên đó.
+                                        Nhập Mã Sinh Viên (MSSV) của bạn cùng lớp hoặc khoa để gửi lời mời tham gia nhóm. Hệ thống sẽ tự kiểm tra MSSV và gửi thông báo mời tới sinh viên đó. Tối đa 5 thành viên.
                                     </p>
                                 </div>
 
@@ -334,7 +334,7 @@
                                                 <thead>
                                                     <tr class="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
                                                         <th class="py-2.5 px-4">Sinh viên</th>
-                                                        <th class="py-2.5 px-3">Mã SV</th>
+                                                        <th class="py-2.5 px-3">MSSV</th>
                                                         <th class="py-2.5 px-3">Khoa</th>
                                                         <th class="py-2.5 px-3">Trạng thái</th>
                                                         <th class="py-2.5 px-3 text-right">Thao tác</th>
@@ -728,10 +728,10 @@
             }
 
             const input = document.getElementById('inputStudentCode');
-            const studentCode = input.value.trim();
+            const studentCode = input.value.trim().toUpperCase();
 
             if (!studentCode) {
-                Swal.fire('Thông báo', 'Vui lòng nhập Mã Sinh Viên cần mời!', 'warning');
+                Swal.fire('Thông báo', 'Vui lòng nhập MSSV cần mời!', 'warning');
                 input.focus();
                 return;
             }
