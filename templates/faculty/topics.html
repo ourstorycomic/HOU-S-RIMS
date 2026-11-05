@@ -216,10 +216,10 @@
                                     <i class="fa-solid fa-triangle-exclamation me-1"></i>
                                     Giảng viên <strong>${qData.mentor_name}</strong> hiện đã hướng dẫn <strong>${qData.group_count}/${qData.max_groups} nhóm</strong> (đã đủ chỉ tiêu tối đa).
                                 </div>
-                                <p class="small text-muted mb-2">Khoa có thể điều chỉnh sang Giảng viên khác cùng chuyên môn hoặc vẫn duyệt nếu có trường hợp đặc cách:</p>
+                                <p class="small text-muted mb-2">Khoa có thể điều chỉnh sang Giảng viên khác cùng hướng nghiên cứu hoặc vẫn duyệt nếu có trường hợp đặc cách:</p>
                                 
                                 <div class="mb-3">
-                                    <label class="form-label small fw-bold">Chọn Giảng viên thay thế (cùng Khoa/chuyên môn):</label>
+                                    <label class="form-label small fw-bold">Chọn Giảng viên thay thế (cùng Khoa/hướng nghiên cứu):</label>
                                     <select id="swal-new-mentor" class="form-select form-select-sm">
                                         <option value="">-- Giữ nguyên ${qData.mentor_name} (Đặc cách duyệt) --</option>
                                         ${optionsHtml}
@@ -228,7 +228,7 @@
 
                                 <div class="mb-2">
                                     <label class="form-label small fw-bold">Lý do điều chỉnh (sẽ gửi email thông báo cho GV cũ, GV mới và SV):</label>
-                                    <textarea id="swal-change-reason" class="form-control form-control-sm" rows="2" placeholder="Ví dụ: Giảng viên đã đủ chỉ tiêu 3 nhóm theo quy định NCKH, điều phối giảng viên cùng chuyên môn..."></textarea>
+                                    <textarea id="swal-change-reason" class="form-control form-control-sm" rows="2" placeholder="Ví dụ: Giảng viên đã đủ chỉ tiêu 3 nhóm theo quy định NCKH, điều phối giảng viên cùng hướng nghiên cứu..."></textarea>
                                 </div>
                             </div>
                         `,
@@ -814,7 +814,7 @@
                     </div>
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <div class="fw-bold text-dark small" id="reassignSuggestTitle">
-                            <i class="fa-solid fa-sparkles text-warning me-1"></i> Giảng viên cùng chuyên môn & bộ môn
+                            <i class="fa-solid fa-sparkles text-warning me-1"></i> Giảng viên cùng hướng nghiên cứu
                         </div>
                         <div class="form-check form-switch small">
                             <input class="form-check-input" type="checkbox" id="reassignShowAll">
@@ -826,7 +826,7 @@
                     </div>
                     <div class="mt-3">
                         <label class="form-label small fw-bold text-dark">Lý do điều chuyển (sẽ ghi vào thông báo gửi GV và SV):</label>
-                        <input type="text" id="reassignReasonInput" class="form-control form-control-sm rounded-3" maxlength="300" placeholder="Ví dụ: Giảng viên đã đủ chỉ tiêu, điều phối giảng viên cùng chuyên môn...">
+                        <input type="text" id="reassignReasonInput" class="form-control form-control-sm rounded-3" maxlength="300" placeholder="Ví dụ: Giảng viên đã đủ chỉ tiêu, điều phối giảng viên cùng hướng nghiên cứu...">
                     </div>
                 </div>
                 <div class="modal-footer border-0 px-4 pb-4">
@@ -880,7 +880,7 @@
             const isAll = document.getElementById('reassignShowAll').checked ? 1 : 0;
             document.getElementById('reassignSuggestTitle').innerHTML = isAll 
                 ? '<i class="fa-solid fa-users text-primary me-1"></i> Tất cả giảng viên' 
-                : '<i class="fa-solid fa-wand-magic-sparkles text-warning me-1"></i> Giảng viên cùng chuyên môn & bộ môn';
+                : '<i class="fa-solid fa-wand-magic-sparkles text-warning me-1"></i> Giảng viên cùng hướng nghiên cứu';
 
             try {
                 const res = await fetch(`/api/assignment/suggest?topic_id=${currentReassignTopic.id}&all=${isAll}`);
@@ -889,7 +889,7 @@
                 reassignSuggestions = data.suggestions || [];
 
                 if (!reassignSuggestions.length) {
-                    box.innerHTML = '<div class="text-muted text-center py-4">Không tìm thấy giảng viên cùng bộ môn. Hãy bật "Hiện tất cả giảng viên" để chọn.</div>';
+                    box.innerHTML = '<div class="text-muted text-center py-4">Không tìm thấy giảng viên cùng hướng nghiên cứu. Hãy bật "Hiện tất cả giảng viên" để chọn.</div>';
                     return;
                 }
 
@@ -907,7 +907,7 @@
                                     <span class="fw-bold text-dark">${s.full_name} ${isCurrent ? '<span class="badge bg-secondary ms-1">Hiện tại</span>' : ''}</span>
                                     <span>${s.available ? '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Còn chỗ</span>' : '<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">Đã đủ</span>'}</span>
                                 </div>
-                                <div class="small text-muted">${s.faculty || 'Khoa CNTT'} ${s.same_department ? '· <span class="text-primary fw-bold">Cùng bộ môn</span>' : ''}</div>
+                                <div class="small text-muted">${s.faculty || 'Khoa CNTT'} ${s.same_department ? '· <span class="text-primary fw-bold">Cùng hướng nghiên cứu</span>' : ''}</div>
                                 ${badges ? `<div class="mt-1">${badges}</div>` : ''}
                                 <div class="mt-2">
                                     <div class="progress" style="height: 5px;">
