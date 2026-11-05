@@ -3,6 +3,8 @@
 {% block title %}Hồ sơ - {{ profile_user.full_name }}{% endblock %}
 
 {% block student_content %}
+{% set can_view_scores = session.get('user_id') == profile_user.id or session.get('role') in ['lecturer', 'faculty', 'admin'] %}
+{% set final_scores = (scores | selectattr('final_score', 'defined') | map(attribute='final_score') | reject('none') | list) if scores else [] %}
 <div id="view-s-profile" class="fade-in container-fluid p-4">
     <div class="mb-3">
         <button onclick="window.history.back()" class="btn btn-sm btn-light rounded-pill px-3 py-1.5 fw-bold border shadow-xs text-secondary hover-primary">
@@ -13,11 +15,14 @@
         <div class="row align-items-center">
             <div class="col-md-2 text-center">
                 <div class="bg-primary text-white rounded-4 d-flex align-items-center justify-content-center mx-auto shadow position-relative" style="width: 100px; height: 100px; font-size: 40px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">
-                    {{ (profile_user.full_name[:2] | upper) if profile_user and profile_user.full_name else 'NA' }}
+                    <img id="avatarImg" {% if profile_user.avatar_url %}src="{{ profile_user.avatar_url }}"{% endif %} alt="Ảnh đại diện"
+                         class="rounded-4 w-100 h-100 {% if not profile_user.avatar_url %}d-none{% endif %}" style="object-fit: cover;">
+                    <span id="avatarInitials" class="{% if profile_user.avatar_url %}d-none{% endif %}">{{ (profile_user.full_name[:2] | upper) if profile_user and profile_user.full_name else 'NA' }}</span>
                     {% if session.get('user_id') == profile_user.id %}
-                    <button class="btn btn-sm btn-light rounded-circle position-absolute" style="bottom: -10px; right: -10px; width: 32px; height: 32px; padding: 0;" title="Đổi ảnh đại diện (Đang phát triển)" onclick="showToast('Tính năng tải ảnh lên đang được phát triển!')">
+                    <button id="btnChangeAvatar" type="button" class="btn btn-sm btn-light rounded-circle position-absolute shadow-sm" style="bottom: -10px; right: -10px; width: 32px; height: 32px; padding: 0;" title="Đổi ảnh đại diện" onclick="document.getElementById('avatarFileInput').click()">
                         <i class="fa-solid fa-camera text-primary" style="font-size: 14px;"></i>
                     </button>
+                    <input type="file" id="avatarFileInput" accept="image/png,image/jpeg,image/webp" class="d-none">
                     {% endif %}
                 </div>
             </div>
@@ -36,9 +41,9 @@
                 </p>
                 <div class="d-flex gap-4">
                     {% if profile_user.role == 'student' %}
-                        <div class="text-center bg-light rounded-3 p-2 px-3"><div class="small text-muted fw-bold">CHUYÊN NGÀNH</div><div class="fw-bold text-dark mb-0">{{ profile_user.faculty or 'Chưa cập nhật' }}</div></div>
+                        <div class="text-center bg-light rounded-3 p-2 px-3"><div class="small text-muted fw-bold">HƯỚNG NGHIÊN CỨU</div><div class="fw-bold text-dark mb-0">{{ profile_user.faculty or 'Chưa cập nhật' }}</div></div>
                         <div class="text-center bg-light rounded-3 p-2 px-3"><div class="small text-muted fw-bold">GIẢI THƯỞNG</div><div class="h5 fw-bold text-success mb-0">{{ achievements|length if achievements else 0 }}</div></div>
-                        <div class="text-center bg-light rounded-3 p-2 px-3"><div class="small text-muted fw-bold">ĐIỂM NCKH</div><div class="h5 fw-bold text-primary mb-0">--</div></div>
+                        <div class="text-center bg-light rounded-3 p-2 px-3"><div class="small text-muted fw-bold">ĐIỂM NCKH</div><div class="h5 fw-bold text-primary mb-0">{{ ((final_scores | sum) / (final_scores | length)) | round(2) if (can_view_scores and final_scores) else '--' }}</div></div>
                     {% else %}
                         <div class="text-center bg-light rounded-3 p-2 px-3"><div class="small text-muted fw-bold">KHOA/BỘ MÔN</div><div class="fw-bold text-dark mb-0">{{ profile_user.faculty or 'Khoa CNTT' }}</div></div>
                         <div class="text-center bg-light rounded-3 p-2 px-3"><div class="small text-muted fw-bold">ĐỀ TÀI ĐANG HƯỚNG DẪN</div><div class="h5 fw-bold text-success mb-0">--</div></div>
@@ -64,6 +69,49 @@
             </div>
         </div>
         
+        {% if profile_user.role == 'student' and can_view_scores %}
+        <div class="col-12">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-table-list me-2"></i> Bảng điểm NCKH</h6>
+                {% if scores %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light text-muted small">
+                            <tr>
+                                <th style="width: 50px;">STT</th>
+                                <th>ĐỀ TÀI</th>
+                                <th>HỌC KỲ</th>
+                                <th class="text-center">ĐIỂM GVHD</th>
+                                <th class="text-center">ĐIỂM HỘI ĐỒNG</th>
+                                <th class="text-center">TỔNG KẾT</th>
+                                <th class="text-center">XẾP LOẠI</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in scores %}
+                            <tr>
+                                <td class="text-muted">{{ loop.index }}</td>
+                                <td class="fw-bold text-dark">{{ s.topic_title or '—' }}</td>
+                                <td>{{ s.semester or '—' }}</td>
+                                <td class="text-center">{{ s.mentor_score if s.mentor_score is not none else '--' }}</td>
+                                <td class="text-center">{{ s.council_score if s.council_score is not none else '--' }}</td>
+                                <td class="text-center fw-bold text-primary">{{ s.final_score if s.final_score is not none else '--' }}</td>
+                                <td class="text-center"><span class="badge bg-success-subtle text-success">{{ s.grade or '--' }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fa-solid fa-chart-column fs-1 mb-3 d-block opacity-25"></i>
+                    <div class="small">Chưa có điểm NCKH.</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
         {% if profile_user.role == 'student' %}
         <div class="col-md-4">
             <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
@@ -125,6 +173,60 @@
         </div>
         {% endif %}
     </div>
+
+    {% if session.get('user_id') == profile_user.id %}
+    <script>
+    (function () {
+        const input = document.getElementById('avatarFileInput');
+        if (!input) return;
+        const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+        const notify = (msg, icon) => (window.Swal
+            ? Swal.fire({ toast: true, position: 'top-end', icon: icon || 'info', title: msg, timer: 3000, showConfirmButton: false })
+            : alert(msg));
+
+        input.addEventListener('change', async function () {
+            const file = input.files && input.files[0];
+            if (!file) return;
+            if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+                notify('Chỉ chấp nhận ảnh PNG, JPG hoặc WEBP.', 'warning'); input.value = ''; return;
+            }
+            if (file.size > MAX_SIZE) {
+                notify('Ảnh quá lớn (tối đa 2MB).', 'warning'); input.value = ''; return;
+            }
+
+            const img = document.getElementById('avatarImg');
+            const initials = document.getElementById('avatarInitials');
+            const btn = document.getElementById('btnChangeAvatar');
+            const oldSrc = img.getAttribute('src') || '';
+            const wasHidden = img.classList.contains('d-none');
+
+            // Xem trước ngay
+            img.src = URL.createObjectURL(file);
+            img.classList.remove('d-none');
+            initials.classList.add('d-none');
+            btn.disabled = true;
+
+            try {
+                const fd = new FormData();
+                fd.append('avatar', file);
+                const resp = await fetch('/api/profile/avatar', { method: 'POST', body: fd });
+                const data = await resp.json().catch(() => ({}));
+                if (!resp.ok) throw new Error(data.error || 'Không thể tải ảnh lên.');
+                if (data.avatar_url) img.src = data.avatar_url;
+                notify('Đã cập nhật ảnh đại diện.', 'success');
+            } catch (err) {
+                // Hoàn tác khi lỗi
+                if (oldSrc) { img.src = oldSrc; } else { img.removeAttribute('src'); }
+                if (wasHidden) { img.classList.add('d-none'); initials.classList.remove('d-none'); }
+                notify(err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                input.value = '';
+            }
+        });
+    })();
+    </script>
+    {% endif %}
 </div>
 {% endblock %}
 

@@ -15,7 +15,7 @@ Endpoints:
        GET    /api/slots/my-bookings     lich da dat cua toi
   Chung: POST /api/slots/<id>/cancel     huy lich da dat (SV dat hoac GV)
 """
-from datetime import datetime, timedelta, date as date_cls
+from datetime import datetime, timedelta, date as date_cls, time as time_cls
 from zoneinfo import ZoneInfo
 
 from flask import Blueprint, request, jsonify, session
@@ -29,6 +29,8 @@ LOCAL_TZ = ZoneInfo('Asia/Ho_Chi_Minh')
 DEFAULT_SLOT_MINUTES = 30
 MIN_SLOT_MINUTES, MAX_SLOT_MINUTES = 10, 120
 MAX_SLOTS_PER_REQUEST = 200
+WORK_START = time_cls(7, 30)          # Gio hanh chinh: 07:30 - 17:00
+WORK_END = time_cls(17, 0)
 MAX_ACTIVE_BOOKINGS_PER_GROUP = 1      # 1 nhom chi giu 1 lich sap toi / GV
 ACCEPTED_MEMBER_STATUSES = ('accepted', 'joined')
 
@@ -181,6 +183,14 @@ def create_slots():
         return _err(f'Độ dài mỗi khung phải từ {MIN_SLOT_MINUTES} đến {MAX_SLOT_MINUTES} phút', 400)
     if t_end <= t_start:
         return _err('Giờ kết thúc phải sau giờ bắt đầu', 400)
+    if t_start < WORK_START or t_end > WORK_END:
+        return _err(f'Khung giờ phải nằm trong giờ hành chính '
+                    f'({WORK_START:%H:%M} - {WORK_END:%H:%M})', 400)
+    if (datetime.combine(date_cls.today(), t_end) - datetime.combine(date_cls.today(), t_start)
+            < timedelta(minutes=minutes)):
+        return _err(f'Khoảng thời gian phải đủ cho ít nhất 1 khung ({minutes} phút)', 400)
+    if all(datetime.combine(d, t_end) <= now_local() for d in day_list):
+        return _err('Tất cả các ngày/giờ đã chọn đều nằm trong quá khứ', 400)
 
     step = timedelta(minutes=minutes)
     now = now_local()
