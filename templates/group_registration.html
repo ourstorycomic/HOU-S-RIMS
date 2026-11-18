@@ -316,9 +316,18 @@
                                             <span>Mời tham gia</span>
                                         </button>
                                     </div>
-                                    <p class="text-[11px] text-slate-400 mt-1.5">
-                                        Hệ thống sẽ tự động kiểm tra Mã SV trong cơ sở dữ liệu và gửi thông báo mời tham gia tới sinh viên đó.
-                                    </p>
+                                    <!-- TASK 3.3: CHUẨN HÓA TEXT HƯỚNG DẪN 1-5 SV & LƯU Ý MSSV -->
+                                    <div class="mt-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600">
+                                        <div class="flex items-center gap-1.5 text-primary font-bold mb-1">
+                                            <i class="fa-solid fa-circle-info text-xs"></i>
+                                            <span>Quy định nhóm NCKH:</span>
+                                        </div>
+                                        <ul class="list-disc pl-4 space-y-0.5 text-[11.5px] text-slate-500">
+                                            <li>Quy mô nhóm: <strong>1 - 5 sinh viên/nhóm</strong> (theo Quy chế Nghiên cứu Khoa học Sinh viên).</li>
+                                            <li>Nhập chính xác <strong>Mã số sinh viên (MSSV)</strong> (ví dụ: <code>24A1001D0342</code>).</li>
+                                            <li>Thành viên được mời cần xác nhận <em>"Đồng ý"</em> trên hệ thống để hoàn tất danh sách.</li>
+                                        </ul>
+                                    </div>
                                 </div>
 
                                 <!-- DANH SÁCH THÀNH VIÊN ĐÃ MỜI / ĐÃ THAM GIA -->
@@ -498,10 +507,13 @@
                 <div class="sm:col-span-5">
                     <select id="modalFacultyFilter" onchange="filterMentorsInModal()"
                             class="w-full py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
-                        <option value="">Tất cả các Khoa</option>
-                        {% for fac_name in faculties.keys() %}
-                        <option value="{{ fac_name }}">{{ fac_name }}</option>
-                        {% endfor %}
+                        <option value="">-- Tất cả Hướng nghiên cứu --</option>
+                        <option value="ai_vision">Trí tuệ nhân tạo & Thị giác máy tính</option>
+                        <option value="security">An toàn thông tin & Mật mã học</option>
+                        <option value="nlp_llm">Xử lý ngôn ngữ tự nhiên & LLMs</option>
+                        <option value="se_web">Công nghệ phần mềm & Web/App</option>
+                        <option value="iot_embedded">Hệ thống nhúng & IoT</option>
+                        <option value="is_edtech">Hệ thống thông tin & Chuyển đổi số</option>
                     </select>
                 </div>
             </div>

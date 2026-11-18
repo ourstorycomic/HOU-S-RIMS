@@ -93,3 +93,111 @@ def lookup_mentors():
         ]
     })
 
+
+
+# =========================================================================
+# TASK 3.4: UPLOAD AVATAR & BẢNG ĐIỂM (TRANSCRIPT)
+# =========================================================================
+import os
+from datetime import datetime
+from werkzeug.utils import secure_filename
+from flask import session
+
+@student_bp.route('/api/students/upload-avatar', methods=['POST'])
+@student_bp.route('/api/user/upload-avatar', methods=['POST'])
+def upload_avatar():
+    uid = session.get('user_id')
+    user = User.query.get(uid) if uid else None
+    if not user:
+        return jsonify({'error': 'Vui lòng đăng nhập để thực hiện!'}), 401
+    
+    import base64
+    is_serverless = bool(os.getenv('VERCEL') or os.getenv('AWS_LAMBDA_FUNCTION_NAME') or os.getenv('LAMBDA_TASK_ROOT'))
+    if is_serverless:
+        upload_dir = '/tmp/uploads/avatars'
+    else:
+        upload_dir = os.path.join(request.environ.get('FLASK_APP_DIR', '.'), 'static', 'uploads', 'avatars')
+    try:
+        os.makedirs(upload_dir, exist_ok=True)
+    except Exception:
+        pass
+
+    # Check if base64 data URI was sent (e.g. from Cropper.js)
+    data = request.get_json(silent=True) or {}
+    base64_data = data.get('avatar_base64') or data.get('image')
+
+    if base64_data:
+        try:
+            if ',' in base64_data:
+                header, encoded = base64_data.split(',', 1)
+            else:
+                encoded = base64_data
+            img_bytes = base64.b64decode(encoded)
+            unique_name = f"avatar_{user.id}_{int(datetime.utcnow().timestamp())}.png"
+            save_path = os.path.join(upload_dir, unique_name)
+            with open(save_path, 'wb') as f:
+                f.write(img_bytes)
+        except Exception as e:
+            return jsonify({'error': f'Lỗi xử lý ảnh crop: {str(e)}'}), 400
+    else:
+        file = request.files.get('avatar') or request.files.get('file')
+        if not file or file.filename == '':
+            return jsonify({'error': 'Vui lòng chọn file ảnh tải lên!'}), 400
+            
+        filename = secure_filename(file.filename)
+        ext = os.path.splitext(filename)[1].lower()
+        if ext not in ['.jpg', '.jpeg', '.png', '.webp']:
+            return jsonify({'error': 'Chỉ chấp nhận file ảnh định dạng JPG, PNG hoặc WEBP!'}), 400
+        
+        unique_name = f"avatar_{user.id}_{int(datetime.utcnow().timestamp())}{ext}"
+        save_path = os.path.join(upload_dir, unique_name)
+        file.save(save_path)
+    
+    relative_path = f"uploads/avatars/{unique_name}"
+    user.avatar_url = relative_path
+    db.session.commit()
+    
+    return jsonify({
+        'message': 'Đã cập nhật ảnh đại diện thành công!',
+        'avatar_url': relative_path
+    }), 200
+
+@student_bp.route('/api/students/upload-transcript', methods=['POST'])
+@student_bp.route('/api/user/upload-transcript', methods=['POST'])
+def upload_transcript():
+    uid = session.get('user_id')
+    user = User.query.get(uid) if uid else None
+    if not user:
+        return jsonify({'error': 'Vui lòng đăng nhập để thực hiện!'}), 401
+    
+    file = request.files.get('transcript') or request.files.get('file')
+    if not file or file.filename == '':
+        return jsonify({'error': 'Vui lòng chọn file bảng điểm tải lên!'}), 400
+        
+    filename = secure_filename(file.filename)
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in ['.pdf', '.jpg', '.jpeg', '.png']:
+        return jsonify({'error': 'Chỉ chấp nhận file bảng điểm định dạng PDF, JPG hoặc PNG!'}), 400
+        
+    is_serverless = bool(os.getenv('VERCEL') or os.getenv('AWS_LAMBDA_FUNCTION_NAME') or os.getenv('LAMBDA_TASK_ROOT'))
+    if is_serverless:
+        upload_dir = '/tmp/uploads/transcripts'
+    else:
+        upload_dir = os.path.join(request.environ.get('FLASK_APP_DIR', '.'), 'static', 'uploads', 'transcripts')
+    try:
+        os.makedirs(upload_dir, exist_ok=True)
+    except Exception:
+        pass
+    
+    unique_name = f"transcript_{user.id}_{int(datetime.utcnow().timestamp())}{ext}"
+    save_path = os.path.join(upload_dir, unique_name)
+    file.save(save_path)
+    
+    relative_path = f"uploads/transcripts/{unique_name}"
+    user.transcript_url = relative_path
+    db.session.commit()
+    
+    return jsonify({
+        'message': 'Đã tải lên bảng điểm thành công!',
+        'transcript_url': relative_path
+    }), 200

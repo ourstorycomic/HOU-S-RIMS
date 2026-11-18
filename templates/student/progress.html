@@ -17,7 +17,28 @@
                                 </div>
                             </div>
                             
-                            <h3 class="fw-bold mb-5" style="line-height: 1.4;">{{ active_topic.title }}</h3>
+                            <h3 class="fw-bold mb-4" style="line-height: 1.4;">{{ active_topic.title }}</h3>
+
+                            {% if active_topic.council %}
+                            <!-- TASK 2.5: THÔNG BÁO HỘI ĐỒNG (ẨN GIỜ BÁO CÁO CHI TIẾT ĐỐI VỚI SINH VIÊN) -->
+                            <div class="alert alert-primary border-0 rounded-4 shadow-xs mb-4 d-flex flex-wrap align-items-center justify-content-between p-3" style="background-color: #eff6ff;">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center shadow-xs flex-shrink-0" style="width: 40px; height: 40px;">
+                                        <i class="fa-solid fa-gavel"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-dark">{{ active_topic.council.name }}</div>
+                                        <div class="small text-muted">
+                                            <i class="fa-regular fa-calendar-check me-1 text-primary"></i> Hạn báo cáo: <strong>{{ active_topic.council.meeting_date.strftime('%d/%m/%Y') if active_topic.council.meeting_date else 'Đang cập nhật' }}</strong>
+                                            {% if active_topic.council.location %} • Địa điểm: {{ active_topic.council.location }}{% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold">
+                                    Chờ phiên báo cáo
+                                </span>
+                            </div>
+                            {% endif %}
 
                             <h6 class="fw-bold text-muted text-uppercase mb-4 small"><i class="fa-solid fa-diagram-project me-2"></i> TIMELINE & MILESTONE</h6>
                             

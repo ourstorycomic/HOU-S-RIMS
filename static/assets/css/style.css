@@ -3,7 +3,7 @@
     /* Color Palette */
     --primary-blue: #2563eb;       /* Dùng cho Admin & Faculty */
     --primary-purple: #6366f1;     /* Dùng cho Lecturer */
-    --student-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); /* Dùng cho Student */
+    --student-gradient: linear-gradient(135deg, #0284c7 0%, #0ea5e9 50%, #38bdf8 100%); /* Dùng cho Student - Xanh nước tươi sáng */
     
     /* Status Colors (Ranking) */
     --rank-a: #10b981; /* Xuất sắc - Green */
@@ -121,11 +121,12 @@ a { text-decoration: none !important; }
 }
 
 .nav-link.active-student {
-    background: linear-gradient(90deg, rgba(99, 102, 241, 0.15) 0%, transparent 100%);
+    background: linear-gradient(90deg, rgba(2, 132, 199, 0.22) 0%, transparent 100%);
     color: #fff;
-    border-left: 3px solid #6366f1;
+    border-left: 3px solid #38bdf8;
+    font-weight: 600;
 }
-.nav-link.active-student i { color: #fff !important; }
+.nav-link.active-student i { color: #38bdf8 !important; }
 
 
 /* ==========================================================================
@@ -918,9 +919,11 @@ a { text-decoration: none !important; }
     color: #1e293b;
 }
 .word-editor-toolbar .btn-tool.active {
-    background: #e0e7ff;
-    color: #4338ca;
-    border-color: #c7d2fe;
+    background: #e0f2fe !important;
+    color: #0284c7 !important;
+    border-color: #38bdf8 !important;
+    box-shadow: 0 1px 3px rgba(2, 132, 199, 0.25) !important;
+    font-weight: bold;
 }
 .word-editor-toolbar .tool-separator {
     width: 1px;
@@ -1011,8 +1014,22 @@ a { text-decoration: none !important; }
 }
 
 .notif-modal-body {
-    padding: 22px 24px !important;
+    padding: 20px 24px !important;
     background: #f8fafc !important;
+}
+.notif-rich-content {
+    font-size: 13.5px !important;
+    line-height: 1.65 !important;
+    color: #1e293b !important;
+}
+.notif-rich-content p {
+    margin-bottom: 0.65rem !important;
+}
+.notif-rich-content p:last-child {
+    margin-bottom: 0 !important;
+}
+.shadow-2xs {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04) !important;
 }
 .notif-detail-modal-card .mb-3,
 .notif-detail-modal-card .mb-3\.5 {
@@ -1069,3 +1086,22 @@ a { text-decoration: none !important; }
 .mb-3\.5 { margin-bottom: 0.875rem !important; }
 .border-slate-200 { border-color: #e2e8f0 !important; }
 .shadow-xs, .shadow-2xs { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important; }
+
+/* Notification Dropdown States */
+.notif-dropdown-item {
+    transition: background-color 0.2s ease, border-color 0.2s ease !important;
+}
+.notif-dropdown-item.notif-unread {
+    background-color: #f0f9ff !important;
+    border-left: 3.5px solid #0284c7 !important;
+}
+.notif-dropdown-item.notif-unread:hover {
+    background-color: #e0f2fe !important;
+}
+.notif-dropdown-item.notif-read {
+    background-color: #ffffff !important;
+    border-left: 3.5px solid transparent !important;
+}
+.notif-dropdown-item.notif-read:hover {
+    background-color: #f8fafc !important;
+}

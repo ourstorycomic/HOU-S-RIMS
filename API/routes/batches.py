@@ -134,7 +134,7 @@ def create_batch():
         
         # Build compact timeline HTML for system notification
         notif_content = f"""
-        <h5 style='color: #4f46e5; margin-bottom: 8px;'>Đợt NCKH: {new_batch.name}</h5>
+        <h5 style='color: #0f172a; margin-bottom: 8px; font-weight: 700;'>{new_batch.name}</h5>
         <div style='background: #f8f9fa; padding: 10px; border-radius: 6px; font-size: 13px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;'>
             <span class='badge bg-primary'>{new_batch.type}</span>
             <span class='badge bg-secondary'>{new_batch.academic_year}</span>
@@ -425,10 +425,11 @@ def delete_batch(batch_id):
     batch = Batch.query.get_or_404(batch_id)
     try:
         batch_name = batch.name
-        # Soft delete: Chỉ ẩn đợt đi, không xóa dữ liệu trong CSDL để lưu trữ và truy xuất khi cần
-        batch.status = 'hidden'
+        with db.session.no_autoflush:
+            cascade_delete_batch_data(batch.id)
+            db.session.delete(batch)
         db.session.commit()
-        return jsonify({'message': f'Đã ẩn đợt NCKH "{batch_name}" thành công! Dữ liệu được bảo lưu an toàn trong hệ thống.', 'deleted_id': batch_id}), 200
+        return jsonify({'message': f'Đã xóa vĩnh viễn đợt NCKH "{batch_name}" thành công!', 'deleted_id': batch_id}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Không thể ẩn đợt NCKH này do có lỗi: {str(e)}'}), 500
+        return jsonify({'error': f'Không thể xóa đợt NCKH này do có lỗi: {str(e)}'}), 500

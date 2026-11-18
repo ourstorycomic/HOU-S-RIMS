@@ -36,7 +36,7 @@
                                 {% set is_faculty_revision = 'Khoa' in notif.content and ('chỉnh sửa' in notif.content or 'YÊU CẦU' in notif.content) %}
                                 {% set is_lecturer_review = 'Giảng viên' in notif.content or 'GV' in notif.content or 'đánh giá' in notif.content or 'hướng dẫn' in notif.content %}
                                 <li>
-                                    <a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start notif-dropdown-item {% if not notif.is_read %}bg-light{% endif %}" 
+                                    <a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start notif-dropdown-item {% if not notif.is_read %}notif-unread{% else %}notif-read{% endif %}" 
                                        href="javascript:void(0)" 
                                        data-notif-id="{{ notif.id }}" 
                                        data-notif-content="{{ notif.content | e }}" 
@@ -58,7 +58,13 @@
                                                     {% endif %}
                                                 </span>
                                                 {% if not notif.is_read %}
-                                                    <span class="badge bg-danger rounded-circle p-1" style="width:8px; height:8px;"></span>
+                                                    <span class="badge bg-primary text-white rounded-pill px-2 py-0.5 fw-bold d-inline-flex align-items-center gap-1 flex-shrink-0" style="font-size: 9.5px;">
+                                                        <span style="width: 5px; height: 5px; border-radius: 50%; background-color: #ffffff; display: inline-block;"></span>Chưa đọc
+                                                    </span>
+                                                {% else %}
+                                                    <span class="text-muted d-inline-flex align-items-center gap-1 flex-shrink-0" style="font-size: 10px; font-weight: 500;">
+                                                        <span style="width: 5px; height: 5px; border-radius: 50%; background-color: #cbd5e1; display: inline-block;"></span>Đã đọc
+                                                    </span>
                                                 {% endif %}
                                             </div>
                                             <div class="small text-muted mb-1" style="line-height: 1.4; white-space: normal;">{{ notif.content.split('|||')[0] | striptags | replace('\n', ' ') | truncate(85) }}</div>

@@ -241,3 +241,24 @@ def sync_notifications():
         'faculty_pending_count': faculty_pending_count,
         'system_state_hash': system_state_hash
     }), 200
+
+
+# =========================================================================
+# TASK 2.7: API CRON NHẮC VIỆC TỰ ĐỘNG (DEADLINE & HỘI ĐỒNG)
+# =========================================================================
+@notifications_bp.route('/cron/check-deadlines', methods=['GET', 'POST'])
+def trigger_deadline_reminders():
+    """
+    Trigger quét hạn deadline báo cáo và lịch họp Hội đồng để gửi email/thông báo nhắc việc
+    """
+    try:
+        from event_mailer import check_and_send_deadline_reminders
+        sent = check_and_send_deadline_reminders()
+        return jsonify({
+            'status': 'success',
+            'message': f'Đã quét và gửi thành công {len(sent)} thông báo nhắc việc tự động!',
+            'reminders_count': len(sent),
+            'reminders': sent
+        }), 200
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 500

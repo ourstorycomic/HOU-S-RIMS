@@ -86,3 +86,6 @@ temp/
 tmp/
 
 *.exe
+
+# Scratch directory
+scratch/

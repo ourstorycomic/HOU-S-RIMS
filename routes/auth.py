@@ -10,6 +10,18 @@ from sqlalchemy import func, or_
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
+    # Nếu user đã đăng nhập mà truy cập lại /login (hoặc bấm nút Back trình duyệt về /login) -> tự động chuyển về trang chủ tương ứng của role
+    if request.method == 'GET' and session.get('user_id'):
+        role = session.get('role', '').lower()
+        if role == 'student':
+            return redirect(url_for('web.student_page'))
+        elif role == 'lecturer':
+            return redirect(url_for('lecturer.dashboard'))
+        elif role == 'faculty':
+            return redirect(url_for('faculty.dashboard'))
+        elif role == 'admin':
+            return redirect(url_for('web.admin_page'))
+
     if request.method == 'POST':
         raw_username = (request.form.get('username') or '').strip()
         password = request.form.get('password', '').strip()
@@ -110,6 +122,7 @@ def api_login():
             pass
 
     if user and valid_pw:
+
         access_token = create_access_token(identity=user.username, additional_claims={"role": user.role, "name": user.full_name})
         return jsonify(access_token=access_token, user=user.to_dict()), 200
 

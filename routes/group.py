@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, render_template, session, redirect, url_for
-from models import db, Group, GroupMember, User, Batch, Notification
+from models import db, Group, GroupMember, User, Batch, Notification, Topic
 from datetime import datetime
 from sqlalchemy import func, or_
 
@@ -249,13 +249,19 @@ def invite_member(group_id):
         )
         db.session.add(new_member)
         
-        # Tạo thông báo gửi đến sinh viên được mời
+        # Tạo thông báo gửi đến sinh viên được mời & thông báo cho người mời (Trưởng nhóm)
         try:
             notif = Notification(
                 user_id=target_student.id,
-                content=f"Sinh viên {current_user.full_name} đã mời bạn tham gia nhóm NCKH: {group.name}."
+                content=f"Sinh viên <strong>{current_user.full_name}</strong> đã mời bạn tham gia nhóm NCKH: <strong>{group.name}</strong>. Vui lòng vào mục Thông báo để xem chi tiết và xác nhận."
             )
             db.session.add(notif)
+
+            inviter_notif = Notification(
+                user_id=current_user.id,
+                content=f"Bạn đã gửi lời mời tham gia nhóm NCKH <strong>{group.name}</strong> tới sinh viên <strong>{target_student.full_name}</strong> ({target_student.student_id or target_student.username}). Lời mời đang chờ phản hồi."
+            )
+            db.session.add(inviter_notif)
         except Exception:
             pass
             
@@ -264,6 +270,193 @@ def invite_member(group_id):
         return jsonify({
             'success': True,
             'message': f'Đã gửi lời mời thành công đến sinh viên {target_student.full_name} ({target_student.student_id or target_student.username})!',
+            'member': new_member.to_dict()
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': f'Lỗi khi mời thành viên: {str(e)}'
+        }), 500
+
+
+# ==========================================
+# 3.1 API: Mời sinh viên vào nhóm trực tiếp (tự động tạo nhóm nếu chưa có)
+# POST /api/groups/invite_direct
+# ==========================================
+@group_bp.route('/api/groups/invite_direct', methods=['POST'])
+def invite_member_direct():
+    current_user = get_current_user()
+    if not current_user:
+        return jsonify({'success': False, 'error': 'Vui lòng đăng nhập để thực hiện thao tác này!'}), 401
+    
+    try:
+        data = request.get_json(silent=True) or {}
+        raw_student_id = str(data.get('student_id') or data.get('student_code') or '').strip()
+        
+        if not raw_student_id:
+            return jsonify({'success': False, 'error': 'Vui lòng cung cấp thông tin sinh viên cần mời!'}), 400
+        
+        # Tìm sinh viên trong hệ thống theo id, mã SV, hoặc username
+        target_student = User.query.filter(
+            func.lower(User.role) == 'student',
+            or_(
+                func.lower(User.student_id) == raw_student_id.lower(),
+                func.lower(User.username) == raw_student_id.lower(),
+                User.id == (int(raw_student_id) if raw_student_id.isdigit() else -1)
+            )
+        ).first()
+        
+        if not target_student:
+            return jsonify({
+                'success': False,
+                'error': f'Không tìm thấy sinh viên nào với thông tin "{raw_student_id}" trong hệ thống!'
+            }), 404
+            
+        if target_student.id == current_user.id:
+            return jsonify({
+                'success': False,
+                'error': 'Bạn là Trưởng nhóm, không thể tự gửi lời mời cho chính mình!'
+            }), 400
+
+        # Lấy đợt NCKH đang kích hoạt
+        active_batch = Batch.query.filter_by(status='active').order_by(Batch.id.desc()).first()
+        batch_id = active_batch.id if active_batch else None
+
+        # Kiểm tra nhóm của người mời
+        my_group = None
+        if batch_id:
+            my_group = Group.query.filter_by(leader_id=current_user.id, batch_id=batch_id).order_by(Group.id.desc()).first()
+        else:
+            my_group = Group.query.filter_by(leader_id=current_user.id).order_by(Group.id.desc()).first()
+
+        # Nếu chưa có nhóm do mình làm trưởng nhóm:
+        if not my_group:
+            # Kiểm tra xem có đang là thành viên chính thức của nhóm khác không
+            other_m = None
+            if batch_id:
+                other_m = GroupMember.query.join(Group).filter(
+                    GroupMember.student_id == current_user.id,
+                    Group.batch_id == batch_id,
+                    GroupMember.status.in_(['joined', 'accepted'])
+                ).first()
+            if other_m:
+                return jsonify({
+                    'success': False,
+                    'error': 'Bạn đang là thành viên của nhóm NCKH khác. Chỉ Trưởng nhóm mới có quyền mời thêm thành viên!'
+                }), 400
+
+            # Khởi tạo nhóm mới cho sinh viên này làm trưởng nhóm
+            group_name = f"Nhóm NCKH - {current_user.full_name}"
+            my_group = Group(
+                name=group_name,
+                batch_id=batch_id,
+                leader_id=current_user.id,
+                status='draft',
+                created_at=datetime.utcnow()
+            )
+            db.session.add(my_group)
+            db.session.flush()
+
+            # Thêm trưởng nhóm
+            leader_gm = GroupMember(
+                group_id=my_group.id,
+                student_id=current_user.id,
+                status='joined'
+            )
+            db.session.add(leader_gm)
+
+        # Kiểm tra sinh viên được mời đã là thành viên chính thức nhóm khác chưa
+        target_in_other = None
+        if batch_id:
+            target_in_other = GroupMember.query.join(Group).filter(
+                GroupMember.student_id == target_student.id,
+                Group.batch_id == batch_id,
+                Group.id != my_group.id,
+                GroupMember.status.in_(['joined', 'accepted'])
+            ).first()
+        if target_in_other:
+            return jsonify({
+                'success': False,
+                'error': f'Sinh viên {target_student.full_name} ({target_student.student_id or target_student.username}) hiện đã là thành viên của một nhóm nghiên cứu khác trong đợt này!'
+            }), 400
+
+        # Kiểm tra số lượng thành viên trong nhóm (tối đa 5)
+        current_count = GroupMember.query.filter(
+            GroupMember.group_id == my_group.id,
+            GroupMember.status.in_(['joined', 'accepted', 'invited', 'pending'])
+        ).count()
+        if current_count >= 5:
+            return jsonify({
+                'success': False,
+                'error': 'Nhóm của bạn đã đủ 5 thành viên tối đa (bao gồm Trưởng nhóm)!'
+            }), 400
+
+        # Kiểm tra trạng thái trong nhóm hiện tại
+        existing_gm = GroupMember.query.filter_by(group_id=my_group.id, student_id=target_student.id).first()
+        if existing_gm:
+            if existing_gm.status in ['joined', 'accepted']:
+                return jsonify({
+                    'success': False,
+                    'error': f'Sinh viên {target_student.full_name} đã là thành viên trong nhóm của bạn!'
+                }), 400
+            elif existing_gm.status in ['invited', 'pending']:
+                return jsonify({
+                    'success': False,
+                    'error': f'Lời mời đã được gửi tới sinh viên {target_student.full_name}. Vui lòng chờ phản hồi!'
+                }), 400
+            else:
+                existing_gm.status = 'invited'
+                new_member = existing_gm
+        else:
+            new_member = GroupMember(
+                group_id=my_group.id,
+                student_id=target_student.id,
+                status='invited'
+            )
+            db.session.add(new_member)
+
+        # Gửi thông báo cho sinh viên được mời
+        try:
+            notif_target = Notification(
+                user_id=target_student.id,
+                content=f"Sinh viên <strong>{current_user.full_name}</strong> đã mời bạn tham gia nhóm NCKH: <strong>{my_group.name}</strong>. Vui lòng vào mục Thông báo để xem chi tiết và xác nhận."
+            )
+            db.session.add(notif_target)
+
+            # Gửi thông báo cho sinh viên mời (Trưởng nhóm)
+            notif_inviter = Notification(
+                user_id=current_user.id,
+                content=f"Bạn đã gửi lời mời tham gia nhóm NCKH <strong>{my_group.name}</strong> tới sinh viên <strong>{target_student.full_name}</strong> ({target_student.student_id or target_student.username}). Lời mời đang chờ phản hồi."
+            )
+            db.session.add(notif_inviter)
+        except Exception:
+            pass
+
+        # Gửi lời mời trong hệ thống tin nhắn Message nếu có
+        try:
+            from models import Message as Msg
+            import json
+            invite_msg = Msg(
+                sender_id=current_user.id,
+                receiver_id=target_student.id,
+                group_id=None,
+                content=f"📩 Mời bạn tham gia nhóm NCKH **{my_group.name}**. Nhấn Đồng ý để xác nhận.",
+                message_type='invitation',
+                meta_data=json.dumps({'invite_group_id': my_group.id, 'group_name': my_group.name})
+            )
+            db.session.add(invite_msg)
+        except Exception:
+            pass
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': f'Đã gửi lời mời tham gia nhóm tới sinh viên {target_student.full_name} ({target_student.student_id or target_student.username}) thành công!',
+            'group_id': my_group.id,
+            'group_name': my_group.name,
             'member': new_member.to_dict()
         }), 201
 
@@ -380,7 +573,10 @@ def remove_member(group_id, member_id):
         if group.leader_id != current_user.id:
             return jsonify({'success': False, 'error': 'Chỉ trưởng nhóm mới có quyền xóa thành viên!'}), 403
             
-        member = GroupMember.query.filter_by(id=member_id, group_id=group.id).first()
+        member = GroupMember.query.filter(
+            GroupMember.group_id == group.id,
+            (GroupMember.id == member_id) | (GroupMember.student_id == member_id)
+        ).first()
         if not member:
             return jsonify({'success': False, 'error': 'Không tìm thấy thành viên trong nhóm!'}), 404
             
@@ -398,6 +594,73 @@ def remove_member(group_id, member_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ==========================================
+# 4. API: Thành viên tự rời khỏi nhóm
+# POST /api/groups/<group_id>/leave
+# ==========================================
+@group_bp.route('/api/groups/<int:group_id>/leave', methods=['POST'])
+def leave_group(group_id):
+    current_user = get_current_user()
+    if not current_user:
+        return jsonify({'success': False, 'error': 'Vui lòng đăng nhập để thực hiện thao tác này!'}), 401
+
+    try:
+        group = db.session.get(Group, group_id)
+        if not group:
+            return jsonify({'success': False, 'error': 'Không tìm thấy nhóm nghiên cứu này!'}), 404
+
+        # Trưởng nhóm không dùng chức năng này
+        if group.leader_id == current_user.id:
+            return jsonify({
+                'success': False,
+                'error': 'Bạn là Trưởng nhóm, không thể tự rời nhóm! Nếu không tiếp tục nghiên cứu, bạn có thể thực hiện Hủy đề tài.'
+            }), 400
+
+        # Kiểm tra xem đề tài đã được Khoa phê duyệt chính thức chưa
+        approved_topic = Topic.query.filter_by(group_id=group.id, status='approved').first()
+        if approved_topic:
+            return jsonify({
+                'success': False,
+                'error': 'Đề tài của nhóm đã được Khoa phê duyệt chính thức. Bạn không thể tự ý rời nhóm ở giai đoạn này!'
+            }), 400
+
+        # Tìm bản ghi thành viên
+        member = GroupMember.query.filter_by(group_id=group.id, student_id=current_user.id).first()
+        if not member:
+            return jsonify({'success': False, 'error': 'Bạn không phải là thành viên của nhóm này!'}), 404
+
+        group_name = group.name
+        leader_id = group.leader_id
+        db.session.delete(member)
+
+        # Gửi thông báo đến Trưởng nhóm
+        try:
+            notif_leader = Notification(
+                user_id=leader_id,
+                content=f"Sinh viên <strong>{current_user.full_name}</strong> ({current_user.student_id or current_user.username}) đã rời khỏi nhóm NCKH <strong>{group_name}</strong> của bạn."
+            )
+            db.session.add(notif_leader)
+
+            notif_me = Notification(
+                user_id=current_user.id,
+                content=f"Bạn đã rời khỏi nhóm NCKH <strong>{group_name}</strong> thành công. Bạn hiện có thể đăng ký đề tài mới hoặc nhận lời mời từ nhóm khác."
+            )
+            db.session.add(notif_me)
+        except Exception:
+            pass
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': f'Bạn đã rời khỏi nhóm "{group_name}" thành công!'
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': f'Lỗi khi rời nhóm: {str(e)}'}), 500
 
 @group_bp.route('/api/groups/mentors', methods=['GET'])
 def get_mentors_list():

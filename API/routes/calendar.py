@@ -93,8 +93,15 @@ def create_event():
     # Không cho đặt lịch hẹn trong quá khứ (tính cả giờ)
     if start <= _now_local():
         return jsonify({'error': 'Không thể đặt lịch hẹn trong quá khứ (tính cả giờ)'}), 400
-    if end < start:
-        return jsonify({'error': 'Thời gian kết thúc phải sau thời gian bắt đầu'}), 400
+    if end <= start:
+        return jsonify({'error': 'Giờ kết thúc phải sau giờ bắt đầu!'}), 400
+
+    # Task 3.7: Bắt lỗi khung giờ hành chính (07:30 - 17:30)
+    from datetime import time as time_cls
+    office_start = time_cls(7, 30)
+    office_end = time_cls(17, 30)
+    if start.time() < office_start or end.time() > office_end:
+        return jsonify({'error': 'Lịch hẹn phải nằm trong khung giờ hành chính (từ 07:30 đến 17:30)!'}), 400
 
     try:
         new_meeting = Meeting(

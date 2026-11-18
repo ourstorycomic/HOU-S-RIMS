@@ -26,7 +26,7 @@ def admin_page():
     from models import Topic, User, Batch, Council, Group
     topics = Topic.query.all()
     users = User.query.all()
-    batches = Batch.query.order_by(Batch.id.desc()).all()
+    batches = Batch.query.filter(Batch.status != 'hidden').order_by(Batch.id.desc()).all()
     councils = Council.query.all()
     groups = Group.query.all()
     return render_template('admin.html', topics=topics, users=users, batches=batches, councils=councils, groups=groups)
@@ -40,15 +40,36 @@ def analysis_page():
     return render_template('analysis.html')
 
 @web_bp.route('/student')
-def student_page():
+@web_bp.route('/student/<string:tab_name>')
+def student_page(tab_name='explore'):
     if session.get('role') != 'student':
         return redirect(url_for('auth.login'))
+        
+    if tab_name == 'book-slot':
+        return render_template('student/book_slot.html')
+        
+    tab_slug_map = {
+        'explore': 's-explore',
+        'dashboard': 's-explore',
+        'mentors': 's-mentors',
+        'members': 's-members',
+        'profile': 's-profile',
+        'portfolio': 's-profile',
+        'register': 's-register',
+        'group': 's-group',
+        'progress': 's-group',
+        'templates': 's-templates',
+        'submit': 's-submit',
+        'chat': 's-chat',
+        'calendar': 's-calendar'
+    }
+    active_tab = tab_slug_map.get(tab_name, 's-explore')
     user_id = session.get('user_id')
     current_user = User.query.get(user_id) if user_id else None
     
     batches = Batch.query.filter_by(status='active').order_by(Batch.id.desc()).all()
     if not batches:
-        batches = Batch.query.order_by(Batch.id.desc()).all()
+        batches = Batch.query.filter(Batch.status != 'hidden').order_by(Batch.id.desc()).all()
     active_batch = batches[0] if (batches and batches[0].status == 'active') else None
     active_batch_id = active_batch.id if active_batch else None
 
@@ -59,7 +80,8 @@ def student_page():
         if not active_group:
             membership = GroupMember.query.join(Group).filter(
                 GroupMember.student_id == current_user.id,
-                Group.batch_id == active_batch_id
+                Group.batch_id == active_batch_id,
+                GroupMember.status.in_(['joined', 'accepted'])
             ).order_by(GroupMember.id.desc()).first()
             if membership:
                 active_group = Group.query.get(membership.group_id)
@@ -201,6 +223,7 @@ def student_page():
                            mentors=mentors,
                            faculties=faculties,
                            notifications=notifications,
+                           received_invitations=pending_invitations,
                            pending_invitations=pending_invitations,
                            sent_pending_invitations=sent_pending_invitations,
                            skills=skills,
@@ -209,12 +232,14 @@ def student_page():
                            students_list=students_list,
                            explore_topics=explore_topics,
                            explore_fields=explore_fields,
-                           explore_mentors=explore_mentors)
+                           explore_mentors=explore_mentors,
+                           active_tab=active_tab,
+                           active_slug=tab_name)
 
 # Danh sách giảng viên hướng dẫn (Mentor List)
 @web_bp.route('/mentors')
 def mentors_page():
-    return render_template('mentors.html')
+    return redirect('/student#s-mentors')
 
 # Chi tiết giảng viên (Mentor Detail)
 @web_bp.route('/mentor/detail')

@@ -49,37 +49,42 @@ def inject_common_data():
         approved_chat_groups=approved_chat_groups
     )
 
+from routes.web import student_page
+
 @student_bp.route('/')
 def index():
-    return redirect('/student#s-explore')
+    return student_page(tab_name='explore')
 
 @student_bp.route('/dashboard')
+@student_bp.route('/explore')
 def dashboard():
-    return redirect('/student#s-explore')
+    return student_page(tab_name='explore')
 
 @student_bp.route('/mentors')
 def mentors():
-    return redirect('/student#s-mentors')
+    return student_page(tab_name='mentors')
 
 @student_bp.route('/members')
 def members():
-    return redirect('/student#s-members')
+    return student_page(tab_name='members')
 
 @student_bp.route('/portfolio')
+@student_bp.route('/profile')
 def portfolio():
-    return redirect('/student#s-profile')
+    return student_page(tab_name='profile')
 
 @student_bp.route('/register')
 def register():
-    return redirect('/student#s-register')
+    return student_page(tab_name='register')
 
 @student_bp.route('/progress')
+@student_bp.route('/group')
 def progress():
-    return redirect('/student#s-group')
+    return student_page(tab_name='group')
 
 @student_bp.route('/calendar')
 def calendar():
-    return redirect('/student#s-calendar')
+    return student_page(tab_name='calendar')
 
 @student_bp.route('/book-slot')
 def book_slot():
@@ -87,22 +92,16 @@ def book_slot():
 
 @student_bp.route('/chat')
 def chat():
-    params = []
-    if request.args.get('target_id'):
-        params.append(f"target_id={request.args.get('target_id')}")
-    if request.args.get('mentor'):
-        params.append(f"mentor={request.args.get('mentor')}")
-    query_str = ('?' + '&'.join(params)) if params else ''
-    return redirect(f"/student{query_str}#s-chat")
+    return student_page(tab_name='chat')
 
 @student_bp.route('/result')
 def result():
-    return redirect('/student#s-register')
+    return student_page(tab_name='register')
 
 @student_bp.route('/templates')
 def templates_page():
-    return redirect('/student#s-templates')
+    return student_page(tab_name='templates')
 
 @student_bp.route('/submit')
 def submit():
-    return redirect('/student#s-submit')
+    return student_page(tab_name='submit')

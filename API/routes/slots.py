@@ -182,6 +182,13 @@ def create_slots():
     if t_end <= t_start:
         return _err('Giờ kết thúc phải sau giờ bắt đầu', 400)
 
+    # Task 3.7: Bắt lỗi khung giờ hành chính (07:30 - 17:30)
+    from datetime import time as time_cls
+    office_start = time_cls(7, 30)
+    office_end = time_cls(17, 30)
+    if t_start < office_start or t_end > office_end:
+        return _err('Khung giờ đặt lịch phải nằm trong giờ hành chính (từ 07:30 đến 17:30)', 400)
+
     step = timedelta(minutes=minutes)
     now = now_local()
     candidates = []

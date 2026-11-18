@@ -12,6 +12,35 @@ window._liveSyncTimer = null;
 async function handleGroupInvitation(groupId, action) {
     const isAcc = action === 'accepted';
     
+    // Task 3.2: Popup nhập lý do từ chối (SweetAlert2)
+    let rejectReason = '';
+    if (action === 'rejected') {
+        if (typeof Swal !== 'undefined') {
+            const { value: reasonText, isConfirmed } = await Swal.fire({
+                title: 'Từ chối lời mời vào nhóm',
+                html: '<p class="small text-muted mb-2">Vui lòng cung cấp lý do từ chối để gửi thông báo tới Trưởng nhóm:</p>',
+                input: 'textarea',
+                inputPlaceholder: 'Nhập lý do từ chối (Ví dụ: Em đã đăng ký nhóm khác, hướng nghiên cứu chưa phù hợp...)',
+                inputAttributes: {
+                    'rows': 3,
+                    'maxlength': 400
+                },
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: '<i class="fa-solid fa-xmark me-1"></i> Xác nhận từ chối',
+                cancelButtonText: 'Đóng',
+                inputValidator: (value) => {
+                    if (!value || !value.trim()) {
+                        return 'Vui lòng nhập lý do từ chối trước khi xác nhận!';
+                    }
+                }
+            });
+            if (!isConfirmed) return;
+            rejectReason = reasonText.trim();
+        }
+    }
+    
     // 1. Optimistic UI update: immediately change button to status badge in dropdown
     const itemEl = document.querySelector(`[data-inv-group-id="${groupId}"]`) || 
                    document.querySelector(`button[onclick*="handleGroupInvitation(${groupId}"]`)?.closest('li, .dropdown-item');
@@ -51,7 +80,7 @@ async function handleGroupInvitation(groupId, action) {
         const resp = await fetch('/api/topics/invitation', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({group_id: groupId, action: action})
+            body: JSON.stringify({group_id: groupId, action: action, reason: rejectReason})
         });
         const data = await resp.json().catch(() => ({}));
         if (resp.ok) {
@@ -494,6 +523,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // ===================== SAVE BATCH (standalone, called by onclick) =====================
 async function saveBatch() {
+    if (typeof window.syncBatchDescFromEditor === 'function') {
+        window.syncBatchDescFromEditor();
+    }
     const name = document.getElementById('batch-name')?.value?.trim();
     const year = document.getElementById('batch-year')?.value?.trim() || '2025-2026';
     const startDate = document.getElementById('batch-start-date')?.value;
@@ -551,12 +583,38 @@ document.addEventListener('DOMContentLoaded', function () {
         btnSubmitMeeting.addEventListener('click', async function() {
             const title = document.getElementById('meetingTitle')?.value?.trim();
             const desc = document.getElementById('meetingDesc')?.value?.trim();
-            const time = document.getElementById('meetingTime')?.value;
+            const dateVal = document.getElementById('meetingDate')?.value;
+            const startTimeVal = document.getElementById('meetingStartTime')?.value;
+            const endTimeVal = document.getElementById('meetingEndTime')?.value;
             const topicId = document.getElementById('meetingTopicId')?.value;
 
-            if (!title || !time) {
-                Swal.fire('Thiếu thông tin', 'Vui lòng điền tiêu đề và thời gian.', 'warning');
-                return;
+            // Hỗ trợ cả form cũ (meetingTime) nếu có
+            let time = document.getElementById('meetingTime')?.value;
+            let startIso = '';
+            let endIso = '';
+
+            if (dateVal && startTimeVal && endTimeVal) {
+                // Task 3.7: Validate giờ kết thúc > giờ bắt đầu
+                if (endTimeVal <= startTimeVal) {
+                    return Swal.fire('Lỗi thời gian', 'Giờ kết thúc cuộc họp phải sau giờ bắt đầu!', 'warning');
+                }
+
+                // Task 3.7: Validate khung giờ hành chính (07:30 - 17:30)
+                if (startTimeVal < '07:30' || endTimeVal > '17:30') {
+                    return Swal.fire('Ngoài giờ hành chính', 'Lịch hẹn phải nằm trong khung giờ hành chính (từ 07:30 đến 17:30)!', 'warning');
+                }
+
+                startIso = `${dateVal}T${startTimeVal}`;
+                endIso = `${dateVal}T${endTimeVal}`;
+            } else if (time) {
+                startIso = time;
+                endIso = time;
+            } else {
+                return Swal.fire('Thiếu thông tin', 'Vui lòng chọn ngày họp, giờ bắt đầu và giờ kết thúc!', 'warning');
+            }
+
+            if (!title) {
+                return Swal.fire('Thiếu thông tin', 'Vui lòng nhập tiêu đề cuộc họp.', 'warning');
             }
 
             try {
@@ -566,7 +624,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     body: JSON.stringify({
                         title: title,
                         description: desc,
-                        start_time: time,
+                        start_time: startIso,
+                        end_time: endIso,
                         topic_id: topicId ? parseInt(topicId) : null
                     })
                 });
@@ -1000,28 +1059,59 @@ async function submitUpdateProgress() {
 }
 
 async function submitEditProfile() {
-    const id = document.getElementById('editProfileId').value;
-    const name = document.getElementById('editProfileName').value;
-    const email = document.getElementById('editProfileEmail').value;
-    const phone = document.getElementById('editProfilePhone').value;
-    const bio = document.getElementById('editProfileBio').value;
-    const faculty = document.getElementById('editProfileFaculty').value;
+    const id = document.getElementById('editProfileId') ? document.getElementById('editProfileId').value : '';
+    const dobInput = document.getElementById('editProfileDob');
+    if (dobInput && dobInput.value.trim() && typeof validateDobString === 'function') {
+        const valRes = validateDobString(dobInput.value);
+        if (!valRes.valid) {
+            Swal.fire('Ngày sinh không hợp lệ', valRes.message, 'warning');
+            dobInput.focus();
+            return;
+        }
+    }
+    const name = document.getElementById('editProfileName') ? document.getElementById('editProfileName').value.trim() : '';
+    const email = document.getElementById('editProfileEmail') ? document.getElementById('editProfileEmail').value.trim() : '';
+    const phone = document.getElementById('editProfilePhone') ? document.getElementById('editProfilePhone').value.trim() : '';
+    const bio = document.getElementById('editProfileBio') ? document.getElementById('editProfileBio').value.trim() : '';
+    const faculty = document.getElementById('editProfileFaculty') ? document.getElementById('editProfileFaculty').value.trim() : '';
+    const dob = document.getElementById('editProfileDob') ? document.getElementById('editProfileDob').value.trim() : '';
+    const gender = document.getElementById('editProfileGender') ? document.getElementById('editProfileGender').value : '';
+    const hometown = document.getElementById('editProfileHometown') ? document.getElementById('editProfileHometown').value.trim() : '';
+    const id_card = document.getElementById('editProfileIdCard') ? document.getElementById('editProfileIdCard').value.trim() : '';
+    const address = document.getElementById('editProfileAddress') ? document.getElementById('editProfileAddress').value.trim() : '';
+    const class_name = document.getElementById('editProfileClass') ? document.getElementById('editProfileClass').value.trim() : '';
+    const major = document.getElementById('editProfileMajor') ? document.getElementById('editProfileMajor').value : '';
+
+    const payload = {
+        full_name: name,
+        email: email,
+        phone: phone,
+        bio: bio,
+        faculty: faculty
+    };
+    if (dob) payload.dob = dob;
+    if (gender) payload.gender = gender;
+    if (hometown) payload.hometown = hometown;
+    if (id_card) payload.id_card = id_card;
+    if (address) payload.address = address;
+    if (class_name) payload.class_name = class_name;
+    if (major) payload.major = major;
 
     try {
         const res = await fetch(`/api/profile/${id}`, {
             method: 'PUT',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                full_name: name,
-                email: email,
-                phone: phone,
-                bio: bio,
-                faculty: faculty
-            })
+            body: JSON.stringify(payload)
         });
         const data = await res.json();
         if (res.ok) {
-            Swal.fire('Thành công', 'Cập nhật hồ sơ thành công!', 'success').then(() => location.reload());
+            Swal.fire({
+                icon: 'success',
+                title: 'Thành công',
+                text: 'Cập nhật hồ sơ sinh viên thành công!',
+                timer: 2000,
+                showConfirmButton: false
+            }).then(() => location.reload());
         } else {
             Swal.fire('Lỗi', data.error || 'Cập nhật thất bại', 'error');
         }
@@ -1092,38 +1182,109 @@ async function submitCreateBatch() {
     }
 }
 
+// ===================== EDIT BATCH MODAL & SUBMIT =====================
+window.openEditBatchModal = function(btn) {
+    if (!btn) return;
+    const id = btn.getAttribute('data-id') || '';
+    const name = btn.getAttribute('data-name') || '';
+    const year = btn.getAttribute('data-year') || '2025-2026';
+    const type = btn.getAttribute('data-type') || 'NCKH Standard';
+    const status = btn.getAttribute('data-status') || 'active';
+    const start = btn.getAttribute('data-start') || '';
+    const deadline = btn.getAttribute('data-deadline') || '';
+    const end = btn.getAttribute('data-end') || deadline;
+    const desc = btn.getAttribute('data-desc') || '';
+    const doc = btn.getAttribute('data-doc') || '';
+
+    const idEl = document.getElementById('editBatchId');
+    if (idEl) idEl.value = id;
+
+    const nameEl = document.getElementById('editBatchName');
+    if (nameEl) nameEl.value = name;
+
+    const yearEl = document.getElementById('editBatchYear');
+    if (yearEl) yearEl.value = year;
+
+    const typeEl = document.getElementById('editBatchType');
+    if (typeEl) typeEl.value = type;
+
+    const statusEl = document.getElementById('editBatchStatus');
+    if (statusEl) statusEl.value = status;
+
+    const startEl = document.getElementById('editBatchStart');
+    if (startEl) startEl.value = start;
+
+    const endEl = document.getElementById('editBatchEnd');
+    if (endEl) endEl.value = end || deadline;
+
+    const deadlineEl = document.getElementById('editBatchSubmitDeadline');
+    if (deadlineEl) deadlineEl.value = deadline || end;
+
+    const editor = document.getElementById('editBatchDescEditor');
+    const textarea = document.getElementById('editBatchDesc');
+    if (editor) editor.innerHTML = desc;
+    if (textarea) textarea.value = desc;
+    if (typeof window.syncEditBatchDesc === 'function') {
+        window.syncEditBatchDesc();
+    }
+
+    const docCurrentEl = document.getElementById('editBatchDocCurrent');
+    if (docCurrentEl) {
+        if (doc && doc.trim()) {
+            const cleanDoc = doc.split(/[/\\]/).pop();
+            docCurrentEl.innerHTML = `<span class="text-success fw-bold"><i class="fa-solid fa-file-circle-check me-1"></i>Tệp hiện tại:</span> <a href="/static/uploads/batches/${encodeURIComponent(cleanDoc)}" target="_blank" class="fw-bold text-primary text-decoration-underline ms-1">${cleanDoc}</a>`;
+            docCurrentEl.style.display = 'block';
+        } else {
+            docCurrentEl.innerHTML = `<span class="text-muted"><i class="fa-solid fa-circle-info me-1"></i>Chưa có văn bản hướng dẫn đính kèm.</span>`;
+            docCurrentEl.style.display = 'block';
+        }
+    }
+
+    const fileInput = document.getElementById('editBatchDoc');
+    if (fileInput) fileInput.value = '';
+
+    const modalEl = document.getElementById('modalEditBatch');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
+};
+
 async function submitEditBatch() {
-    const id = document.getElementById('editBatchId').value;
-    const name = document.getElementById('editBatchName').value.trim();
-    const year = document.getElementById('editBatchYear').value;
-    const type = document.getElementById('editBatchType').value;
-    const startDate = document.getElementById('editBatchStart').value;
-    const endDate = document.getElementById('editBatchEnd').value;
+    if (typeof window.syncEditBatchDesc === 'function') {
+        window.syncEditBatchDesc();
+    }
+    const id = document.getElementById('editBatchId')?.value;
+    const name = document.getElementById('editBatchName')?.value?.trim();
+    const year = document.getElementById('editBatchYear')?.value || '2025-2026';
+    const type = document.getElementById('editBatchType')?.value || 'NCKH Standard';
+    const startDate = document.getElementById('editBatchStart')?.value || '';
+    const endDate = document.getElementById('editBatchEnd')?.value || '';
     const submitDeadlineEl = document.getElementById('editBatchSubmitDeadline');
-    const submitDeadline = (submitDeadlineEl && submitDeadlineEl.value) ? submitDeadlineEl.value : endDate;
-    const status = document.getElementById('editBatchStatus').value;
-    const desc = document.getElementById('editBatchDesc').value.trim();
-    const docPath = document.getElementById('editBatchDoc').value;
-    const docName = docPath ? docPath.split('\\').pop() : '';
+    let submitDeadline = (submitDeadlineEl && submitDeadlineEl.value) ? submitDeadlineEl.value : endDate;
+    if (!submitDeadline && endDate) submitDeadline = endDate;
+    if (endDate && submitDeadline > endDate) submitDeadline = endDate;
+
+    const status = document.getElementById('editBatchStatus')?.value || 'active';
+    const desc = document.getElementById('editBatchDesc')?.value?.trim() || '';
     
-    if (!name) return Swal.fire('Lỗi', 'Vui lòng nhập tên đợt triển khai', 'warning');
-    if (startDate && endDate && startDate > endDate) return Swal.fire('Lỗi', 'Ngày bắt đầu không thể sau ngày kết thúc đợt', 'warning');
-    if (startDate && submitDeadline && startDate > submitDeadline) return Swal.fire('Lỗi', 'Hạn nộp đề tài phải sau ngày bắt đầu', 'warning');
-    if (submitDeadline && endDate && submitDeadline > endDate) return Swal.fire('Lỗi', 'Hạn nộp đề tài không thể sau ngày kết thúc đợt', 'warning');
+    if (!id) return Swal.fire('Lỗi', 'Không tìm thấy ID của đợt cần chỉnh sửa.', 'error');
+    if (!name) return Swal.fire('Lỗi', 'Vui lòng nhập tên đợt triển khai.', 'warning');
+    if (startDate && endDate && startDate > endDate) return Swal.fire('Lỗi', 'Ngày bắt đầu không thể sau hạn cuối đợt.', 'warning');
     
     try {
         const formData = new FormData();
         formData.append('name', name);
         formData.append('academic_year', year);
         formData.append('type', type);
-        formData.append('start_date', startDate);
-        formData.append('submission_deadline', submitDeadline);
-        formData.append('end_date', endDate);
+        if (startDate) formData.append('start_date', startDate);
+        if (submitDeadline) formData.append('submission_deadline', submitDeadline);
+        if (endDate) formData.append('end_date', endDate);
         formData.append('status', status);
         formData.append('description', desc);
         
         const fileInput = document.getElementById('editBatchDoc');
-        if (fileInput.files.length > 0) {
+        if (fileInput && fileInput.files && fileInput.files.length > 0) {
             for (let i = 0; i < fileInput.files.length; i++) {
                 formData.append('guidance_doc', fileInput.files[i]);
             }
@@ -1135,7 +1296,16 @@ async function submitEditBatch() {
         });
         const data = await res.json();
         if (res.ok) {
-            Swal.fire('Thành công', 'Đã cập nhật đợt thành công!', 'success').then(() => location.reload());
+            sessionStorage.setItem('active_admin_tab', 'batches');
+            window.location.hash = '#batches';
+            await Swal.fire({
+                icon: 'success',
+                title: 'Thành công',
+                text: 'Đã cập nhật thông tin đợt NCKH!',
+                timer: 1600,
+                showConfirmButton: false
+            });
+            location.reload();
         } else {
             Swal.fire('Lỗi', data.error || 'Cập nhật đợt thất bại', 'error');
         }
@@ -1259,7 +1429,46 @@ window.goBackToAllNotifications = function() {
     }, 200);
 };
 
-function buildModernNotificationHtml(id, content, fromAll) {
+// ====================================================================
+// HỆ THỐNG MODAL CHI TIẾT THÔNG BÁO CHUẨN ĐẠI HỌC (HOU S-RIMS)
+// ====================================================================
+window.handleNotifActionClick = function(href) {
+    if (typeof Swal !== 'undefined') Swal.close();
+    if (!href) return;
+
+    // Xử lý chuyển tab trực tiếp nếu đang ở trang Sinh viên
+    if (href.includes('#s-') || href.startsWith('/student#s-')) {
+        const parts = href.split('#');
+        const tabId = parts[1];
+        if (typeof switchTab === 'function') {
+            const navLink = document.querySelector(`a[href*="${tabId}"]`);
+            if (navLink) {
+                switchTab(tabId, navLink);
+            } else {
+                window.location.hash = '#' + tabId;
+            }
+            return;
+        }
+    }
+
+    if (href.startsWith('/lecturer') && window.location.pathname.startsWith('/lecturer')) {
+        window.location.href = href;
+        return;
+    }
+
+    window.location.href = href;
+};
+
+window.goBackToAllNotifications = function() {
+    if (typeof Swal !== 'undefined') Swal.close();
+    setTimeout(() => {
+        if (typeof showAllNotifications === 'function') {
+            showAllNotifications();
+        }
+    }, 200);
+};
+
+function buildModernNotificationHtml(id, content, fromAll, createdAt) {
     const parts = (content || '').split('|||');
     const mainHtml = parts[0] || '';
     const attachments = parts.slice(1).map(s => s.trim()).filter(Boolean);
@@ -1282,97 +1491,112 @@ function buildModernNotificationHtml(id, content, fromAll) {
     const cleanHtml = tempDiv.innerHTML.trim();
     const textContent = tempDiv.textContent || tempDiv.innerText || '';
 
-    // 2. Xác định Loại thông báo & Theme màu sắc
+    // 2. Xác định Loại thông báo & Theme phân loại chuẩn đại học
     let theme = {
-        gradient: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
         categoryTag: 'THÔNG BÁO HỆ THỐNG',
-        icon: 'fa-solid fa-bell',
-        headline: 'Thông báo từ Hệ thống NCKH',
+        categoryBadgeClass: 'bg-secondary-subtle text-secondary border border-secondary-subtle',
+        icon: 'fa-solid fa-bell text-secondary',
+        sender: 'Cổng thông tin HOU S-RIMS',
+        headline: 'Thông báo từ Hệ thống Quản lý NCKH',
+        isBatch: false,
         isApproval: false,
         isRevision: false
     };
 
-    const isFacultyApproval = textContent.includes('Khoa') && (textContent.includes('phê duyệt') || textContent.includes('ĐÃ PHÊ DUYỆT'));
-    const isFacultyRevision = textContent.includes('Khoa') && (textContent.includes('chỉnh sửa') || textContent.includes('YÊU CẦU CHỈNH SỬA') || textContent.includes('YÊU CẦU'));
-    const isLecturerApproved = (textContent.includes('Giảng viên') || textContent.includes('GVHD') || textContent.includes('TS.')) && (textContent.includes('phê duyệt') || textContent.includes('ĐÃ DUYỆT'));
-    const isLecturerRevision = (textContent.includes('Giảng viên') || textContent.includes('GVHD') || textContent.includes('TS.')) && (textContent.includes('yêu cầu') || textContent.includes('chỉnh sửa'));
-    const isLecturerReview = (textContent.includes('Giảng viên') || textContent.includes('GVHD') || textContent.includes('TS.')) && (textContent.includes('đánh giá') || textContent.includes('ghi chú') || textContent.includes('nhận xét'));
+    const isFacultyApproval = textContent.includes('Khoa') && (textContent.includes('phê duyệt') || textContent.includes('ĐÃ PHÊ DUYỆT') || textContent.includes('ĐẠT'));
+    const isFacultyRevision = textContent.includes('Khoa') && (textContent.includes('chỉnh sửa') || textContent.includes('YÊU CẦU CHỈNH SỬA') || textContent.includes('YÊU CẦU') || textContent.includes('TỪ CHỐI'));
+    const isLecturerApproved = (textContent.includes('Giảng viên') || textContent.includes('GVHD') || textContent.includes('ThS.') || textContent.includes('TS.')) && (textContent.includes('phê duyệt') || textContent.includes('ĐÃ DUYỆT') || textContent.includes('đồng ý'));
+    const isLecturerRevision = (textContent.includes('Giảng viên') || textContent.includes('GVHD') || textContent.includes('ThS.') || textContent.includes('TS.')) && (textContent.includes('yêu cầu') || textContent.includes('chỉnh sửa') || textContent.includes('từ chối'));
+    const isLecturerReview = (textContent.includes('Giảng viên') || textContent.includes('GVHD')) && (textContent.includes('đánh giá') || textContent.includes('ghi chú') || textContent.includes('nhận xét'));
     const isStudentSubmission = textContent.includes('Bài nộp mới từ nhóm') || textContent.includes('vừa nộp');
-    const isTopicWaitingFaculty = textContent.includes('Đề tài mới chờ Khoa phê duyệt') || (textContent.includes('chờ Hội đồng Khoa') && textContent.includes('thẩm định'));
+    const isTopicWaitingFaculty = textContent.includes('chờ Khoa phê duyệt') || (textContent.includes('chờ Hội đồng Khoa') && textContent.includes('thẩm định'));
     const isGroupInvitation = textContent.includes('Lời mời tham gia') || textContent.includes('mời vào nhóm') || textContent.includes('mời tham gia nhóm');
-    const isTopicApproval = textContent.includes('phê duyệt đề tài') || (textContent.includes('Đề tài NCKH') && textContent.includes('chính thức phê duyệt'));
-    const isBatchAnnouncement = textContent.includes('Đợt NCKH:') || textContent.includes('NCKH 20') || textContent.includes('Kế hoạch NCKH') || mainHtml.includes('Đợt NCKH:');
-    const isCalendarMeeting = textContent.includes('Lịch hẹn') || textContent.includes('lịch hẹn');
-    const isCouncil = textContent.includes('Hội đồng') || textContent.includes('hội đồng');
+    const isTopicApproval = textContent.includes('phê duyệt đề tài') || (textContent.includes('Đề tài NCKH') && textContent.includes('phê duyệt'));
+    const isBatchAnnouncement = textContent.includes('Đợt NCKH') || textContent.includes('NCKH 20') || textContent.includes('Kế hoạch NCKH') || mainHtml.includes('Đợt NCKH:');
+    const isCalendarMeeting = textContent.includes('Lịch hẹn') || textContent.includes('lịch hẹn') || textContent.includes('cuộc họp');
+    const isCouncil = textContent.includes('Hội đồng') || textContent.includes('nghiệm thu');
 
-    if (isFacultyApproval) {
-        theme.gradient = 'linear-gradient(135deg, #065f46 0%, #059669 100%)';
-        theme.categoryTag = 'KHOA CÔNG NGHỆ THÔNG TIN • ĐÃ PHÊ DUYỆT';
-        theme.icon = 'fa-solid fa-stamp';
-        theme.headline = 'Khoa CNTT đã phê duyệt Đạt yêu cầu';
+    if (isBatchAnnouncement) {
+        theme.isBatch = true;
+        theme.categoryTag = 'KẾ HOẠCH ĐỢT NCKH';
+        theme.categoryBadgeClass = 'bg-primary-subtle text-primary border border-primary-subtle';
+        theme.icon = 'fa-solid fa-bullhorn text-primary';
+        theme.sender = 'Phòng Quản lý Khoa học • Khoa CNTT';
+        
+        let batchName = '';
+        const h5Match = mainHtml.match(/<h5[^>]*>(.*?)<\/h5>/i);
+        if (h5Match) {
+            batchName = h5Match[1].replace(/<\/?[^>]+(>|$)/g, '').replace(/^Đợt\s*NCKH:\s*/i, '').trim();
+        }
+        theme.headline = batchName ? `Kế hoạch Đợt NCKH: ${batchName}` : 'Thông báo Kế hoạch Đợt Nghiên cứu khoa học';
+        if (!actionUrl) actionUrl = '/student#s-explore';
+    } else if (isFacultyApproval) {
         theme.isApproval = true;
+        theme.categoryTag = 'KHOA CNTT • ĐÃ PHÊ DUYỆT';
+        theme.categoryBadgeClass = 'bg-success-subtle text-success border border-success-subtle';
+        theme.icon = 'fa-solid fa-circle-check text-success';
+        theme.sender = 'Hội đồng Khoa Công nghệ Thông tin';
+        theme.headline = 'Kết quả thẩm định: Đề tài đã được Khoa phê duyệt';
+        if (!actionUrl) actionUrl = '/student/progress';
     } else if (isFacultyRevision) {
-        theme.gradient = 'linear-gradient(135deg, #991b1b 0%, #dc2626 100%)';
-        theme.categoryTag = 'KHOA CÔNG NGHỆ THÔNG TIN • YÊU CẦU CHỈNH SỬA';
-        theme.icon = 'fa-solid fa-triangle-exclamation';
-        theme.headline = 'Khoa CNTT yêu cầu chỉnh sửa bài nộp';
         theme.isRevision = true;
+        theme.categoryTag = 'KHOA CNTT • YÊU CẦU CHỈNH SỬA';
+        theme.categoryBadgeClass = 'bg-danger-subtle text-danger border border-danger-subtle';
+        theme.icon = 'fa-solid fa-triangle-exclamation text-danger';
+        theme.sender = 'Hội đồng Khoa Công nghệ Thông tin';
+        theme.headline = 'Thông báo: Yêu cầu chỉnh sửa & bổ sung hồ sơ đề tài';
+        if (!actionUrl) actionUrl = '/student/progress';
     } else if (isLecturerApproved) {
-        theme.gradient = 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)';
-        theme.categoryTag = 'GIẢNG VIÊN HƯỚNG DẪN • ĐÃ DUYỆT';
-        theme.icon = 'fa-solid fa-circle-check';
-        theme.headline = 'Giảng viên hướng dẫn đã duyệt Đạt';
         theme.isApproval = true;
+        theme.categoryTag = 'GV HƯỚNG DẪN • ĐÃ DUYỆT';
+        theme.categoryBadgeClass = 'bg-success-subtle text-success border border-success-subtle';
+        theme.icon = 'fa-solid fa-circle-check text-success';
+        theme.sender = 'Giảng viên Hướng dẫn';
+        theme.headline = 'Giảng viên hướng dẫn đã phê duyệt hồ sơ đề tài';
+        if (!actionUrl) actionUrl = '/student/progress';
     } else if (isLecturerRevision) {
-        theme.gradient = 'linear-gradient(135deg, #b45309 0%, #d97706 100%)';
-        theme.categoryTag = 'GIẢNG VIÊN HƯỚNG DẪN • YÊU CẦU SỬA';
-        theme.icon = 'fa-solid fa-triangle-exclamation';
-        theme.headline = 'Giảng viên yêu cầu chỉnh sửa bài nộp';
         theme.isRevision = true;
+        theme.categoryTag = 'GV HƯỚNG DẪN • YÊU CẦU SỬA';
+        theme.categoryBadgeClass = 'bg-danger-subtle text-danger border border-danger-subtle';
+        theme.icon = 'fa-solid fa-triangle-exclamation text-danger';
+        theme.sender = 'Giảng viên Hướng dẫn';
+        theme.headline = 'Giảng viên yêu cầu điều chỉnh & hoàn thiện hồ sơ';
+        if (!actionUrl) actionUrl = '/student/progress';
     } else if (isLecturerReview) {
-        theme.gradient = 'linear-gradient(135deg, #0369a1 0%, #0284c7 100%)';
-        theme.categoryTag = 'GIẢNG VIÊN HƯỚNG DẪN • ĐÁNH GIÁ';
-        theme.icon = 'fa-solid fa-chalkboard-user';
-        theme.headline = 'Giảng viên đã nhận xét & đánh giá bài nộp';
-    } else if (isTopicWaitingFaculty) {
-        theme.gradient = 'linear-gradient(135deg, #854d0e 0%, #d97706 100%)';
-        theme.categoryTag = 'HỘI ĐỒNG KHOA • THẨM ĐỊNH ĐỀ TÀI';
-        theme.icon = 'fa-solid fa-building-columns';
-        theme.headline = 'Đề tài NCKH mới chờ Khoa thẩm định';
-        if (!actionUrl) actionUrl = '/faculty/topics';
-    } else if (isStudentSubmission) {
-        theme.gradient = 'linear-gradient(135deg, #312e81 0%, #4f46e5 100%)';
-        theme.categoryTag = 'BÀI NỘP MỚI TỪ SINH VIÊN';
-        theme.icon = 'fa-solid fa-file-arrow-up';
-        theme.headline = 'Sinh viên nộp hồ sơ / bài báo cáo mới';
-        if (!actionUrl) actionUrl = '/lecturer/progress';
+        theme.categoryTag = 'GV HƯỚNG DẪN • ĐÁNH GIÁ';
+        theme.categoryBadgeClass = 'bg-info-subtle text-info-emphasis border border-info-subtle';
+        theme.icon = 'fa-solid fa-chalkboard-user text-primary';
+        theme.sender = 'Giảng viên Hướng dẫn';
+        theme.headline = 'Giảng viên đã nhận xét & đánh giá tiến độ';
+        if (!actionUrl) actionUrl = '/student/progress';
     } else if (isGroupInvitation) {
-        theme.gradient = 'linear-gradient(135deg, #0f766e 0%, #0d9488 100%)';
-        theme.categoryTag = 'LỜI MỜI THAM GIA NHÓM NCKH';
-        theme.icon = 'fa-solid fa-user-plus';
+        theme.categoryTag = 'LỜI MỜI NHÓM NCKH';
+        theme.categoryBadgeClass = 'bg-primary-subtle text-primary border border-primary-subtle';
+        theme.icon = 'fa-solid fa-user-plus text-primary';
+        theme.sender = 'Trưởng nhóm Nghiên cứu Khoa học';
         theme.headline = 'Lời mời tham gia nhóm Nghiên cứu khoa học';
         if (!actionUrl) actionUrl = '/student#s-group';
-    } else if (isTopicApproval) {
-        theme.gradient = 'linear-gradient(135deg, #3730a3 0%, #6366f1 100%)';
-        theme.categoryTag = 'PHÊ DUYỆT ĐỀ TÀI NCKH CHÍNH THỨC';
-        theme.icon = 'fa-solid fa-award';
-        theme.headline = '🎉 Đề tài NCKH đã được phê duyệt chính thức';
-        theme.isApproval = true;
-    } else if (isBatchAnnouncement) {
-        theme.gradient = 'linear-gradient(135deg, #312e81 0%, #4338ca 100%)';
-        theme.categoryTag = 'KẾ HOẠCH & HƯỚNG DẪN ĐỢT NCKH';
-        theme.icon = 'fa-solid fa-bullhorn';
-        theme.headline = 'Thông báo Đợt Nghiên cứu khoa học';
     } else if (isCalendarMeeting) {
-        theme.gradient = 'linear-gradient(135deg, #0e7490 0%, #0891b2 100%)';
-        theme.categoryTag = 'LỊCH HẸN & TRAO ĐỔI NCKH';
-        theme.icon = 'fa-solid fa-calendar-check';
-        theme.headline = 'Cập nhật trạng thái lịch hẹn';
+        theme.categoryTag = 'LỊCH HẸN & LÀM VIỆC';
+        theme.categoryBadgeClass = 'bg-info-subtle text-info-emphasis border border-info-subtle';
+        theme.icon = 'fa-solid fa-calendar-check text-primary';
+        theme.sender = 'Hệ thống Quản lý Lịch biểu';
+        theme.headline = 'Thông báo cập nhật lịch hẹn & trao đổi NCKH';
+        if (!actionUrl) actionUrl = '/student/calendar';
     } else if (isCouncil) {
-        theme.gradient = 'linear-gradient(135deg, #701a75 0%, #a21caf 100%)';
-        theme.categoryTag = 'HỘI ĐỒNG ĐÁNH GIÁ NGHIỆM THU';
-        theme.icon = 'fa-solid fa-users-rectangle';
-        theme.headline = 'Phân công Hội đồng đánh giá NCKH';
+        theme.categoryTag = 'HỘI ĐỒNG ĐÁNH GIÁ';
+        theme.categoryBadgeClass = 'bg-primary-subtle text-primary border border-primary-subtle';
+        theme.icon = 'fa-solid fa-users text-primary';
+        theme.sender = 'Ban Thư ký Hội đồng Nghiệm thu';
+        theme.headline = 'Thông báo phân công & lịch làm việc Hội đồng';
+    } else if (isTopicApproval) {
+        theme.isApproval = true;
+        theme.categoryTag = 'PHÊ DUYỆT ĐỀ TÀI NCKH';
+        theme.categoryBadgeClass = 'bg-success-subtle text-success border border-success-subtle';
+        theme.icon = 'fa-solid fa-stamp text-success';
+        theme.sender = 'Hội đồng Khoa CNTT';
+        theme.headline = 'Đề tài NCKH đã được phê duyệt chính thức';
+        if (!actionUrl) actionUrl = '/student/progress';
     }
 
     // Tinh chỉnh nút hành động và icon
@@ -1383,9 +1607,9 @@ function buildModernNotificationHtml(id, content, fromAll) {
         } else if (actionUrl.includes('faculty/topics')) {
             actionIcon = 'fa-solid fa-check-double';
             actionText = 'Xem & Phê duyệt Đề tài';
-        } else if (actionUrl.includes('lecturer/progress') || actionUrl.includes('progress')) {
+        } else if (actionUrl.includes('progress')) {
             actionIcon = 'fa-solid fa-clipboard-check';
-            actionText = actionText && actionText !== 'Xem chi tiết' ? actionText : 'Xem Tiến độ Đề tài';
+            actionText = 'Xem Tiến độ Đề tài';
         } else if (actionUrl.includes('group')) {
             actionIcon = 'fa-solid fa-users';
             actionText = 'Quản lý Nhóm NCKH';
@@ -1395,86 +1619,85 @@ function buildModernNotificationHtml(id, content, fromAll) {
         } else if (actionUrl.includes('chat')) {
             actionIcon = 'fa-solid fa-comments';
             actionText = 'Vào phòng Chat Nhóm';
+        } else if (actionUrl.includes('explore')) {
+            actionIcon = 'fa-solid fa-compass';
+            actionText = 'Xem Đợt NCKH';
         }
     }
 
-    // 3. Xây dựng khối HTML giao diện hiện đại
+    // 3. Xây dựng khối HTML giao diện chuẩn Đại học (không rườm rà, không lỗi)
     let bodyCardsHtml = '';
 
-    if (isBatchAnnouncement) {
-        // Trích xuất tên đợt
-        let batchName = '';
-        const h5Match = mainHtml.match(/<h5[^>]*>(?:Đợt NCKH:)?\s*(.*?)<\/h5>/i);
-        if (h5Match) {
-            batchName = h5Match[1].replace(/<\/?[^>]+(>|$)/g, '').trim();
-            theme.headline = batchName ? `Đợt NCKH: ${batchName}` : 'Thông báo Đợt Nghiên cứu khoa học';
+    if (theme.isBatch) {
+        const typeMatch = mainHtml.match(/badge bg-primary['"]?>([^<]+)<\/span>/i);
+        const yearMatch = mainHtml.match(/badge bg-secondary['"]?>([^<]+)<\/span>/i);
+        const dates = [...mainHtml.matchAll(/(\d{2}\/\d{2}\/\d{4})/g)].map(m => m[1]);
+        const bType = typeMatch ? typeMatch[1].trim() : 'NCKH Standard';
+        const bYear = yearMatch ? yearMatch[1].trim() : '2025-2026';
+        const bStart = dates[0] || 'Chưa công bố';
+        const bDeadline = dates[1] || dates[0] || 'Chưa công bố';
+
+        let descHtml = '';
+        const descMatch = mainHtml.match(/(?:<strong>\s*Mô tả chi tiết:?\s*<\/strong><br\s*\/?>|Mô tả chi tiết:?)([\s\S]*?)$/i);
+        if (descMatch) {
+            descHtml = descMatch[1].replace(/<\/div>\s*$/, '').trim();
+        } else {
+            const tempDiv2 = document.createElement('div');
+            tempDiv2.innerHTML = mainHtml;
+            const h5 = tempDiv2.querySelector('h5'); if (h5) h5.remove();
+            const firstDiv = tempDiv2.querySelector('div'); if (firstDiv) firstDiv.remove();
+            descHtml = tempDiv2.innerHTML.trim();
         }
 
-        // Trích xuất thông tin timeline / badge nếu có
-        let timelineMatch = mainHtml.match(/<div style=['"]background:\s*#f8f9fa;[^'"]*['"]>([\s\S]*?)<\/div>/i);
-        let timelineContent = timelineMatch ? timelineMatch[1] : '';
-
-        // Trích xuất phần mô tả chi tiết
-        let descMatch = mainHtml.match(/(?:<strong>Mô tả chi tiết:<\/strong><br>|Mô tả chi tiết:)([\s\S]*?)$/i);
-        let descHtml = descMatch ? descMatch[1] : '';
-        descHtml = descHtml.replace(/<\/div>\s*$/, '').trim();
-
-        // Thẻ 1: Kế hoạch & Thời gian
-        bodyCardsHtml += `
-            <div class="p-4 rounded-4 bg-white border border-slate-200 shadow-sm mb-3">
-                <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold" style="font-size: 11.5px;">
-                        <i class="fa-solid fa-bullhorn me-1"></i> Kế hoạch NCKH
-                    </span>
-                    <span class="badge bg-light text-secondary border rounded-pill px-3 py-1.5 fw-medium" style="font-size: 11.5px;">
-                        <i class="fa-regular fa-calendar-check me-1"></i> Kế hoạch chính thức
-                    </span>
-                </div>
-                <h6 class="fw-bold text-dark mb-3 fs-6" style="line-height: 1.5;">
-                    ${batchName || 'Kế hoạch triển khai Đợt Nghiên cứu khoa học'}
-                </h6>
-                ${timelineContent ? `
-                    <div class="p-3 rounded-3 bg-light border d-flex align-items-center flex-wrap gap-2" style="font-size: 13px;">
-                        ${timelineContent}
+        bodyCardsHtml = `
+            <div class="p-3 bg-white rounded-3 border mb-3">
+                <div class="row g-2 text-center text-sm-start">
+                    <div class="col-6 col-sm-3">
+                        <div class="text-muted fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">LOẠI HÌNH</div>
+                        <div class="fw-bold text-dark mt-1" style="font-size: 13px;">${bType}</div>
                     </div>
-                ` : ''}
+                    <div class="col-6 col-sm-3">
+                        <div class="text-muted fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">NĂM HỌC</div>
+                        <div class="fw-bold text-dark mt-1" style="font-size: 13px;">${bYear}</div>
+                    </div>
+                    <div class="col-6 col-sm-3">
+                        <div class="text-muted fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">NGÀY BẮT ĐẦU</div>
+                        <div class="fw-bold text-dark mt-1" style="font-size: 13px;">${bStart}</div>
+                    </div>
+                    <div class="col-6 col-sm-3">
+                        <div class="text-muted fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">HẠN CUỐI NỘP</div>
+                        <div class="fw-bold text-danger mt-1" style="font-size: 13px;">${bDeadline}</div>
+                    </div>
+                </div>
             </div>
-        `;
-
-        // Thẻ 2: Nội dung & Hướng dẫn (nếu có mô tả)
-        if (descHtml) {
-            bodyCardsHtml += `
-                <div class="p-4 rounded-4 bg-white border border-slate-200 shadow-sm mb-3">
-                    <div class="fw-bold text-dark mb-3 d-flex align-items-center gap-2" style="font-size: 13.5px;">
-                        <i class="fa-solid fa-file-lines text-primary"></i> Nội dung & Hướng dẫn chi tiết:
-                    </div>
-                    <div class="rich-content-display text-secondary" style="font-size: 13.5px; line-height: 1.7; padding: 2px 2px;">
-                        ${descHtml}
-                    </div>
+            ${descHtml ? `
+            <div class="p-3.5 bg-white rounded-3 border mb-3">
+                <div class="text-muted fw-bold mb-2 pb-2 border-bottom d-flex align-items-center gap-1.5" style="font-size: 11px;">
+                    <i class="fa-regular fa-file-lines text-primary"></i> KẾ HOẠCH & HƯỚNG DẪN CHI TIẾT
                 </div>
-            `;
-        }
+                <div class="notif-rich-content" style="font-size: 13.5px; line-height: 1.65; color: #1e293b;">
+                    ${descHtml}
+                </div>
+            </div>
+            ` : ''}
+        `;
     } else {
-        // Phân tách dữ liệu cho bài nộp / thẩm định đề tài
+        // Thông báo khác (Phê duyệt đề tài, Yêu cầu sửa, Nhận xét, Lời mời...)
         let topicTitle = '';
-        let docVersionFile = '';
-        let statusLabel = '';
+        let docVersion = '';
+        let statusBadge = '';
         let feedbackText = '';
 
-        const topicRegex = /Đề tài:\s*(?:<strong>)?(.*?)(?:<\/strong>)?(?:\s*\((.*?)\))?(?:<\/p>|<br>|[\r\n]|$)/i;
-        const topicMatch = mainHtml.match(topicRegex) 
-                        || mainHtml.match(/đề tài\s*(?:NCKH)?(?:\s*<strong>)?:\s*(.*?)(?:<\/strong>)?(?:<\/p>|<br>|[\r\n]|$)/i)
-                        || mainHtml.match(/đề tài\s*(?:<strong>)?["'“]?([^"'”<]+)["'”]?/i);
+        const topicMatch = mainHtml.match(/Đề tài:\s*(?:<strong>)?(.*?)(?:<\/strong>)?(?:\s*\((.*?)\))?(?:<\/p>|<br>|[\r\n]|$)/i)
+                        || mainHtml.match(/đề tài\s*(?:NCKH)?(?:\s*<strong>)?:\s*(.*?)(?:<\/strong>)?(?:<\/p>|<br>|[\r\n]|$)/i);
         if (topicMatch) {
-            topicTitle = topicMatch[1] ? topicMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim() : '';
-            if (topicMatch[2]) {
-                docVersionFile = topicMatch[2].replace(/<\/?[^>]+(>|$)/g, '').trim();
-            }
+            topicTitle = topicMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim();
+            if (topicMatch[2]) docVersion = topicMatch[2].replace(/<\/?[^>]+(>|$)/g, '').trim();
         }
 
         const badgeMatch = mainHtml.match(/<span class="badge[^"]*">(.*?)<\/span>/i);
         if (badgeMatch) {
-            statusLabel = badgeMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim();
+            statusBadge = badgeMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim();
         }
 
         const feedbackRegex = /(?:Ý kiến chỉ đạo(?: của Khoa| từ Khoa)?:?|Ghi chú(?: từ GV)?:?|Nhận xét(?: của Giảng viên)?:?|Lý do(?: từ chối)?:?)\s*(?:<\/strong>)?\s*([\s\S]*?)(?:<\/p>|<a |$)/i;
@@ -1483,112 +1706,84 @@ function buildModernNotificationHtml(id, content, fromAll) {
             feedbackText = feedbackMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim();
         }
 
-        const strongHeaderMatch = mainHtml.match(/<p>\s*<strong>(.*?)<\/strong>\s*<\/p>/i) || mainHtml.match(/<strong>(.*?)<\/strong>/i);
-        if (strongHeaderMatch) {
-            const hText = strongHeaderMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim();
-            if (hText.length > 5 && !hText.includes('Đề tài:') && !hText.includes('Kết quả') && !hText.includes('Ý kiến')) {
-                theme.headline = hText;
-            }
+        let specialCardsHtml = '';
+        if (topicTitle) {
+            specialCardsHtml += `
+                <div class="p-3 bg-white rounded-3 border mb-3">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <span class="text-muted fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">ĐỀ TÀI NGHIÊN CỨU</span>
+                        ${docVersion ? `<span class="badge bg-light text-secondary border rounded-pill px-2.5 py-0.5" style="font-size: 10.5px;"><i class="fa-regular fa-file me-1"></i>${docVersion}</span>` : ''}
+                    </div>
+                    <div class="fw-bold text-dark" style="font-size: 14px; line-height: 1.5;">${topicTitle}</div>
+                </div>
+            `;
         }
 
-        const isEvaluationType = isFacultyApproval || isFacultyRevision || isLecturerApproved || isLecturerRevision || isLecturerReview || topicTitle || statusLabel;
-
-        if (isEvaluationType && (topicTitle || statusLabel || feedbackText)) {
-            if (topicTitle) {
-                bodyCardsHtml += `
-                    <!-- Khối thông tin Đề tài & Bài nộp -->
-                    <div class="p-4 rounded-4 bg-white border border-slate-200 shadow-sm mb-3">
-                        <div class="d-flex align-items-center justify-content-between mb-2.5 flex-wrap gap-2">
-                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1 fw-bold" style="font-size: 11px;">
-                                <i class="fa-solid fa-book-bookmark me-1"></i> Đề tài NCKH
-                            </span>
-                            ${docVersionFile ? `<span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-1 fw-semibold" style="font-size: 11px;"><i class="fa-solid fa-file-lines me-1"></i> ${docVersionFile}</span>` : ''}
-                        </div>
-                        <div class="fw-bold text-dark fs-6" style="line-height: 1.55;">
-                            ${topicTitle}
-                        </div>
-                    </div>
-                `;
+        if (statusBadge) {
+            let sClass = 'alert-info text-primary-emphasis border-info-subtle';
+            let sIcon = 'fa-solid fa-circle-info';
+            if (theme.isApproval || statusBadge.includes('ĐẠT') || statusBadge.includes('DUYỆT')) {
+                sClass = 'alert-success text-success-emphasis border-success-subtle';
+                sIcon = 'fa-solid fa-circle-check text-success';
+            } else if (theme.isRevision || statusBadge.includes('SỬA') || statusBadge.includes('TỪ CHỐI')) {
+                sClass = 'alert-danger text-danger-emphasis border-danger-subtle';
+                sIcon = 'fa-solid fa-triangle-exclamation text-danger';
             }
-
-            if (statusLabel) {
-                let sBg = '#ecfdf5', sBorder = '#a7f3d0', sText = '#065f46', sIcon = 'fa-solid fa-circle-check', sIconBg = '#d1fae5';
-                if (theme.isRevision || statusLabel.includes('YÊU CẦU') || statusLabel.includes('TỪ CHỐI')) {
-                    sBg = '#fef2f2'; sBorder = '#fecaca'; sText = '#991b1b'; sIcon = 'fa-solid fa-triangle-exclamation'; sIconBg = '#fee2e2';
-                } else if (statusLabel.includes('CHỜ') || statusLabel.includes('ĐANG')) {
-                    sBg = '#fffbeb'; sBorder = '#fde68a'; sText = '#b45309'; sIcon = 'fa-solid fa-clock'; sIconBg = '#fef3c7';
-                }
-
-                bodyCardsHtml += `
-                    <!-- Khối Quyết định thẩm định -->
-                    <div class="p-4 rounded-4 mb-3 d-flex align-items-center gap-3 shadow-sm" style="background: ${sBg}; border: 1.5px solid ${sBorder};">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px; background: ${sIconBg}; color: ${sText}; font-size: 20px;">
-                            <i class="${sIcon}"></i>
-                        </div>
-                        <div>
-                            <div class="text-uppercase fw-bold mb-1" style="font-size: 11px; letter-spacing: 0.5px; color: ${sText}; opacity: 0.85;">Quyết định & Kết quả thẩm định:</div>
-                            <div class="fw-bold" style="font-size: 15.5px; color: ${sText}; line-height: 1.4;">
-                                ${statusLabel}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            if (feedbackText) {
-                bodyCardsHtml += `
-                    <!-- Khối Ý kiến chỉ đạo / Nhận xét -->
-                    <div class="p-4 rounded-4 mb-3 shadow-sm" style="background: #fffbeb; border: 1px solid #fde68a; border-left: 5px solid #f59e0b;">
-                        <div class="fw-bold mb-2 d-flex align-items-center gap-2" style="color: #b45309; font-size: 13.5px;">
-                            <i class="fa-solid fa-comment-dots fs-6"></i> Ý kiến chỉ đạo / Ghi chú phản hồi:
-                        </div>
-                        <div style="font-size: 13.5px; color: #334155; line-height: 1.6; white-space: pre-wrap; padding-left: 2px;">
-                            ${feedbackText}
-                        </div>
-                    </div>
-                `;
-            }
-        } else {
-            // Thông báo văn bản tự do / lịch hẹn / lời mời
-            bodyCardsHtml += `
-                <div class="p-4 rounded-4 bg-white border border-slate-200 shadow-sm mb-3">
-                    <div class="rich-content-display" style="font-size: 13.5px; line-height: 1.65; color: #1e293b; padding: 4px 6px;">
-                        ${cleanHtml}
+            specialCardsHtml += `
+                <div class="alert ${sClass} rounded-3 p-3 mb-3 d-flex align-items-center gap-2.5">
+                    <i class="${sIcon} fs-5"></i>
+                    <div>
+                        <div class="small fw-bold text-uppercase opacity-75" style="font-size: 10px;">Kết quả thẩm định:</div>
+                        <div class="fw-bold" style="font-size: 13.5px;">${statusBadge}</div>
                     </div>
                 </div>
             `;
         }
+
+        if (feedbackText) {
+            specialCardsHtml += `
+                <div class="p-3 rounded-3 mb-3" style="background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #f59e0b;">
+                    <div class="fw-bold mb-1.5 d-flex align-items-center gap-1.5" style="color: #b45309; font-size: 12px;">
+                        <i class="fa-solid fa-comment-dots"></i> Ý KIẾN CHỈ ĐẠO & GHI CHÚ PHẢN HỒI:
+                    </div>
+                    <div style="font-size: 13.5px; color: #334155; line-height: 1.6; white-space: pre-wrap;">
+                        ${feedbackText}
+                    </div>
+                </div>
+            `;
+        }
+
+        bodyCardsHtml = specialCardsHtml + `
+            <div class="p-3.5 bg-white rounded-3 border mb-3">
+                <div class="notif-rich-content" style="font-size: 13.5px; line-height: 1.65; color: #1e293b;">
+                    ${cleanHtml}
+                </div>
+            </div>
+        `;
     }
 
     // 4. Khối tệp đính kèm (nếu có)
     let attachmentsHtml = '';
     if (attachments.length > 0) {
         attachmentsHtml = `
-            <div class="notif-attachment-box shadow-sm mb-3">
-                <div class="fw-bold text-dark mb-3 d-flex align-items-center gap-2" style="font-size: 13.5px;">
-                    <i class="fa-solid fa-paperclip text-primary fs-6"></i>
-                    <span>Tài liệu đính kèm (${attachments.length}):</span>
+            <div class="p-3 bg-white rounded-3 border mb-3">
+                <div class="text-muted fw-bold mb-2.5 pb-2 border-bottom d-flex align-items-center gap-1.5" style="font-size: 11px;">
+                    <i class="fa-solid fa-paperclip text-primary"></i> TÀI LIỆU ĐÍNH KÈM (${attachments.length})
                 </div>
                 <div class="d-flex flex-column gap-2">
                     ${attachments.map(f => {
                         const ext = (f.split('.').pop() || '').toLowerCase();
                         let fileIcon = 'fa-solid fa-file text-secondary';
-                        let fileTypeBg = '#f1f5f9';
                         if (ext === 'pdf') {
                             fileIcon = 'fa-solid fa-file-pdf text-danger';
-                            fileTypeBg = '#fee2e2';
                         } else if (['doc', 'docx'].includes(ext)) {
                             fileIcon = 'fa-solid fa-file-word text-primary';
-                            fileTypeBg = '#dbeafe';
                         } else if (['xls', 'xlsx'].includes(ext)) {
                             fileIcon = 'fa-solid fa-file-excel text-success';
-                            fileTypeBg = '#dcfce7';
                         } else if (['ppt', 'pptx'].includes(ext)) {
                             fileIcon = 'fa-solid fa-file-powerpoint text-warning';
-                            fileTypeBg = '#fef3c7';
                         } else if (['zip', 'rar', '7z'].includes(ext)) {
                             fileIcon = 'fa-solid fa-file-zipper text-secondary';
-                            fileTypeBg = '#f1f5f9';
                         }
 
                         let fileUrl = `/static/uploads/batches/${encodeURIComponent(f)}`;
@@ -1597,19 +1792,15 @@ function buildModernNotificationHtml(id, content, fromAll) {
                         }
 
                         return `
-                            <a href="${fileUrl}" target="_blank" class="notif-attachment-pill text-decoration-none">
-                                <div class="d-flex align-items-center gap-2.5 overflow-hidden me-2" style="min-width: 0;">
-                                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px; background: ${fileTypeBg};">
-                                        <i class="${fileIcon} fs-6"></i>
-                                    </div>
-                                    <div class="text-truncate fw-semibold text-dark" style="font-size: 13px;" title="${f}">
-                                        ${f}
-                                    </div>
+                            <div class="d-flex align-items-center justify-content-between p-2.5 bg-light rounded-2 border">
+                                <div class="d-flex align-items-center gap-2 overflow-hidden me-2" style="min-width: 0;">
+                                    <i class="${fileIcon} fs-5 flex-shrink-0"></i>
+                                    <span class="text-truncate fw-semibold text-dark small" title="${f}">${f}</span>
                                 </div>
-                                <span class="badge bg-primary text-white rounded-pill px-3 py-1.5 flex-shrink-0 d-inline-flex align-items-center gap-1 shadow-sm" style="font-size: 11.5px;">
-                                    <i class="fa-solid fa-download"></i> Tải về
-                                </span>
-                            </a>
+                                <a href="${fileUrl}" target="_blank" download class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold flex-shrink-0" style="font-size: 11.5px;">
+                                    <i class="fa-solid fa-download me-1"></i> Tải về
+                                </a>
+                            </div>
                         `;
                     }).join('')}
                 </div>
@@ -1619,47 +1810,54 @@ function buildModernNotificationHtml(id, content, fromAll) {
 
     // 5. Khối nút hành động đáy (Footer Action Bar)
     const backBtn = fromAll ? `
-        <button type="button" class="btn btn-outline-secondary rounded-pill px-3 py-2 fw-bold small d-inline-flex align-items-center gap-2 shadow-none" onclick="window.goBackToAllNotifications()">
-            <i class="fa-solid fa-arrow-left"></i> Quay lại danh sách
+        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1.5 fw-bold" onclick="window.goBackToAllNotifications()">
+            <i class="fa-solid fa-arrow-left me-1"></i> Danh sách thông báo
         </button>
     ` : `
-        <span class="badge bg-light text-secondary border rounded-pill px-3 py-2 small fw-semibold" style="font-size: 11.5px;">
-            <i class="fa-solid fa-shield-halved text-primary me-1"></i> HOU S-RIMS
+        <span class="small text-muted" style="font-size: 11.5px;">
+            <i class="fa-solid fa-shield-halved text-primary me-1"></i> Cổng NCKH HOU S-RIMS
         </span>
     `;
 
     const actionBtn = actionUrl ? `
-        <button type="button" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm d-inline-flex align-items-center gap-2 small" onclick="window.handleNotifActionClick('${actionUrl}')">
-            <i class="${actionIcon}"></i> ${actionText}
+        <button type="button" class="btn btn-sm btn-primary rounded-pill px-3.5 py-1.5 fw-bold shadow-xs" onclick="window.handleNotifActionClick('${actionUrl}')">
+            <i class="${actionIcon} me-1"></i> ${actionText}
         </button>
     ` : '';
 
     return `
         <div class="notif-detail-modal-card text-start" style="font-family: inherit;">
-            <!-- Header Banner -->
-            <div class="p-4 text-white position-relative" style="background: ${theme.gradient}; border-radius: 18px 18px 0 0;">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="badge rounded-pill px-3 py-1 fw-bold text-uppercase" style="background: rgba(255,255,255,0.22); backdrop-filter: blur(6px); font-size: 10.5px; letter-spacing: 0.5px;">
-                        <i class="${theme.icon} me-1"></i> ${theme.categoryTag}
-                    </span>
-                    <button type="button" class="btn-close btn-close-white" onclick="Swal.close()" aria-label="Close" style="opacity: 0.85; filter: invert(1);"></button>
+            <!-- Institutional Header Bar -->
+            <div class="p-3.5 px-4 bg-white border-bottom position-relative" style="border-radius: 16px 16px 0 0;">
+                <div class="d-flex align-items-center justify-content-between mb-1.5">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge ${theme.categoryBadgeClass} rounded-pill px-2.5 py-1 fw-bold" style="font-size: 11px;">
+                            <i class="${theme.icon} me-1"></i> ${theme.categoryTag}
+                        </span>
+                        <span class="text-muted small" style="font-size: 11.5px;">• HOU S-RIMS</span>
+                    </div>
+                    <button type="button" class="btn-close" onclick="Swal.close()" aria-label="Đóng" style="font-size: 11px;"></button>
                 </div>
-                <h5 class="fw-bold mb-0 text-white" style="line-height: 1.4; font-size: 17px;">
+                <h5 class="fw-bold text-dark mb-1" style="line-height: 1.45; font-size: 16.5px;">
                     ${theme.headline}
                 </h5>
+                <div class="d-flex align-items-center flex-wrap gap-3 text-muted small mt-1.5" style="font-size: 11.5px;">
+                    <span><i class="fa-solid fa-building-columns text-primary me-1"></i>${theme.sender}</span>
+                    ${createdAt ? `<span><i class="fa-regular fa-clock me-1"></i>${createdAt}</span>` : ''}
+                </div>
             </div>
 
-            <!-- Body Content -->
-            <div class="notif-modal-body" style="max-height: 65vh; overflow-y: auto;">
+            <!-- Body Container -->
+            <div class="p-3.5 px-4 notif-modal-body" style="background: #f8fafc; max-height: 62vh; overflow-y: auto;">
                 ${bodyCardsHtml}
                 ${attachmentsHtml}
             </div>
 
-            <!-- Footer Action Bar -->
-            <div class="p-3 px-4 bg-white border-top d-flex align-items-center justify-content-between" style="border-radius: 0 0 18px 18px;">
+            <!-- Footer Bar -->
+            <div class="p-3 px-4 bg-white border-top d-flex align-items-center justify-content-between" style="border-radius: 0 0 16px 16px;">
                 <div>${backBtn}</div>
                 <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="btn btn-light rounded-pill px-4 py-2 fw-bold text-secondary border small shadow-none" onclick="Swal.close()">
+                    <button type="button" class="btn btn-sm btn-light border rounded-pill px-3.5 py-1.5 fw-bold text-secondary" onclick="Swal.close()">
                         Đóng
                     </button>
                     ${actionBtn}
@@ -1699,33 +1897,53 @@ async function readNotification(id, content, fromAll = false) {
         })
         .catch(console.error);
 
-    // Lấy nội dung nếu chưa có
+    // Cập nhật giao diện tức thì cho item đã đọc trong dropdown
+    document.querySelectorAll(`[data-notif-id="${id}"]`).forEach(item => {
+        item.classList.remove('notif-unread', 'bg-light');
+        item.classList.add('notif-read');
+        const badge = item.querySelector('.badge.bg-primary');
+        if (badge) {
+            badge.outerHTML = '<span class="text-muted d-inline-flex align-items-center gap-1 flex-shrink-0" style="font-size: 10px; font-weight: 500;"><span style="width: 5px; height: 5px; border-radius: 50%; background-color: #cbd5e1; display: inline-block;"></span>Đã đọc</span>';
+        }
+    });
+
+    // Lấy nội dung và thời gian tạo nếu chưa có
+    let notifCreatedAt = '';
+    if (window._notifsMetadata && window._notifsMetadata[id]) {
+        notifCreatedAt = window._notifsMetadata[id];
+    }
+
     if (!content && window._allNotifications && window._allNotifications[id]) {
         content = window._allNotifications[id];
     }
-    if (!content) {
+    if (!content || !notifCreatedAt) {
         try {
             const res = await fetch('/api/notifications');
             const data = await res.json();
+            window._allNotifications = window._allNotifications || {};
+            window._notifsMetadata = window._notifsMetadata || {};
+            (data || []).forEach(n => {
+                window._allNotifications[n.id] = n.content;
+                window._notifsMetadata[n.id] = n.created_at;
+            });
             const found = (data || []).find(n => String(n.id) === String(id));
             if (found) {
-                content = found.content;
-                window._allNotifications = window._allNotifications || {};
-                window._allNotifications[id] = content;
+                if (!content) content = found.content;
+                notifCreatedAt = found.created_at || '';
             }
         } catch (e) {}
     }
     if (!content) content = 'Thông báo hệ thống';
 
     const isFromAll = Boolean(fromAll);
-    const htmlModal = buildModernNotificationHtml(id, content, isFromAll);
+    const htmlModal = buildModernNotificationHtml(id, content, isFromAll, notifCreatedAt);
 
     window._isReadingNotifModal = true;
     Swal.fire({
         html: htmlModal,
         showConfirmButton: false,
         showCloseButton: false,
-        width: 580,
+        width: 620,
         padding: '0',
         background: '#ffffff',
         allowOutsideClick: true,
@@ -1756,18 +1974,22 @@ async function showAllNotifications() {
                 title: 'Hộp thư Thông báo',
                 text: 'Bạn không có thông báo nào.',
                 confirmButtonText: 'Đóng',
-                confirmButtonColor: '#2563eb',
+                confirmButtonColor: '#0284c7',
                 customClass: { popup: 'rounded-4' }
             });
             return;
         }
 
-        window._allNotifications = {};
-        data.forEach(n => { window._allNotifications[n.id] = n.content; });
+        window._allNotifications = window._allNotifications || {};
+        window._notifsMetadata = window._notifsMetadata || {};
+        data.forEach(n => {
+            window._allNotifications[n.id] = n.content;
+            window._notifsMetadata[n.id] = n.created_at;
+        });
 
         const unreadCount = data.filter(n => !n.is_read).length;
 
-        // Render card items
+        // Render clean list items
         let listItems = data.map(n => {
             const raw = n.content.split('|||')[0];
             const temp = document.createElement("div");
@@ -1775,39 +1997,49 @@ async function showAllNotifications() {
             const cleanText = (temp.textContent || temp.innerText || "").trim();
             const snippet = cleanText.length > 95 ? cleanText.substring(0, 95) + '...' : cleanText;
 
-            const isFacultyApproved = n.content.includes('Khoa') && (n.content.includes('phê duyệt') || n.content.includes('ĐÃ PHÊ DUYỆT'));
-            const isFacultyRevision = n.content.includes('Khoa') && (n.content.includes('chỉnh sửa') || n.content.includes('YÊU CẦU'));
-            const isLecturerReview = n.content.includes('Giảng viên') || n.content.includes('GV') || n.content.includes('đánh giá') || n.content.includes('hướng dẫn');
+            const isBatch = n.content.includes('Đợt NCKH') || n.content.includes('NCKH 20') || n.content.includes('NCKH Standard');
+            const isFacultyApproved = n.content.includes('Khoa') && (n.content.includes('phê duyệt') || n.content.includes('ĐÃ PHÊ DUYỆT') || n.content.includes('ĐẠT'));
+            const isFacultyRevision = n.content.includes('Khoa') && (n.content.includes('chỉnh sửa') || n.content.includes('YÊU CẦU') || n.content.includes('TỪ CHỐI'));
+            const isLecturer = n.content.includes('Giảng viên') || n.content.includes('GVHD') || n.content.includes('ThS.') || n.content.includes('TS.');
 
-            let badgeHtml = '<span class="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1 small">Hệ thống</span>';
-            let iconClass = 'fa-solid fa-bell text-secondary';
+            let badgeHtml = '<span class="badge bg-secondary-subtle text-secondary rounded-pill px-2 py-0.5" style="font-size: 10px;">Hệ thống</span>';
+            let iconClass = 'fa-regular fa-bell text-secondary';
+            let iconBg = 'bg-light';
 
-            if (isFacultyApproved) {
-                badgeHtml = '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 small"><i class="fa-solid fa-stamp me-1"></i>Khoa đã duyệt</span>';
-                iconClass = 'fa-solid fa-stamp text-success';
+            if (isBatch) {
+                badgeHtml = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size: 10px;"><i class="fa-solid fa-bullhorn me-1"></i>Đợt NCKH</span>';
+                iconClass = 'fa-solid fa-bullhorn text-primary';
+                iconBg = 'bg-primary-subtle';
+            } else if (isFacultyApproved) {
+                badgeHtml = '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5" style="font-size: 10px;"><i class="fa-solid fa-circle-check me-1"></i>Khoa đã duyệt</span>';
+                iconClass = 'fa-solid fa-circle-check text-success';
+                iconBg = 'bg-success-subtle';
             } else if (isFacultyRevision) {
-                badgeHtml = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1 small"><i class="fa-solid fa-triangle-exclamation me-1"></i>Khoa yêu cầu sửa</span>';
+                badgeHtml = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-0.5" style="font-size: 10px;"><i class="fa-solid fa-triangle-exclamation me-1"></i>Khoa yêu cầu sửa</span>';
                 iconClass = 'fa-solid fa-triangle-exclamation text-danger';
-            } else if (isLecturerReview) {
-                badgeHtml = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 small"><i class="fa-solid fa-chalkboard-user me-1"></i>GVHD đánh giá</span>';
+                iconBg = 'bg-danger-subtle';
+            } else if (isLecturer) {
+                badgeHtml = '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill px-2 py-0.5" style="font-size: 10px;"><i class="fa-solid fa-chalkboard-user me-1"></i>GVHD</span>';
                 iconClass = 'fa-solid fa-chalkboard-user text-primary';
+                iconBg = 'bg-info-subtle';
             }
 
             return `
-                <div class="list-group-item list-group-item-action p-3 mb-2 rounded-4 border ${!n.is_read ? 'border-primary-subtle bg-white shadow-xs' : 'bg-light bg-opacity-75'}"
-                    style="cursor: pointer; transition: all 0.2s;"
+                <div class="list-group-item list-group-item-action p-3 mb-2 rounded-3 border ${!n.is_read ? 'border-primary-subtle bg-white shadow-xs' : 'bg-light bg-opacity-50'}"
+                    style="cursor: pointer; transition: all 0.15s ease-in-out;"
+                    data-is-read="${n.is_read ? 'true' : 'false'}"
                     onclick="event.preventDefault(); readNotification(${n.id}, window._allNotifications[${n.id}], true)">
                     <div class="d-flex align-items-start gap-3">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 38px; height: 38px; background: rgba(0,0,0,0.04);">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 ${iconBg}" style="width: 36px; height: 36px;">
                             <i class="${iconClass}"></i>
                         </div>
                         <div class="flex-grow-1" style="min-width: 0;">
                             <div class="d-flex align-items-center justify-content-between mb-1">
-                                <div>
+                                <div class="d-flex align-items-center gap-1.5">
                                     ${badgeHtml}
-                                    ${!n.is_read ? '<span class="badge bg-danger rounded-circle p-1 ms-1" style="width:8px; height:8px; display:inline-block;"></span>' : ''}
+                                    ${!n.is_read ? '<span class="badge bg-primary text-white rounded-pill px-2 py-0.5 fw-bold d-inline-flex align-items-center gap-1" style="font-size: 9.5px;"><span style="width: 5px; height: 5px; border-radius: 50%; background-color: #fff; display: inline-block;"></span>Chưa đọc</span>' : '<span class="badge bg-light text-muted border rounded-pill px-2 py-0.5 fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 9.5px;"><span style="width: 5px; height: 5px; border-radius: 50%; background-color: #94a3b8; display: inline-block;"></span>Đã đọc</span>'}
                                 </div>
-                                <span class="text-muted small" style="font-size: 11px;">${n.created_at}</span>
+                                <span class="text-muted small" style="font-size: 11px;">${n.created_at || ''}</span>
                             </div>
                             <p class="mb-0 text-dark small" style="line-height: 1.45; font-size: 13px;">${snippet}</p>
                         </div>
@@ -1818,27 +2050,30 @@ async function showAllNotifications() {
 
         let modalHtml = `
             <div class="text-start" style="font-family: inherit;">
-                <!-- Header -->
-                <div class="p-4 text-white position-relative" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); border-radius: 16px 16px 0 0;">
+                <!-- Clean Header -->
+                <div class="p-3.5 px-4 bg-white border-bottom position-relative" style="border-radius: 16px 16px 0 0;">
                     <div class="d-flex align-items-center justify-content-between mb-1">
-                        <span class="badge rounded-pill px-3 py-1 fw-bold text-uppercase" style="background: rgba(255,255,255,0.22); font-size: 10.5px;">
-                            <i class="fa-solid fa-inbox me-1"></i> HỘP THƯ HỆ THỐNG
-                        </span>
-                        <button type="button" class="btn-close btn-close-white" onclick="Swal.close()" aria-label="Close" style="opacity: 0.85; filter: invert(1);"></button>
-                    </div>
-                    <div class="d-flex align-items-baseline justify-content-between">
-                        <div>
-                            <h5 class="fw-bold mb-0 text-white">Tất cả Thông báo</h5>
-                            <small class="text-white-50">Tổng số: ${data.length} thông báo ${unreadCount > 0 ? `• <span class="text-warning fw-bold">${unreadCount} chưa đọc</span>` : ''}</small>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fw-bold" style="font-size: 11px;">
+                                <i class="fa-solid fa-inbox me-1"></i> HỘP THƯ HỆ THỐNG
+                            </span>
+                            <span class="text-muted small" style="font-size: 11.5px;">• HOU S-RIMS</span>
                         </div>
-                        <button class="btn btn-sm btn-outline-light rounded-pill px-3 py-1 fw-bold small" onclick="deleteAllReadNotifications()">
+                        <button type="button" class="btn-close" onclick="Swal.close()" aria-label="Đóng" style="font-size: 11px;"></button>
+                    </div>
+                    <div class="d-flex align-items-baseline justify-content-between mt-2">
+                        <div>
+                            <h5 class="fw-bold mb-0 text-dark">Tất cả Thông báo</h5>
+                            <small class="text-muted">Tổng cộng: ${data.length} thông báo ${unreadCount > 0 ? `• <span class="text-danger fw-bold">${unreadCount} chưa đọc</span>` : ''}</small>
+                        </div>
+                        <button class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1 fw-bold" style="font-size: 11.5px;" onclick="deleteAllReadNotifications()">
                             <i class="fa-solid fa-trash me-1"></i> Xóa đã đọc
                         </button>
                     </div>
                 </div>
 
                 <!-- List Content -->
-                <div class="p-3.5 p-md-4" style="background: #f8fafc; max-height: 58vh; overflow-y: auto;">
+                <div class="p-3 px-4" style="background: #f8fafc; max-height: 60vh; overflow-y: auto;">
                     <div class="list-group list-group-flush border-0">
                         ${listItems}
                     </div>
@@ -1846,7 +2081,7 @@ async function showAllNotifications() {
 
                 <!-- Footer -->
                 <div class="p-3 px-4 bg-white border-top text-end" style="border-radius: 0 0 16px 16px;">
-                    <button type="button" class="btn btn-light rounded-pill px-4 py-2 fw-bold text-secondary border small" onclick="Swal.close()">
+                    <button type="button" class="btn btn-sm btn-light rounded-pill px-4 py-1.5 fw-bold text-secondary border" onclick="Swal.close()">
                         Đóng
                     </button>
                 </div>
@@ -1992,11 +2227,16 @@ async function syncNotificationsLive(immediate = false) {
                         titleHtml = '<span class="text-primary fw-bold"><i class="fa-solid fa-user-tie me-1"></i>Đánh giá từ GVHD</span>';
                     }
 
+                    const unreadStatusHtml = !notif.is_read
+                        ? `<span class="badge bg-primary text-white rounded-pill px-2 py-0.5 fw-bold d-inline-flex align-items-center gap-1 flex-shrink-0" style="font-size: 9.5px;"><span style="width: 5px; height: 5px; border-radius: 50%; background-color: #ffffff; display: inline-block;"></span>Chưa đọc</span>`
+                        : `<span class="text-muted d-inline-flex align-items-center gap-1 flex-shrink-0" style="font-size: 10px; font-weight: 500;"><span style="width: 5px; height: 5px; border-radius: 50%; background-color: #cbd5e1; display: inline-block;"></span>Đã đọc</span>`;
+
                     itemsHtml += `
                         <li>
-                            <a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start notif-dropdown-item ${!notif.is_read ? 'bg-light' : ''}" 
+                            <a class="dropdown-item p-3 border-bottom d-flex gap-3 align-items-start notif-dropdown-item ${!notif.is_read ? 'notif-unread' : 'notif-read'}" 
                                href="javascript:void(0)" 
                                data-notif-id="${notif.id}"
+                               data-notif-content="${encodedContent}"
                                onclick="event.preventDefault(); readNotification(${notif.id}, null, false)">
                                 <div class="${iconBg} rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;">
                                     <i class="${iconClass}"></i>
@@ -2004,7 +2244,7 @@ async function syncNotificationsLive(immediate = false) {
                                 <div class="flex-grow-1" style="min-width: 0;">
                                     <div class="fw-bold small mb-1 d-flex align-items-center justify-content-between">
                                         ${titleHtml}
-                                        ${!notif.is_read ? '<span class="badge bg-danger rounded-circle p-1" style="width:8px; height:8px;"></span>' : ''}
+                                        ${unreadStatusHtml}
                                     </div>
                                     <div class="small text-muted mb-1" style="line-height: 1.4; white-space: normal;">${snippet}</div>
                                     <div class="text-muted" style="font-size: 10px;">${notif.created_at}</div>

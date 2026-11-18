@@ -15,6 +15,16 @@ class User(db.Model):
     role = db.Column(db.String(20), nullable=False) # Admin, Lecturer, Student
     student_id = db.Column(db.String(20), nullable=True)   # MSSV for students
     faculty = db.Column(db.String(100), nullable=True)      # faculty / department
+    avatar_url = db.Column(db.Text, nullable=True)         # Profile avatar path
+    transcript_url = db.Column(db.Text, nullable=True)     # Student academic transcript PDF/image
+    dob = db.Column(db.String(20), nullable=True)          # Ngay sinh
+    gender = db.Column(db.String(10), nullable=True)       # Gioi tinh (Nam/Nu)
+    hometown = db.Column(db.String(100), nullable=True)    # Noi sinh / Que quan
+    class_name = db.Column(db.String(50), nullable=True)   # Lop sinh hoat (VD: 2410A08KS)
+    major = db.Column(db.String(100), nullable=True)       # Nganh / Chuyen nganh
+    id_card = db.Column(db.String(30), nullable=True)      # So CMND/CCCD
+    address = db.Column(db.String(255), nullable=True)     # Noi o hien nay
+    gpa = db.Column(db.String(10), nullable=True)          # Diem GPA tich luy
     
     # Relationships
     topics_mentored = db.relationship('Topic', backref='mentor', lazy=True)
@@ -43,7 +53,17 @@ class User(db.Model):
             'bio': self.bio,
             'phone': self.phone,
             'student_id': self.student_id,
-            'faculty': self.faculty
+            'faculty': self.faculty,
+            'avatar_url': self.avatar_url,
+            'transcript_url': self.transcript_url,
+            'dob': self.dob,
+            'gender': self.gender,
+            'hometown': self.hometown,
+            'class_name': self.class_name,
+            'major': self.major,
+            'id_card': self.id_card,
+            'address': self.address,
+            'gpa': self.gpa
         }
 
 class Batch(db.Model):

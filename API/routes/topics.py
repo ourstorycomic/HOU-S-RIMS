@@ -105,7 +105,37 @@ def get_my_topic():
         ).order_by(Topic.id.desc()).first()
         
     if not topic:
-        return jsonify({'has_topic': False, 'topic': None}), 200
+        act_group = groups[0] if groups else None
+        if act_group:
+            is_leader = bool(act_group.leader_id == user_id)
+            members_data = []
+            for m in act_group.members:
+                st = m.student
+                if st:
+                    members_data.append({
+                        'id': m.id,
+                        'student_id': st.id,
+                        'student_code': getattr(st, 'student_id', '') or st.username,
+                        'full_name': st.full_name or '',
+                        'status': m.status,
+                        'is_leader': bool(st.id == act_group.leader_id)
+                    })
+            return jsonify({
+                'has_topic': False,
+                'has_group': True,
+                'group': {
+                    'id': act_group.id,
+                    'name': act_group.name,
+                    'is_leader': is_leader,
+                    'leader_name': act_group.leader.full_name if act_group.leader else '',
+                    'leader_code': getattr(act_group.leader, 'student_id', '') or getattr(act_group.leader, 'username', '') if act_group.leader else '',
+                    'leader_id': act_group.leader_id,
+                    'mentor_name': act_group.mentor.full_name if act_group.mentor else 'Chưa chọn GVHD',
+                    'members': members_data
+                },
+                'topic': None
+            }), 200
+        return jsonify({'has_topic': False, 'has_group': False, 'topic': None}), 200
         
     status_map = {'waiting_for_members': 0, 'pending': 1, 'faculty_pending': 2, 'approved': 3, 'rejected': 0}
     step = status_map.get(topic.status, 1)
@@ -252,22 +282,30 @@ def register_topic():
         topic_title = data.get('name', '').strip() or 'Đề tài NCKH (Chưa đặt tên)'
         # 1. Xác định group_id và tạo/cập nhật nhóm
         if group_id == 0:
-            # Auto-create group
-            group_name = f"Nhóm {topic_title}" if topic_title != 'Đề tài NCKH (Chưa đặt tên)' else f"Nhóm NCKH - SV{user_id}"
-            new_group = Group(
-                name=group_name,
-                batch_id=batch_id,
-                leader_id=user_id,
-                mentor_id=data['mentor_id'],
-                status='pending_mentor'
-            )
-            db.session.add(new_group)
-            db.session.flush() # To get new_group.id
-            group_id = new_group.id
-            
-            # Add leader as accepted member
-            new_member = GroupMember(group_id=group_id, student_id=user_id, status='accepted')
-            db.session.add(new_member)
+            existing_led_group = Group.query.filter_by(leader_id=user_id, batch_id=batch_id).first()
+            if existing_led_group:
+                group_id = existing_led_group.id
+                existing_led_group.mentor_id = data['mentor_id']
+                existing_led_group.status = 'pending_mentor'
+                if topic_title != 'Đề tài NCKH (Chưa đặt tên)':
+                    existing_led_group.name = f"Nhóm {topic_title}"
+            else:
+                # Auto-create group
+                group_name = f"Nhóm {topic_title}" if topic_title != 'Đề tài NCKH (Chưa đặt tên)' else f"Nhóm NCKH - SV{user_id}"
+                new_group = Group(
+                    name=group_name,
+                    batch_id=batch_id,
+                    leader_id=user_id,
+                    mentor_id=data['mentor_id'],
+                    status='pending_mentor'
+                )
+                db.session.add(new_group)
+                db.session.flush() # To get new_group.id
+                group_id = new_group.id
+                
+                # Add leader as accepted member
+                new_member = GroupMember(group_id=group_id, student_id=user_id, status='accepted')
+                db.session.add(new_member)
         else:
             # Check if group already has a topic in this batch
             existing_topic = Topic.query.filter_by(group_id=group_id, batch_id=batch_id).first()
@@ -291,7 +329,7 @@ def register_topic():
                 except (ValueError, TypeError):
                     pass
 
-        # Nếu group có các thành viên khác từ trước, cũng thêm vào danh sách cần xác nhận
+        # Nếu group có các thành viên khác từ trước, cũng thêm vào danh sách
         existing_other_gms = GroupMember.query.filter(
             GroupMember.group_id == group_id,
             GroupMember.student_id != user_id
@@ -299,60 +337,66 @@ def register_topic():
         for gm in existing_other_gms:
             other_member_ids.add(gm.student_id)
 
-        # Với mỗi thành viên khác: Đặt status = 'pending' và gửi lời mời
+        has_pending_invitations = False
+        # Với mỗi thành viên khác: nếu chưa chấp nhận thì mới đặt pending & gửi lời mời
         for mid in other_member_ids:
             gm = GroupMember.query.filter_by(group_id=group_id, student_id=mid).first()
+            is_already_accepted = (gm and gm.status in ['joined', 'accepted'])
+            
             if not gm:
                 gm = GroupMember(group_id=group_id, student_id=mid, status='pending')
                 db.session.add(gm)
-            else:
+                has_pending_invitations = True
+            elif not is_already_accepted:
                 gm.status = 'pending'
+                has_pending_invitations = True
 
-            # Gửi lời mời qua tin nhắn chat riêng
-            from models import Message as Msg
-            import json
-            inviter = User.query.get(user_id)
-            invite_msg = Msg(
-                sender_id=user_id,
-                receiver_id=mid,
-                group_id=None,
-                content=f"📩 Mời bạn tham gia nhóm NCKH cho đề tài **{topic_title}**. Nhấn Đồng ý để xác nhận.",
-                message_type='invitation',
-                meta_data=json.dumps({'invite_group_id': group_id, 'topic_name': topic_title})
-            )
-            db.session.add(invite_msg)
-
-            # Gửi notification in-app cho thành viên
-            from models import Notification
-            invited_user = User.query.get(mid)
-            if invited_user:
-                link = f"/student#s-explore"
-                html_content = (
-                    f"<p>Xin chào <strong>{invited_user.full_name}</strong>,</p>"
-                    f"<p>Bạn vừa nhận được lời mời tham gia nhóm NCKH cho đề tài: <strong>{topic_title}</strong>.</p>"
-                    f"<a href='{link}' class='btn btn-primary rounded-pill btn-sm mt-2'>Xem lời mời</a>"
+            # Chỉ gửi lời mời qua chat/email nếu thành viên chưa xác nhận tham gia
+            if not is_already_accepted:
+                from models import Message as Msg
+                import json
+                inviter = User.query.get(user_id)
+                invite_msg = Msg(
+                    sender_id=user_id,
+                    receiver_id=mid,
+                    group_id=None,
+                    content=f"📩 Mời bạn tham gia nhóm NCKH cho đề tài **{topic_title}**. Nhấn Đồng ý để xác nhận.",
+                    message_type='invitation',
+                    meta_data=json.dumps({'invite_group_id': group_id, 'topic_name': topic_title})
                 )
-                new_notif = Notification(user_id=mid, content=html_content)
-                db.session.add(new_notif)
+                db.session.add(invite_msg)
 
-                # Gửi email cho thành viên
-                if invited_user.email:
-                    from email_utils import send_email_async
-                    email_link = f"http://127.0.0.1:5000/student/chat"
-                    email_html = (
-                        f"<div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>"
-                        f"<h2 style='color: #4f46e5;'>Lời mời tham gia nhóm NCKH</h2>"
+                # Gửi notification in-app cho thành viên
+                from models import Notification
+                invited_user = User.query.get(mid)
+                if invited_user:
+                    link = f"/student#s-explore"
+                    html_content = (
                         f"<p>Xin chào <strong>{invited_user.full_name}</strong>,</p>"
-                        f"<p>Bạn vừa nhận được lời mời tham gia nhóm NCKH cho đề tài: <strong>{topic_title}</strong> từ sinh viên {inviter.full_name if inviter else ''}.</p>"
-                        f"<p>Vui lòng đăng nhập hệ thống và vào mục Chat Cá nhân để Đồng ý hoặc Từ chối lời mời này.</p>"
-                        f"<a href='{email_link}' style='display: inline-block; padding: 10px 20px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Xem lời mời</a>"
-                        f"<br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>"
-                        f"</div>"
+                        f"<p>Bạn vừa nhận được lời mời tham gia nhóm NCKH cho đề tài: <strong>{topic_title}</strong>.</p>"
+                        f"<a href='{link}' class='btn btn-primary rounded-pill btn-sm mt-2'>Xem lời mời</a>"
                     )
-                    send_email_async(invited_user.email, f"[HOU S-RIMS] Lời mời tham gia nhóm NCKH", f"Bạn được mời tham gia đề tài {topic_title}", email_html)
+                    new_notif = Notification(user_id=mid, content=html_content)
+                    db.session.add(new_notif)
 
-        has_pending_members = len(other_member_ids) > 0
-        topic_status = 'waiting_for_members' if has_pending_members else 'pending'
+                    # Gửi email cho thành viên
+                    if invited_user.email:
+                        from email_utils import send_email_async
+                        email_link = f"http://127.0.0.1:5000/student/chat"
+                        email_html = (
+                            f"<div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>"
+                            f"<h2 style='color: #4f46e5;'>Lời mời tham gia nhóm NCKH</h2>"
+                            f"<p>Xin chào <strong>{invited_user.full_name}</strong>,</p>"
+                            f"<p>Bạn vừa nhận được lời mời tham gia nhóm NCKH cho đề tài: <strong>{topic_title}</strong> từ sinh viên {inviter.full_name if inviter else ''}.</p>"
+                            f"<p>Vui lòng đăng nhập hệ thống và vào mục Chat Cá nhân để Đồng ý hoặc Từ chối lời mời này.</p>"
+                            f"<a href='{email_link}' style='display: inline-block; padding: 10px 20px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Xem lời mời</a>"
+                            f"<br><br><p style='color: #666; font-size: 12px;'>Trân trọng,<br>Hệ thống HOU S-RIMS</p>"
+                            f"</div>"
+                        )
+                        send_email_async(invited_user.email, f"[HOU S-RIMS] Lời mời tham gia nhóm NCKH", f"Bạn được mời tham gia đề tài {topic_title}", email_html)
+
+        has_pending_members = has_pending_invitations
+        topic_status = 'waiting_for_members' if has_pending_invitations else 'pending'
 
         faculty = data.get('faculty', '') or 'Khoa Công nghệ Thông tin'
         major = data.get('major', '')
@@ -419,6 +463,13 @@ def register_topic():
             )
             new_notif = Notification(user_id=mentor.id, content=html_content)
             db.session.add(new_notif)
+
+            # Thêm thông báo xác nhận gửi hồ sơ cho sinh viên
+            student_notif = Notification(
+                user_id=user_id,
+                content=f"Bạn đã gửi hồ sơ đăng ký đề tài <strong>{topic_title}</strong> tới Giảng viên hướng dẫn <strong>{mentor.full_name if mentor else ''}</strong> thành công! Đang chờ Thầy/Cô xét duyệt."
+            )
+            db.session.add(student_notif)
             db.session.commit()
             
             from email_utils import send_email_async
@@ -546,6 +597,7 @@ def handle_invitation():
         responder = User.query.get(user_id)
         responder_name = responder.full_name if responder else f"Sinh viên {user_id}"
         group_name = group.name if group else f"Nhóm #{group_id}"
+        reason = (data.get('reason') or '').strip()
 
         if group and group.leader_id and group.leader_id != user_id:
             leader_id = group.leader_id
@@ -559,9 +611,11 @@ def handle_invitation():
                     f"<i class='fa-solid fa-users me-1'></i> Xem thành viên nhóm</button>"
                 )
             else:
+                reason_block = f"<div class='p-2 my-2 bg-light border border-danger-subtle rounded-3 small text-danger'><strong>Lý do từ chối:</strong> <em>\"{reason}\"</em></div>" if reason else ""
                 notif_html = (
                     f"<p>⚠️ Sinh viên <strong>{responder_name}</strong> đã <span class='text-danger fw-bold'>từ chối</span> "
                     f"tham gia nhóm <strong>{group_name}</strong> (Đề tài: <em>{topic_title}</em>).</p>"
+                    f"{reason_block}"
                     f"<p class='small text-muted mb-2'>Hệ thống đã <strong>tạm ngưng không gửi đề tài tới Giảng viên hướng dẫn</strong>. Bạn có thể hủy đăng ký để mời thành viên khác hoặc tiếp tục gửi đề tài với số người hiện tại.</p>"
                     f"<a href='/student#s-register' class='btn btn-danger btn-sm rounded-pill mt-1 px-3 fw-bold shadow-xs'>"
                     f"<i class='fa-solid fa-sliders me-1'></i> Xử lý đề tài ngay</a>"
@@ -572,7 +626,8 @@ def handle_invitation():
             # Gửi tin nhắn chat phản hồi vào hộp thoại riêng với trưởng nhóm
             try:
                 from models import Message as Msg
-                chat_text = f"✅ Tôi đã đồng ý tham gia nhóm **{group_name}**." if action == 'accepted' else f"❌ Tôi xin phép từ chối tham gia nhóm **{group_name}**."
+                reason_chat = f" Lý do: {reason}" if reason else ""
+                chat_text = f"✅ Tôi đã đồng ý tham gia nhóm **{group_name}**." if action == 'accepted' else f"❌ Tôi xin phép từ chối tham gia nhóm **{group_name}**.{reason_chat}"
                 fb_msg = Msg(
                     sender_id=user_id,
                     receiver_id=leader_id,

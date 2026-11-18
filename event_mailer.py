@@ -254,3 +254,186 @@ def emit(event, *, inapp=True, **ctx):
     except Exception:
         db.session.rollback()
         log.exception('emit(%s) thất bại', event)
+
+
+# =============================================================================
+# TASK 2.7: DỊCH VỤ NHẮC VIỆC TỰ ĐỘNG (DEADLINE & HỘI ĐỒNG REMINDER CRON)
+# =============================================================================
+def check_and_send_deadline_reminders():
+    """
+    Dịch vụ nhắc việc tự động:
+    1. Quét các cột mốc Milestone sắp đến hạn trong vòng 1-3 ngày tới.
+       -> Gửi email & in-app Notification cho tất cả sinh viên trong nhóm.
+    2. Quét các Hội đồng nghiệm thu sắp họp trong vòng 24-48 giờ tới.
+       -> Gửi email & in-app Notification nhắc lịch họp cho Giảng viên Hội đồng và Sinh viên báo cáo.
+    """
+    from datetime import datetime, timedelta, date
+    from models import Milestone, Council, CouncilMember, Topic, User, Notification, GroupMember
+
+    now = datetime.utcnow()
+    upcoming_3d = now + timedelta(days=3)
+    today = date.today()
+    upcoming_council_days = today + timedelta(days=2)
+
+    reminders_sent = []
+
+    # 1. Nhắc hạn nộp báo cáo Milestone (1-3 ngày tới)
+    try:
+        milestones = Milestone.query.filter(
+            Milestone.status != 'completed',
+            Milestone.deadline >= now - timedelta(hours=12),
+            Milestone.deadline <= upcoming_3d
+        ).all()
+
+        for m in milestones:
+            topic = Topic.query.get(m.topic_id)
+            if not topic or not topic.group_id:
+                continue
+
+            students = _group_students(topic.group_id)
+            for s in students:
+                # Kiểm tra tránh gửi trùng lặp thông báo trong vòng 24h
+                tag = f"[MILESTONE_REMINDER_{m.id}]"
+                recent_notif = Notification.query.filter(
+                    Notification.user_id == s.id,
+                    Notification.content.contains(tag),
+                    Notification.created_at >= now - timedelta(hours=24)
+                ).first()
+
+                if not recent_notif:
+                    deadline_str = m.deadline.strftime('%d/%m/%Y %H:%M')
+                    msg_obj = _msg(
+                        s,
+                        f"[HOU S-RIMS] Nhắc hạn chót: {m.name}",
+                        "Nhắc nhở hạn nộp báo cáo tiến độ NCKH",
+                        "#f59e0b",
+                        [
+                            f"Cột mốc <strong>{_esc(m.name)}</strong> của đề tài <strong>{_esc(topic.title)}</strong> sắp đến hạn báo cáo.",
+                            f"Hạn chót: <strong>{deadline_str}</strong>.",
+                            "Nhóm vui lòng rà soát lại tiến độ và nộp tài liệu báo cáo lên hệ thống đúng thời hạn quy định."
+                        ],
+                        "/student#s-submit",
+                        "Nộp báo cáo ngay"
+                    )
+                    # Gửi qua in-app và email
+                    db.session.add(Notification(user_id=s.id, content=_inapp_html(msg_obj) + f" <!-- {tag} -->"))
+                    db.session.commit()
+                    try:
+                        from email_utils import send_email_async
+                        if s.email:
+                            send_email_async(s.email, msg_obj['subject'], msg_obj['subject'], _email_html(msg_obj))
+                    except Exception:
+                        pass
+
+                    reminders_sent.append({
+                        'type': 'milestone',
+                        'milestone_id': m.id,
+                        'recipient': s.full_name,
+                        'email': s.email
+                    })
+    except Exception as e:
+        log.exception("Error checking milestone reminders: %s", e)
+
+    # 2. Nhắc lịch họp Hội đồng nghiệm thu (1-2 ngày tới)
+    try:
+        councils = Council.query.filter(
+            Council.meeting_date >= today,
+            Council.meeting_date <= upcoming_council_days
+        ).all()
+
+        for c in councils:
+            tag = f"[COUNCIL_REMINDER_{c.id}]"
+            date_str = c.meeting_date.strftime('%d/%m/%Y')
+            time_str = c.meeting_time.strftime('%H:%M') if c.meeting_time else '--:--'
+            loc_str = c.location or 'Khoa Công nghệ thông tin'
+
+            # A. Nhắc Giảng viên Hội đồng
+            members = CouncilMember.query.filter_by(council_id=c.id).all()
+            for cm in members:
+                lec = User.query.get(cm.mentor_id)
+                if not lec:
+                    continue
+
+                recent = Notification.query.filter(
+                    Notification.user_id == lec.id,
+                    Notification.content.contains(tag),
+                    Notification.created_at >= now - timedelta(hours=24)
+                ).first()
+
+                if not recent:
+                    role_label = 'Chủ tịch' if cm.role == 'president' else ('Thư ký' if cm.role == 'secretary' else 'Ủy viên')
+                    msg_obj = _msg(
+                        lec,
+                        f"[HOU S-RIMS] Nhắc lịch họp Hội đồng: {c.name}",
+                        "Nhắc lịch họp Hội đồng nghiệm thu",
+                        "#4f46e5",
+                        [
+                            f"Phiên họp <strong>{_esc(c.name)}</strong> sẽ diễn ra vào ngày <strong>{date_str}</strong> lúc <strong>{time_str}</strong>.",
+                            f"Địa điểm: <strong>{_esc(loc_str)}</strong>.",
+                            f"Vai trò của bạn trong Hội đồng: <strong>{role_label}</strong>.",
+                            "Kính đề nghị Thầy/Cô sắp xếp thời gian tham dự đúng giờ để điều hành phiên nghiệm thu."
+                        ],
+                        "/lecturer/council",
+                        "Xem chi tiết Hội đồng"
+                    )
+                    db.session.add(Notification(user_id=lec.id, content=_inapp_html(msg_obj) + f" <!-- {tag} -->"))
+                    db.session.commit()
+                    try:
+                        from email_utils import send_email_async
+                        if lec.email:
+                            send_email_async(lec.email, msg_obj['subject'], msg_obj['subject'], _email_html(msg_obj))
+                    except Exception:
+                        pass
+
+                    reminders_sent.append({
+                        'type': 'council_lecturer',
+                        'council_id': c.id,
+                        'recipient': lec.full_name,
+                        'email': lec.email
+                    })
+
+            # B. Nhắc Sinh viên các nhóm báo cáo (ẩn giờ chi tiết theo Task 2.5)
+            c_topics = Topic.query.filter_by(council_id=c.id).all()
+            for top in c_topics:
+                if not top.group_id:
+                    continue
+                for s in _group_students(top.group_id):
+                    recent = Notification.query.filter(
+                        Notification.user_id == s.id,
+                        Notification.content.contains(tag),
+                        Notification.created_at >= now - timedelta(hours=24)
+                    ).first()
+
+                    if not recent:
+                        msg_obj = _msg(
+                            s,
+                            f"[HOU S-RIMS] Nhắc lịch báo cáo Hội đồng: {c.name}",
+                            "Nhắc lịch báo cáo Hội đồng nghiệm thu",
+                            "#10b981",
+                            [
+                                f"Nhóm đề tài <strong>{_esc(top.title)}</strong> có lịch báo cáo trước <strong>{_esc(c.name)}</strong>.",
+                                f"Hạn báo cáo: ngày <strong>{date_str}</strong> tại <strong>{_esc(loc_str)}</strong>.",
+                                "Nhóm lưu ý chuẩn bị đầy đủ slide thuyết trình, sản phẩm demo và có mặt đúng giờ theo hướng dẫn của Hội đồng."
+                            ],
+                            "/student#s-progress",
+                            "Xem lịch báo cáo"
+                        )
+                        db.session.add(Notification(user_id=s.id, content=_inapp_html(msg_obj) + f" <!-- {tag} -->"))
+                        db.session.commit()
+                        try:
+                            from email_utils import send_email_async
+                            if s.email:
+                                send_email_async(s.email, msg_obj['subject'], msg_obj['subject'], _email_html(msg_obj))
+                        except Exception:
+                            pass
+
+                        reminders_sent.append({
+                            'type': 'council_student',
+                            'council_id': c.id,
+                            'recipient': s.full_name,
+                            'email': s.email
+                        })
+    except Exception as e:
+        log.exception("Error checking council reminders: %s", e)
+
+    return reminders_sent

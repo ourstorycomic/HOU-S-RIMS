@@ -163,7 +163,8 @@ def create_council():
         for s_id in students_to_notify:
             student = User.query.get(s_id)
             if student:
-                notif_content = f"Nhóm của bạn đã được sắp xếp báo cáo trước {new_council.name}. Thời gian: {time_str} ngày {date_str}, Địa điểm: {location_str}"
+                # Task 2.5: Ẩn giờ báo cáo chi tiết đối với sinh viên nếu chưa công bố chính thức
+                notif_content = f"Nhóm của bạn đã được sắp xếp báo cáo trước {new_council.name}. Hạn báo cáo: ngày {date_str}, Địa điểm: {location_str}. (Lịch giờ cụ thể sẽ được cập nhật trước phiên họp)."
                 db.session.add(Notification(user_id=student.id, content=notif_content))
                 try:
                     send_notification_email(
@@ -373,9 +374,67 @@ def upload_council_minutes(council_id):
     relative_path = f"uploads/councils/minutes/{unique_name}"
     council.minute_file_url = relative_path
     db.session.commit()
+
+    # Task 2.6: Gửi file kết quả sau khi họp Hội đồng (Tự động kèm link tải vào thông báo/email cho SV & GV)
+    try:
+        from email_utils import send_notification_email
+        minute_full_link = f"/static/{relative_path}"
+        base_host = request.host_url.rstrip('/')
+        
+        # 1. Gửi cho các thành viên trong Hội đồng (Giảng viên)
+        council_members = CouncilMember.query.filter_by(council_id=council.id).all()
+        for cm in council_members:
+            lecturer = User.query.get(cm.mentor_id)
+            if lecturer:
+                notif_msg = (
+                    f"Biên bản nghiệm thu Hội đồng <strong>{council.name}</strong> đã được tải lên thành công. "
+                    f"<a href='{minute_full_link}' target='_blank' class='btn btn-xs btn-outline-primary ms-1'>Xem/Tải file</a>"
+                )
+                db.session.add(Notification(user_id=lecturer.id, content=notif_msg))
+                if lecturer.email:
+                    send_notification_email(
+                        to_email=lecturer.email,
+                        subject=f"[HOU S-RIMS] Biên bản nghiệm thu {council.name}",
+                        content=f"Xin chào Thầy/Cô {lecturer.full_name},\n\nBiên bản họp Hội đồng '{council.name}' đã được tải lên chính thức.\nBạn có thể xem và tải file biên bản tại liên kết:\n{base_host}{minute_full_link}\n\nTrân trọng,\nHOU S-RIMS"
+                    )
+
+        # 2. Gửi cho sinh viên các nhóm đề tài và GVHD của đề tài
+        c_topics = Topic.query.filter_by(council_id=council.id).all()
+        notified_student_ids = set()
+        for top in c_topics:
+            if top.mentor_id:
+                mentor_user = User.query.get(top.mentor_id)
+                if mentor_user and mentor_user.id not in [cm.mentor_id for cm in council_members]:
+                    notif_msg = (
+                        f"Hội đồng <strong>{council.name}</strong> đã tải lên biên bản nghiệm thu cho đề tài <em>'{top.title}'</em>. "
+                        f"<a href='{minute_full_link}' target='_blank' class='btn btn-xs btn-outline-primary ms-1'>Xem/Tải file</a>"
+                    )
+                    db.session.add(Notification(user_id=mentor_user.id, content=notif_msg))
+            
+            if top.group_id:
+                gms = GroupMember.query.filter_by(group_id=top.group_id).all()
+                for gm in gms:
+                    if gm.student_id not in notified_student_ids:
+                        notified_student_ids.add(gm.student_id)
+                        st_user = User.query.get(gm.student_id)
+                        if st_user:
+                            notif_msg = (
+                                f"Hội đồng <strong>{council.name}</strong> đã tải lên Biên bản nghiệm thu đề tài NCKH. "
+                                f"<a href='{minute_full_link}' target='_blank' class='btn btn-xs btn-outline-success ms-1'>Xem/Tải biên bản</a>"
+                            )
+                            db.session.add(Notification(user_id=st_user.id, content=notif_msg))
+                            if st_user.email:
+                                send_notification_email(
+                                    to_email=st_user.email,
+                                    subject=f"[HOU S-RIMS] Biên bản họp Hội đồng - Đề tài: {top.title}",
+                                    content=f"Xin chào {st_user.full_name},\n\nHội đồng '{council.name}' đã tải lên Biên bản nghiệm thu cho đề tài '{top.title}'.\nBạn có thể xem và tải file tại:\n{base_host}{minute_full_link}\n\nTrân trọng,\nHOU S-RIMS"
+                                )
+        db.session.commit()
+    except Exception as notif_err:
+        print(f"Error sending minute notifications: {notif_err}")
     
     return jsonify({
-        'message': 'Đã tải lên biên bản cứng thành công!',
+        'message': 'Đã tải lên biên bản cứng và gửi thông báo kết quả thành công!',
         'minute_file_url': relative_path,
         'filename': unique_name
     }), 200
@@ -579,3 +638,226 @@ def get_topic_evaluations(council_id, topic_id):
             'comments': e.comments or ''
         })
     return jsonify({'evaluations': results}), 200
+
+
+# =========================================================================
+# TASK 2.4: UPLOAD QUYẾT ĐỊNH THÀNH LẬP HỘI ĐỒNG
+# =========================================================================
+@evaluation_bp.route('/councils/<int:council_id>/upload-decision', methods=['POST'])
+def upload_council_decision(council_id):
+    """
+    API upload file Quyết định thành lập Hội đồng (PDF/JPG/PNG) lưu trữ và cập nhật decision_file_url
+    """
+    council = Council.query.get_or_404(council_id)
+    if 'file' not in request.files:
+        return jsonify({'error': 'Không tìm thấy file tải lên!'}), 400
+        
+    file = request.files['file']
+    if not file or file.filename == '':
+        return jsonify({'error': 'Tên file không hợp lệ!'}), 400
+        
+    filename = secure_filename(file.filename)
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in ['.pdf', '.jpg', '.jpeg', '.png']:
+        return jsonify({'error': 'Chỉ chấp nhận file scan định dạng PDF, JPG hoặc PNG!'}), 400
+        
+    is_serverless = bool(os.getenv('VERCEL') or os.getenv('AWS_LAMBDA_FUNCTION_NAME') or os.getenv('LAMBDA_TASK_ROOT'))
+    if is_serverless:
+        upload_dir = '/tmp/uploads/councils/decisions'
+    else:
+        upload_dir = os.path.join(request.environ.get('FLASK_APP_DIR', '.'), 'static', 'uploads', 'councils', 'decisions')
+    try:
+        os.makedirs(upload_dir, exist_ok=True)
+    except Exception:
+        pass
+    
+    unique_name = f"quyetdinh_hd_{council.id}_{int(datetime.utcnow().timestamp())}{ext}"
+    save_path = os.path.join(upload_dir, unique_name)
+    file.save(save_path)
+    
+    relative_path = f"uploads/councils/decisions/{unique_name}"
+    council.decision_file_url = relative_path
+    db.session.commit()
+    
+    return jsonify({
+        'message': 'Đã tải lên Quyết định thành lập Hội đồng thành công!',
+        'decision_file_url': relative_path,
+        'filename': unique_name
+    }), 200
+
+
+# =========================================================================
+# TASK 2.1: THUẬT TOÁN TỰ ĐỘNG TÍNH & CHIA ĐỀ TÀI VÀO HỘI ĐỒNG
+# =========================================================================
+@evaluation_bp.route('/councils/auto-group-topics', methods=['POST'])
+def auto_group_topics():
+    """
+    Thuật toán tự động tính toán và chia đề tài vào các Hội đồng:
+    1. Gom nhóm đề tài theo Hướng nghiên cứu / Chuyên môn
+    2. Tối đa X đề tài/Hội đồng (cân đối thời lượng báo cáo)
+    3. Loại trừ hoàn toàn GVHD của các đề tài khỏi Hội đồng đó
+    4. Ưu tiên chọn Giảng viên có chuyên môn phù hợp với đề tài
+    5. Cân bằng tải trọng giữa các giảng viên trong khoa
+    """
+    from sqlalchemy import func
+    data = request.get_json(silent=True) or {}
+    batch_id = data.get('batch_id')
+    max_per_council = int(data.get('max_topics_per_council') or 5)
+    max_per_council = max(2, min(max_per_council, 10))
+    apply_changes = bool(data.get('apply', False))
+    meeting_date_str = data.get('meeting_date')
+
+    if not batch_id:
+        active_batch = Batch.query.filter_by(status='active').order_by(Batch.id.desc()).first()
+        if not active_batch:
+            active_batch = Batch.query.order_by(Batch.id.desc()).first()
+        batch_id = active_batch.id if active_batch else None
+
+    if not batch_id:
+        return jsonify({'error': 'Không tìm thấy đợt NCKH phù hợp!'}), 400
+
+    # Lấy các đề tài trong đợt chưa được phân vào Hội đồng
+    unassigned_topics = Topic.query.filter(
+        Topic.batch_id == batch_id,
+        Topic.council_id.is_(None)
+    ).all()
+
+    if not unassigned_topics:
+        return jsonify({'error': 'Tất cả các đề tài trong đợt này đã được phân công vào Hội đồng!'}), 400
+
+    all_lecturers = User.query.filter(func.lower(User.role) == 'lecturer').all()
+    if len(all_lecturers) < 3:
+        return jsonify({'error': 'Cần ít nhất 3 giảng viên trong hệ thống để thành lập Hội đồng!'}), 400
+
+    # Gom nhóm đề tài theo Hướng nghiên cứu (field)
+    field_groups = {}
+    for t in unassigned_topics:
+        f = (t.field or 'Công nghệ thông tin & Ứng dụng').strip()
+        field_groups.setdefault(f, []).append(t)
+
+    suggested_councils = []
+    council_counter = Council.query.filter_by(batch_id=batch_id).count() + 1
+
+    leftover_topics = []
+    for field_name, topics_in_field in field_groups.items():
+        if len(topics_in_field) <= 1:
+            leftover_topics.extend(topics_in_field)
+            continue
+        
+        for i in range(0, len(topics_in_field), max_per_council):
+            chunk = topics_in_field[i:i + max_per_council]
+            if len(chunk) == 1 and i > 0:
+                leftover_topics.extend(chunk)
+                continue
+            suggested_councils.append({
+                'name': f"Hội đồng Nghiệm thu NCKH - Tiểu ban {field_name} (HĐ {council_counter})",
+                'field': field_name,
+                'topics': chunk
+            })
+            council_counter += 1
+
+    if leftover_topics:
+        for i in range(0, len(leftover_topics), max_per_council):
+            chunk = leftover_topics[i:i + max_per_council]
+            suggested_councils.append({
+                'name': f"Hội đồng Nghiệm thu NCKH - Tiểu ban Liên ngành CNTT (HĐ {council_counter})",
+                'field': 'Liên ngành CNTT',
+                'topics': chunk
+            })
+            council_counter += 1
+
+    # Phân bổ Giảng viên cho từng Hội đồng
+    # Lấy số lượng HĐ mà mỗi GV đã tham gia trong đợt này
+    existing_assignments = CouncilMember.query.join(Council).filter(Council.batch_id == batch_id).all()
+    lecturer_council_counts = {l.id: 0 for l in all_lecturers}
+    for ea in existing_assignments:
+        lecturer_council_counts[ea.mentor_id] = lecturer_council_counts.get(ea.mentor_id, 0) + 1
+
+    councils_result = []
+    for c_info in suggested_councils:
+        topics_list = c_info['topics']
+        field_key = c_info['field'].lower()
+        
+        # Rule 2.2: Chặn GVHD tham gia Hội đồng
+        excluded_mentor_ids = set()
+        for t in topics_list:
+            if t.mentor_id:
+                excluded_mentor_ids.add(t.mentor_id)
+
+        candidates = [l for l in all_lecturers if l.id not in excluded_mentor_ids]
+        
+        # Rule 2.3: Ưu tiên gợi ý GV theo Hướng nghiên cứu
+        def lecturer_score(lec):
+            score = 0
+            text = ((lec.bio or '') + ' ' + (lec.faculty or '')).lower()
+            words = [w for w in field_key.split() if len(w) > 2]
+            for w in words:
+                if w in text:
+                    score += 3
+            # Cân bằng tải trọng
+            score -= lecturer_council_counts.get(lec.id, 0) * 1.5
+            return score
+
+        candidates.sort(key=lecturer_score, reverse=True)
+
+        if len(candidates) < 2:
+            president = candidates[0] if len(candidates) > 0 else all_lecturers[0]
+            secretary = candidates[1] if len(candidates) > 1 else (all_lecturers[1] if all_lecturers[1].id != president.id else all_lecturers[2])
+            members = []
+        else:
+            president = candidates[0]
+            secretary = candidates[1]
+            members = candidates[2:4] if len(candidates) >= 4 else (candidates[2:3] if len(candidates) >= 3 else [])
+
+        lecturer_council_counts[president.id] += 1
+        lecturer_council_counts[secretary.id] += 1
+        for m in members:
+            lecturer_council_counts[m.id] += 1
+
+        councils_result.append({
+            'name': c_info['name'],
+            'field': c_info['field'],
+            'topics': [{'id': t.id, 'title': t.title, 'mentor_name': t.mentor.full_name if t.mentor else 'Chưa có', 'mentor_id': t.mentor_id, 'field': t.field} for t in topics_list],
+            'president': {'id': president.id, 'full_name': president.full_name, 'email': president.email},
+            'secretary': {'id': secretary.id, 'full_name': secretary.full_name, 'email': secretary.email},
+            'members': [{'id': m.id, 'full_name': m.full_name, 'email': m.email} for m in members]
+        })
+
+    # Nếu apply=True: lưu trực tiếp vào DB
+    created_councils = []
+    if apply_changes:
+        default_date = datetime.strptime(meeting_date_str, '%Y-%m-%d').date() if meeting_date_str else datetime.utcnow().date()
+        for plan in councils_result:
+            new_c = Council(
+                name=plan['name'],
+                batch_id=batch_id,
+                meeting_date=default_date,
+                location="Phòng Hội thảo Khoa CNTT"
+            )
+            db.session.add(new_c)
+            db.session.flush()
+
+            db.session.add(CouncilMember(council_id=new_c.id, mentor_id=plan['president']['id'], role='president'))
+            db.session.add(CouncilMember(council_id=new_c.id, mentor_id=plan['secretary']['id'], role='secretary'))
+            for m in plan['members']:
+                db.session.add(CouncilMember(council_id=new_c.id, mentor_id=m['id'], role='member'))
+
+            for t_item in plan['topics']:
+                top = Topic.query.get(t_item['id'])
+                if top:
+                    top.council_id = new_c.id
+
+            created_councils.append(new_c.id)
+        db.session.commit()
+        return jsonify({
+            'message': f'Đã tự động tính toán và thành lập thành công {len(created_councils)} Hội đồng nghiệm thu!',
+            'council_ids': created_councils,
+            'councils': councils_result
+        }), 201
+
+    return jsonify({
+        'message': f'Đã tính toán phương án phân bổ {len(unassigned_topics)} đề tài vào {len(councils_result)} Hội đồng!',
+        'total_topics': len(unassigned_topics),
+        'total_councils': len(councils_result),
+        'councils': councils_result
+    }), 200

@@ -77,11 +77,41 @@ def update_profile(user_id):
         return jsonify({'error': 'User not found'}), 404
         
     data = request.get_json()
-    if 'full_name' in data: user.full_name = data['full_name']
+    if 'full_name' in data: 
+        user.full_name = data['full_name']
+        session['user_name'] = data['full_name']
     if 'email' in data: user.email = data['email']
     if 'phone' in data: user.phone = data['phone']
     if 'bio' in data: user.bio = data['bio']
     if 'faculty' in data: user.faculty = data['faculty']
+    if 'dob' in data:
+        dob_val = (data['dob'] or '').strip()
+        if dob_val:
+            import re
+            from datetime import datetime
+            m = re.match(r'^(\d{1,2})/(\d{1,2})/(\d{4})$', dob_val)
+            if not m:
+                return jsonify({'error': 'Định dạng ngày sinh phải là DD/MM/YYYY (ví dụ: 15/08/2006)'}), 400
+            d, m_val, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
+            curr_year = datetime.now().year
+            if y >= curr_year or y > 2010 or (curr_year - y) < 16:
+                return jsonify({'error': f'Năm sinh {y} không hợp lệ! Sinh viên phải từ 16 tuổi trở lên (năm sinh không thể là năm {y} hoặc tương lai).'}), 400
+            if y < 1960:
+                return jsonify({'error': f'Năm sinh {y} không hợp lệ (quá nhỏ). Vui lòng kiểm tra lại.'}), 400
+            try:
+                datetime(y, m_val, d)
+            except ValueError:
+                return jsonify({'error': f'Ngày {d}/{m_val}/{y} không tồn tại trên lịch (ví dụ: ngày 31/02)! Vui lòng kiểm tra lại.'}), 400
+            user.dob = f"{d:02d}/{m_val:02d}/{y}"
+        else:
+            user.dob = None
+    if 'gender' in data: user.gender = data['gender']
+    if 'hometown' in data: user.hometown = data['hometown']
+    if 'class_name' in data: user.class_name = data['class_name']
+    if 'major' in data: user.major = data['major']
+    if 'id_card' in data: user.id_card = data['id_card']
+    if 'address' in data: user.address = data['address']
+    if 'gpa' in data: user.gpa = data['gpa']
     
     db.session.commit()
     return jsonify({'message': 'Profile updated successfully'}), 200

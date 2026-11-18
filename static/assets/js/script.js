@@ -21,9 +21,36 @@ document.addEventListener('DOMContentLoaded', function() {
         const allViews = contentArea.querySelectorAll(':scope > div[id^="view-"]');
         console.log('Initializing views, total found:', allViews.length);
         
-        // Kiểm tra URL hash hoặc sessionStorage để hiển thị view tương ứng
+        // Kiểm tra URL route, URL hash hoặc sessionStorage để hiển thị view tương ứng
         let rawHash = window.location.hash.substring(1); // Bỏ dấu #
         let hash = rawHash.split('?')[0];
+        
+        if (window.location.pathname.startsWith('/student')) {
+            const pathParts = window.location.pathname.split('/').filter(Boolean);
+            const sub = pathParts[1];
+            const slugToTab = {
+                'explore': 's-explore',
+                'dashboard': 's-explore',
+                'mentors': 's-mentors',
+                'members': 's-members',
+                'profile': 's-profile',
+                'portfolio': 's-profile',
+                'register': 's-register',
+                'group-registration': 's-register',
+                'group': 's-group',
+                'progress': 's-group',
+                'templates': 's-templates',
+                'submit': 's-submit',
+                'chat': 's-chat',
+                'calendar': 's-calendar'
+            };
+            if (sub && slugToTab[sub]) {
+                hash = slugToTab[sub];
+            } else if (!hash && pathParts.length === 1) {
+                hash = 's-explore';
+            }
+        }
+        
         if (!hash) {
             hash = sessionStorage.getItem('active_admin_tab') || '';
         }
@@ -188,18 +215,18 @@ document.addEventListener('DOMContentLoaded', function() {
 /**
  * 1. HÀM CHUYỂN TAB (NAVIGATION)
  */
-function switchTab(tabName, element) {
+function switchTab(tabName, element, pushHistory = true) {
     // Lưu vị trí scroll hiện tại của sidebar
     const sidebarMenu = document.querySelector('.sidebar-menu-wrapper');
     const currentScrollPosition = sidebarMenu ? sidebarMenu.scrollTop : 0;
-    console.log('=== switchTab START ===');
-    console.log('Tab name:', tabName);
-    console.log('Element:', element);
+    console.log('=== switchTab START ===', tabName, 'pushHistory:', pushHistory);
     
     // Tự động tìm element nếu chưa truyền
     if (!element) {
-        element = document.querySelector(`.sidebar .nav-link[onclick*="'${tabName}'"]`) || 
-                  document.querySelector(`.sidebar .nav-link[href*="#${tabName}"]`);
+        element = document.querySelector(`.sidebar .nav-link[data-tab="${tabName}"]`) ||
+                  document.querySelector(`.sidebar .nav-link[onclick*="'${tabName}'"]`) || 
+                  document.querySelector(`.sidebar .nav-link[href*="#${tabName}"]`) ||
+                  document.querySelector(`.sidebar .nav-link[href*="/${tabName.replace('s-', '')}"]`);
     }
 
     // A. Xử lý UI của thanh điều hướng (Sidebar)
@@ -311,10 +338,49 @@ function switchTab(tabName, element) {
         }
     }
 
-    // D. Cập nhật URL hash và sessionStorage để khi reload vẫn ở đúng tab
+    // D. Cập nhật URL route (hoặc hash) và sessionStorage
     try {
-        history.replaceState(null, '', '#' + tabName);
         sessionStorage.setItem('active_admin_tab', tabName);
+        if (window.location.pathname.startsWith('/student')) {
+            const tabToSlugMap = {
+                's-explore': '',
+                'explore': '',
+                's-mentors': 'mentors',
+                'mentors': 'mentors',
+                's-members': 'members',
+                'members': 'members',
+                's-profile': 'profile',
+                'profile': 'profile',
+                's-register': 'register',
+                'register': 'register',
+                's-group': 'group',
+                'group': 'group',
+                's-templates': 'templates',
+                'templates': 'templates',
+                's-submit': 'submit',
+                'submit': 'submit',
+                's-chat': 'chat',
+                'chat': 'chat',
+                's-calendar': 'calendar',
+                'calendar': 'calendar'
+            };
+            const slug = tabToSlugMap[tabName] !== undefined ? tabToSlugMap[tabName] : tabName.replace('s-', '');
+            const newUrl = slug ? `/student/${slug}` : '/student';
+            
+            if (pushHistory) {
+                if (window.location.pathname !== newUrl) {
+                    history.pushState({ tab: tabName, path: newUrl }, '', newUrl);
+                }
+            } else {
+                history.replaceState({ tab: tabName, path: newUrl }, '', newUrl);
+            }
+        } else {
+            if (pushHistory) {
+                history.pushState({ tab: tabName }, '', '#' + tabName);
+            } else {
+                history.replaceState({ tab: tabName }, '', '#' + tabName);
+            }
+        }
     } catch(e) {}
     
     // Khôi phục vị trí scroll của sidebar sau khi xử lý xong
@@ -326,6 +392,46 @@ function switchTab(tabName, element) {
     
     console.log('=== switchTab END ===');
 }
+
+// Lắng nghe sự kiện Back / Forward của trình duyệt để chuyển tab và ngăn back về login
+window.addEventListener('popstate', function(event) {
+    if (window.location.pathname.startsWith('/student')) {
+        let targetTab = 's-explore';
+        if (event.state && event.state.tab) {
+            targetTab = event.state.tab;
+        } else {
+            const parts = window.location.pathname.split('/').filter(Boolean);
+            const sub = parts[1];
+            const slugToTab = {
+                'explore': 's-explore',
+                'dashboard': 's-explore',
+                'mentors': 's-mentors',
+                'members': 's-members',
+                'profile': 's-profile',
+                'portfolio': 's-profile',
+                'register': 's-register',
+                'group-registration': 's-register',
+                'group': 's-group',
+                'progress': 's-group',
+                'templates': 's-templates',
+                'submit': 's-submit',
+                'chat': 's-chat',
+                'calendar': 's-calendar'
+            };
+            if (sub && slugToTab[sub]) {
+                targetTab = slugToTab[sub];
+            } else if (window.location.hash) {
+                targetTab = window.location.hash.replace('#', '');
+            }
+        }
+        switchTab(targetTab, null, false);
+    } else if (event.state && event.state.tab) {
+        switchTab(event.state.tab, null, false);
+    } else if (window.location.hash) {
+        const hash = window.location.hash.substring(1).split('?')[0];
+        if (hash) switchTab(hash, null, false);
+    }
+});
 
 /**
  * 2. HÀM HIỂN THỊ THÔNG BÁO (TOAST)
@@ -498,13 +604,41 @@ function addRubricCriteria() {
  * 5. BỘ CÔNG CỤ SOẠN THẢO VĂN BẢN KIỂU WORD (WORD-LIKE RICH TEXT EDITOR HELPERS)
  */
 window.formatWordDoc = function (cmd, value = null, targetEditorId = 'registerTopicDescEditor') {
-    const editor = document.getElementById(targetEditorId);
-    if (editor) editor.focus();
-    document.execCommand(cmd, false, value);
+    let editor = document.getElementById(targetEditorId);
+    if (!editor) {
+        const active = document.activeElement;
+        if (active && active.classList.contains('word-editor-content')) {
+            editor = active;
+            targetEditorId = active.id;
+        } else {
+            editor = document.querySelector('.word-editor-content');
+            if (editor) targetEditorId = editor.id;
+        }
+    }
+    if (editor) {
+        editor.focus();
+    }
+    
+    if (cmd === 'hiliteColor') {
+        if (!document.execCommand('hiliteColor', false, value)) {
+            document.execCommand('backColor', false, value);
+        }
+    } else {
+        document.execCommand(cmd, false, value);
+    }
+
+    if (editor) {
+        window.updateWordToolbarActiveStates(editor);
+    }
+
     if (targetEditorId === 'submissionNotesEditor' && typeof window.syncSubmissionNotesFromEditor === 'function') {
         window.syncSubmissionNotesFromEditor();
     } else if (targetEditorId === 'feedbackTextEditor' && typeof window.syncFeedbackTextFromEditor === 'function') {
         window.syncFeedbackTextFromEditor();
+    } else if (targetEditorId === 'batchDescEditor' && typeof window.syncBatchDescFromEditor === 'function') {
+        window.syncBatchDescFromEditor();
+    } else if (targetEditorId === 'editBatchDescEditor' && typeof window.syncEditBatchDesc === 'function') {
+        window.syncEditBatchDesc();
     } else if (typeof window.syncTopicDescFromEditor === 'function') {
         window.syncTopicDescFromEditor();
     }
@@ -512,9 +646,21 @@ window.formatWordDoc = function (cmd, value = null, targetEditorId = 'registerTo
 
 window.formatWordDocFontSize = function (size, targetEditorId = 'registerTopicDescEditor') {
     if (!size) return;
-    const editor = document.getElementById(targetEditorId);
-    if (editor) editor.focus();
-    
+    let editor = document.getElementById(targetEditorId);
+    if (!editor) {
+        const active = document.activeElement;
+        if (active && active.classList.contains('word-editor-content')) {
+            editor = active;
+            targetEditorId = active.id;
+        } else {
+            editor = document.querySelector('.word-editor-content');
+            if (editor) targetEditorId = editor.id;
+        }
+    }
+    if (editor) {
+        editor.focus();
+    }
+
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
         const range = selection.getRangeAt(0);
@@ -530,10 +676,18 @@ window.formatWordDocFontSize = function (size, targetEditorId = 'registerTopicDe
         document.execCommand('fontSize', false, '3');
     }
 
+    if (editor) {
+        window.updateWordToolbarActiveStates(editor);
+    }
+
     if (targetEditorId === 'submissionNotesEditor' && typeof window.syncSubmissionNotesFromEditor === 'function') {
         window.syncSubmissionNotesFromEditor();
     } else if (targetEditorId === 'feedbackTextEditor' && typeof window.syncFeedbackTextFromEditor === 'function') {
         window.syncFeedbackTextFromEditor();
+    } else if (targetEditorId === 'batchDescEditor' && typeof window.syncBatchDescFromEditor === 'function') {
+        window.syncBatchDescFromEditor();
+    } else if (targetEditorId === 'editBatchDescEditor' && typeof window.syncEditBatchDesc === 'function') {
+        window.syncEditBatchDesc();
     } else if (typeof window.syncTopicDescFromEditor === 'function') {
         window.syncTopicDescFromEditor();
     }
@@ -546,6 +700,179 @@ window.formatDoc = function (cmd, value = null) {
 window.formatDocFontSize = function (size) {
     window.formatWordDocFontSize(size, 'registerTopicDescEditor');
 };
+
+// ===================== BATCH DESCRIPTION EDITOR (ADMIN MODAL) =====================
+window.syncBatchDescFromEditor = function () {
+    const editor = document.getElementById('batchDescEditor');
+    const textarea = document.getElementById('batch-description');
+    const countEl = document.getElementById('batchDescWordCount');
+    if (!editor) return;
+
+    const htmlContent = editor.innerHTML.trim();
+    const plainText = editor.innerText.trim();
+
+    if (textarea) {
+        if (!plainText || htmlContent === '<br>') {
+            textarea.value = '';
+        } else {
+            textarea.value = htmlContent;
+        }
+    }
+
+    if (countEl) {
+        const words = plainText ? plainText.split(/\s+/).filter(Boolean).length : 0;
+        const chars = plainText.length;
+        countEl.textContent = `${words} từ • ${chars} ký tự`;
+    }
+};
+
+window.formatBatchDoc = function (cmd, value = null) {
+    window.formatWordDoc(cmd, value, 'batchDescEditor');
+    window.syncBatchDescFromEditor();
+};
+
+window.formatBatchDocFontSize = function (size) {
+    window.formatWordDocFontSize(size, 'batchDescEditor');
+    window.syncBatchDescFromEditor();
+};
+
+// ===================== EDIT BATCH DESCRIPTION EDITOR (ADMIN MODAL) =====================
+window.syncEditBatchDesc = function () {
+    const editor = document.getElementById('editBatchDescEditor');
+    const textarea = document.getElementById('editBatchDesc');
+    const countEl = document.getElementById('editBatchDescWordCount');
+    if (!editor) return;
+
+    const htmlContent = editor.innerHTML.trim();
+    const plainText = editor.innerText.trim();
+
+    if (textarea) {
+        if (!plainText || htmlContent === '<br>') {
+            textarea.value = '';
+        } else {
+            textarea.value = htmlContent;
+        }
+    }
+
+    if (countEl) {
+        const words = plainText ? plainText.split(/\s+/).filter(Boolean).length : 0;
+        const chars = plainText.length;
+        countEl.textContent = `${words} từ • ${chars} ký tự`;
+    }
+};
+
+window.formatEditBatchDoc = function (cmd, value = null) {
+    window.formatWordDoc(cmd, value, 'editBatchDescEditor');
+    window.syncEditBatchDesc();
+};
+
+window.formatEditBatchDocFontSize = function (size) {
+    window.formatWordDocFontSize(size, 'editBatchDescEditor');
+    window.syncEditBatchDesc();
+};
+
+// ===================== CẬP NHẬT TRẠNG THÁI NÚT ACTIVE (BOLD, ITALIC, U, LIST, ALIGN...) =====================
+window.updateWordToolbarActiveStates = function (editor) {
+    if (!editor) {
+        const active = document.activeElement;
+        if (active && active.classList.contains('word-editor-content')) {
+            editor = active;
+        } else {
+            const sel = window.getSelection();
+            if (sel && sel.anchorNode) {
+                const node = sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement;
+                editor = node ? node.closest('.word-editor-content') : null;
+            }
+        }
+    }
+    if (!editor) return;
+
+    const container = editor.closest('.word-editor-container');
+    if (!container) return;
+    const toolbar = container.querySelector('.word-editor-toolbar');
+    if (!toolbar) return;
+
+    const commands = [
+        'bold',
+        'italic',
+        'underline',
+        'strikeThrough',
+        'justifyLeft',
+        'justifyCenter',
+        'justifyRight',
+        'justifyFull',
+        'insertUnorderedList',
+        'insertOrderedList'
+    ];
+
+    const buttons = toolbar.querySelectorAll('.btn-tool');
+    buttons.forEach(btn => {
+        let cmd = btn.getAttribute('data-cmd');
+        if (!cmd) {
+            const onclickAttr = btn.getAttribute('onclick') || '';
+            for (const c of commands) {
+                if (onclickAttr.includes(`'${c}'`) || onclickAttr.includes(`"${c}"`)) {
+                    cmd = c;
+                    btn.setAttribute('data-cmd', c);
+                    break;
+                }
+            }
+        }
+
+        if (cmd) {
+            try {
+                const isActive = document.queryCommandState(cmd);
+                if (isActive) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            } catch (err) {
+                btn.classList.remove('active');
+            }
+        }
+    });
+
+    // Đồng bộ lại font và font size trong select nếu có
+    try {
+        const fontSelect = toolbar.querySelector('select[id*="FontFamily"]');
+        if (fontSelect) {
+            const fontName = document.queryCommandValue('fontName')?.replace(/['"]/g, '').toLowerCase();
+            if (fontName) {
+                for (const opt of fontSelect.options) {
+                    if (opt.value && opt.value.toLowerCase().includes(fontName)) {
+                        fontSelect.value = opt.value;
+                        break;
+                    }
+                }
+            }
+        }
+    } catch (e) {}
+};
+
+// Lắng nghe sự kiện di chuyển con trỏ hoặc bôi đen văn bản để đổi trạng thái nút active
+document.addEventListener('selectionchange', function () {
+    window.updateWordToolbarActiveStates();
+});
+
+document.addEventListener('keyup', function (e) {
+    if (e.target && e.target.classList.contains('word-editor-content')) {
+        window.updateWordToolbarActiveStates(e.target);
+    }
+});
+
+document.addEventListener('mouseup', function (e) {
+    if (e.target && (e.target.classList.contains('word-editor-content') || e.target.closest('.word-editor-content'))) {
+        const editor = e.target.classList.contains('word-editor-content') ? e.target : e.target.closest('.word-editor-content');
+        window.updateWordToolbarActiveStates(editor);
+    }
+});
+
+document.addEventListener('focusin', function (e) {
+    if (e.target && e.target.classList.contains('word-editor-content')) {
+        window.updateWordToolbarActiveStates(e.target);
+    }
+});
 
 document.addEventListener('keydown', function (e) {
     const active = document.activeElement;
@@ -563,5 +890,13 @@ document.addEventListener('keydown', function (e) {
             e.preventDefault();
             window.formatWordDoc('underline', null, targetId);
         }
+    }
+});
+
+// Giữ lại vùng chọn khi bấm nút toolbar (ngăn chặn toolbar button cướp focus gây mất highlight text)
+document.addEventListener('mousedown', function (e) {
+    const btn = e.target.closest('.word-editor-toolbar .btn-tool');
+    if (btn) {
+        e.preventDefault();
     }
 });

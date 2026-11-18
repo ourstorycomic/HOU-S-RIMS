@@ -107,37 +107,38 @@
     {% endif %}
 
     {% if session.get('role') == 'student' %}
+    {% set cur_tab = active_tab if active_tab is defined and active_tab else 's-explore' %}
     <div class="menu-category">SINH VIÊN PORTAL</div>
-    <a href="/student#s-explore" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-explore', this); }" class="nav-link active-student">
+    <a href="/student" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-explore', this); }" class="nav-link {{ 'active-student' if cur_tab == 's-explore' else '' }}" data-tab="s-explore">
         <i class="fa-solid fa-compass"></i> Khám phá ý tưởng
     </a>
-    <a href="/student#s-mentors" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-mentors', this); }" class="nav-link">
+    <a href="/student/mentors" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-mentors', this); }" class="nav-link {{ 'active-student' if cur_tab == 's-mentors' else '' }}" data-tab="s-mentors">
         <i class="fa-solid fa-chalkboard-user"></i> Tìm kiếm Mentor
     </a>
-    <a href="/student#s-members" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-members', this); }" class="nav-link">
+    <a href="/student/members" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-members', this); }" class="nav-link {{ 'active-student' if cur_tab == 's-members' else '' }}" data-tab="s-members">
         <i class="fa-solid fa-user-group"></i> Tìm kiếm thành viên
     </a>
-    <a href="/student#s-profile" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-profile', this); }" class="nav-link">
+    <a href="/student/profile" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-profile', this); }" class="nav-link {{ 'active-student' if cur_tab == 's-profile' else '' }}" data-tab="s-profile">
         <i class="fa-regular fa-id-badge"></i> Hồ sơ năng lực
     </a>
-    <a href="/student#s-register" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-register', this); }" class="nav-link">
+    <a href="/student/register" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-register', this); }" class="nav-link {{ 'active-student' if cur_tab == 's-register' else '' }}" data-tab="s-register">
         <i class="fa-solid fa-pen-to-square"></i> Đăng ký Đề tài
     </a>
-    <a href="/student#s-group" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-group', this); }" class="nav-link">
+    <a href="/student/group" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-group', this); }" class="nav-link {{ 'active-student' if cur_tab == 's-group' else '' }}" data-tab="s-group">
         <i class="fa-solid fa-layer-group"></i> Nhóm nghiên cứu
     </a>
-    <a href="/student#s-templates" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-templates', this); }" class="nav-link">
+    <a href="/student/templates" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-templates', this); }" class="nav-link {{ 'active-student' if cur_tab == 's-templates' else '' }}" data-tab="s-templates">
         <i class="fa-regular fa-folder-open"></i> Tài liệu mẫu
     </a>
-    <a href="/student#s-submit" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-submit', this); }" class="nav-link">
+    <a href="/student/submit" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-submit', this); }" class="nav-link {{ 'active-student' if cur_tab == 's-submit' else '' }}" data-tab="s-submit">
         <i class="fa-solid fa-cloud-arrow-up"></i> Nộp báo cáo
     </a>
-    <a href="/student#s-chat" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-chat', this); }" class="nav-link">
+    <a href="/student/chat" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-chat', this); }" class="nav-link {{ 'active-student' if cur_tab == 's-chat' else '' }}" data-tab="s-chat">
         <i class="fa-regular fa-comments"></i> Chatgroups
         {% set sg_count = approved_chat_groups | length if approved_chat_groups is defined else 0 %}
         {% if sg_count > 0 %}<span class="badge bg-primary rounded-pill ms-1" style="font-size: 9px;">{{ sg_count }}</span>{% endif %}
     </a>
-    <a href="/student#s-calendar" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-calendar', this); }" class="nav-link">
+    <a href="/student/calendar" onclick="if (window.location.pathname.startsWith('/student')) { event.preventDefault(); switchTab('s-calendar', this); }" class="nav-link {{ 'active-student' if cur_tab == 's-calendar' else '' }}" data-tab="s-calendar">
         <i class="fa-regular fa-calendar"></i> Lịch & Thông báo
     </a>
     {% endif %}

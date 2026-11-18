@@ -10,7 +10,14 @@
                         <h5 class="fw-bold text-primary mb-1"><i class="fa-solid fa-gavel me-2"></i> QUẢN LÝ HỘI ĐỒNG ĐÁNH GIÁ & NGHIỆM THU</h5>
                         <small class="text-muted">Thành lập hội đồng, gom nhóm theo lĩnh vực, chấm điểm và upload biên bản scan</small>
                     </div>
-                    <button class="btn btn-primary fw-bold rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAddCouncil">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary fw-bold rounded-pill px-3 shadow-xs" onclick="openAutoGroupModal()">
+                            <i class="fa-solid fa-wand-magic-sparkles me-1"></i> TỰ ĐỘNG CHIA HỘI ĐỒNG
+                        </button>
+                        <button class="btn btn-primary fw-bold rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAddCouncil">
+                            <i class="fa-solid fa-plus me-2"></i> THÀNH LẬP HỘI ĐỒNG
+                        </button>
+                    </div>
                         <i class="fa-solid fa-plus me-2"></i> THÀNH LẬP HỘI ĐỒNG
                     </button>
                 </div>
@@ -65,6 +72,31 @@
                                                     <div class="d-flex align-items-center justify-content-between bg-warning-subtle border border-warning-subtle p-2 rounded-3">
                                                         <span class="small text-warning-emphasis fw-semibold"><i class="fa-solid fa-triangle-exclamation me-1"></i> Chưa upload bản cứng scan</span>
                                                         <button class="btn btn-xs btn-warning rounded-pill px-2 py-1 fw-bold" onclick="openUploadMinutesModal({{ c.id }}, '{{ c.name }}', '');">
+                                                            <i class="fa-solid fa-upload me-1"></i> Tải lên
+                                                        </button>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+
+                                            <!-- TASK 2.4: QUYẾT ĐỊNH THÀNH LẬP HỘI ĐỒNG -->
+                                            <div class="pt-2 border-top mt-2">
+                                                <div class="small fw-bold text-muted mb-1"><i class="fa-solid fa-stamp text-primary me-1"></i> Quyết định thành lập Hội đồng:</div>
+                                                {% if c.decision_file_url %}
+                                                    <div class="d-flex align-items-center justify-content-between bg-primary-subtle border border-primary-subtle p-2 rounded-3">
+                                                        <span class="small text-primary fw-bold text-truncate me-2"><i class="fa-solid fa-file-pdf me-1"></i> Đã có Quyết định ({{ c.decision_number or 'QĐ' }})</span>
+                                                        <div class="d-flex gap-1">
+                                                            <a href="{{ url_for('static', filename=c.decision_file_url) }}" target="_blank" class="btn btn-xs btn-primary rounded-pill px-2 py-1 fw-bold text-white text-decoration-none">
+                                                                <i class="fa-solid fa-eye me-1"></i> Xem file
+                                                            </a>
+                                                            <button class="btn btn-xs btn-outline-primary rounded-pill px-2 py-1 fw-bold" onclick="openUploadDecisionModal({{ c.id }}, '{{ c.name }}', '{{ c.decision_file_url }}');">
+                                                                <i class="fa-solid fa-rotate me-1"></i> Đổi
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                {% else %}
+                                                    <div class="d-flex align-items-center justify-content-between bg-light border p-2 rounded-3">
+                                                        <span class="small text-muted fw-semibold"><i class="fa-solid fa-file-circle-question me-1"></i> Chưa upload file Quyết định</span>
+                                                        <button class="btn btn-xs btn-outline-primary rounded-pill px-2 py-1 fw-bold" onclick="openUploadDecisionModal({{ c.id }}, '{{ c.name }}', '');">
                                                             <i class="fa-solid fa-upload me-1"></i> Tải lên
                                                         </button>
                                                     </div>
@@ -258,7 +290,7 @@
                         </div>
                         {% else %}
                         {% for t in topics %}
-                        <div class="col-md-6 topic-item-card" data-field="{{ t.field or 'Khác' }}">
+                        <div class="col-md-6 topic-item-card" data-field="{{ t.field or 'Khác' }}" data-mentor-id="{{ t.mentor_id or '' }}" data-mentor-name="{{ t.mentor.full_name if t.mentor else '' }}">
                             <div class="card border rounded-3 p-3 h-100 bg-white shadow-xs">
                                 <div class="form-check">
                                     <input class="form-check-input council-topic-cb" type="checkbox" value="{{ t.id }}" id="cbTopic{{ t.id }}" onchange="handleTopicSelectChange({{ t.id }})">
@@ -286,7 +318,30 @@
                 </div>
 
                 <hr class="my-4">
-                <h6 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-user-tie me-2"></i> THÀNH PHẦN HỘI ĐỒNG (THÊM GIẢNG VIÊN)</h6>
+                <!-- TASK 2.2: CHẶN GVHD THAM GIA HỘI ĐỒNG & TASK 2.3: ƯU TIÊN GỢI Ý GV THEO HƯỚNG NCKH -->
+                <div class="card p-3 rounded-4 bg-light border mb-4">
+                    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+                        <div>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" id="blockSupervisorCheck" checked onchange="updateCouncilEligibleMentors()">
+                                <label class="form-check-label fw-bold text-dark cursor-pointer" for="blockSupervisorCheck">
+                                    <i class="fa-solid fa-shield-halved text-danger me-1"></i> Chặn GVHD tham gia Hội đồng (Khuyến nghị chuẩn NCKH)
+                                </label>
+                            </div>
+                            <small class="text-muted d-block mt-0.5">Tự động loại bỏ các Giảng viên đang là GVHD của các đề tài đã chọn để đảm bảo tính khách quan.</small>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1.5 fw-bold" id="blockedMentorsCountBadge">
+                                0 GVHD bị loại trừ
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-user-tie me-2"></i> THÀNH PHẦN HỘI ĐỒNG (THÊM GIẢNG VIÊN)</h6>
+                    <small class="text-muted"><i class="fa-solid fa-star text-warning me-1"></i> Giảng viên có chuyên môn phù hợp đề tài được ưu tiên xếp đầu</small>
+                </div>
                 
                 <input type="hidden" id="councilPresident">
                 <input type="hidden" id="councilSecretary">
@@ -306,7 +361,7 @@
                             <select class="form-select form-select-sm mb-2" id="picker-{{ role_id }}" onchange="addCouncilMember('{{ role_id }}', '{{ badge_class }}')">
                                 <option value="">-- Chọn giảng viên --</option>
                                 {% for m in mentors %}
-                                <option value="{{ m.id }}" data-name="{{ m.full_name }}">{{ m.full_name }} ({{ m.faculty or 'CNTT' }})</option>
+                                <option value="{{ m.id }}" data-name="{{ m.full_name }}" data-base-name="{{ m.full_name }}" data-bio="{{ m.bio or '' }}">{{ m.full_name }} ({{ m.faculty or 'CNTT' }})</option>
                                 {% endfor %}
                             </select>
                             <div id="tags-{{ role_id }}" class="d-flex flex-wrap gap-1 min-height-tag"></div>
@@ -812,4 +867,94 @@ async function doUploadMinutes() {
     }
 }
 </script>
+
+<!-- ======================================================= -->
+<!-- TASK 2.4: MODAL UPLOAD QUYẾT ĐỊNH THÀNH LẬP HỘI ĐỒNG -->
+<!-- ======================================================= -->
+<div class="modal fade" id="modalUploadDecision" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-stamp me-2"></i> Quyết định Thành lập Hội đồng</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="decisionCouncilId">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-dark">Hội đồng:</label>
+                    <div id="decisionCouncilNameDisplay" class="fw-bold text-primary bg-light p-2.5 rounded-3 border"></div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-dark">Chọn file Quyết định (PDF, JPG, PNG):</label>
+                    <input type="file" id="decisionFileInput" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                    <small class="text-muted">Dung lượng tối đa 15MB. Bản scan rõ nét hoặc file PDF có dấu đỏ.</small>
+                </div>
+                <div id="decisionCurrentFilePreview" class="d-none alert alert-info py-2 px-3 small rounded-3 mb-0">
+                    <i class="fa-solid fa-file-pdf me-1"></i> File hiện tại: <a href="#" id="decisionCurrentFileLink" target="_blank" class="fw-bold">Xem file</a>
+                </div>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy bỏ</button>
+                <button type="button" class="btn btn-primary fw-bold px-4" id="btnSubmitDecision" onclick="submitCouncilDecisionFile()">
+                    <i class="fa-solid fa-cloud-arrow-up me-1"></i> Tải lên
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================= -->
+<!-- TASK 2.1: MODAL TỰ ĐỘNG CHIA HỘI ĐỒNG THÔNG MINH -->
+<!-- ======================================================= -->
+<div class="modal fade" id="modalAutoGroup" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-gradient bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-wand-magic-sparkles me-2"></i> Thuật toán Tự động Tính & Chia Hội đồng</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3 mb-4 bg-light p-3 rounded-4 border">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold text-dark small">SỐ ĐỀ TÀI TỐI ĐA / MỖI HỘI ĐỒNG</label>
+                        <select id="autoMaxTopics" class="form-select fw-semibold">
+                            <option value="3">3 đề tài / Hội đồng</option>
+                            <option value="4">4 đề tài / Hội đồng</option>
+                            <option value="5" selected>5 đề tài / Hội đồng (Khuyến nghị)</option>
+                            <option value="6">6 đề tài / Hội đồng</option>
+                        </select>
+                        <small class="text-muted">Cân đối thời gian mỗi đề tài báo cáo 20-30 phút.</small>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label fw-bold text-dark small">NGÀY HỌP DỰ KIẾN</label>
+                        <input type="date" id="autoMeetingDate" class="form-control"
+                            value="{{ active_batch.end_date.strftime('%Y-%m-%d') if active_batch and active_batch.end_date else '' }}">
+                        <small class="text-muted">Mặc định áp dụng ngày họp cho các Hội đồng được tạo.</small>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="button" class="btn btn-primary fw-bold w-100 py-2 rounded-3 shadow-sm" onclick="calcAutoGroupPreview()">
+                            <i class="fa-solid fa-calculator me-1"></i> Tính toán phân bổ
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KHU VỰC HIỂN THỊ KẾT QUẢ GỢI Ý -->
+                <div id="autoGroupResultContainer">
+                    <div class="text-center py-5 text-muted">
+                        <i class="fa-solid fa-brain fs-1 d-block mb-3 opacity-25 text-primary"></i>
+                        <h6 class="fw-bold text-dark mb-1">Hệ thống phân bổ Hội đồng thông minh</h6>
+                        <p class="small text-muted mb-0">Nhấn <strong>"Tính toán phân bổ"</strong> để hệ thống tự động gom nhóm đề tài theo Hướng nghiên cứu,<br>loại trừ GVHD và đề xuất Hội đồng tối ưu.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-success fw-bold px-4 d-none" id="btnApplyAutoGroup" onclick="applyAutoGroupCouncils()">
+                    <i class="fa-solid fa-check-double me-1"></i> Xác nhận & Thành lập tất cả Hội đồng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

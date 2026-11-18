@@ -191,10 +191,7 @@
                                     {% endif %}
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
-                                    <button class="btn btn-sm btn-outline-danger border-0 rounded-circle text-danger p-1" onclick="deleteBatch({{ b.id }}, '{{ b.name }}')" title="Xóa đợt NCKH này" style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;">
-                                        <i class="fa-solid fa-trash-can"></i>
-                                    </button>
-                                    <a href="#" class="text-muted"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                                    <span class="badge bg-light text-muted border small"><i class="fa-regular fa-calendar me-1"></i> {{ b.academic_year or '2025-2026' }}</span>
                                 </div>
                             </div>
                             <h5 class="fw-bold mb-4">{{ b.name }}</h5>
@@ -209,7 +206,23 @@
                                 </div>
                             </div>
                             <div class="d-flex gap-2 mt-auto">
-                                <button class="btn btn-dark flex-grow-1 rounded-3 fw-bold" style="font-size: 13px;" data-bs-toggle="modal" data-bs-target="#modalManageFaculty">TRẠNG THÁI CÁC KHOA</button>
+                                <button class="btn btn-primary flex-grow-1 rounded-3 fw-bold btn-edit-batch shadow-xs"
+                                    style="font-size: 13px; background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%); border: none;"
+                                    data-bs-toggle="modal" data-bs-target="#modalEditBatch"
+                                    data-id="{{ b.id }}"
+                                    data-name="{{ b.name }}"
+                                    data-year="{{ b.academic_year or '2025-2026' }}"
+                                    data-type="{{ b.type or 'NCKH Standard' }}"
+                                    data-status="{{ b.status or 'active' }}"
+                                    data-start="{{ b.start_date.strftime('%Y-%m-%d') if b.start_date else '' }}"
+                                    data-deadline="{{ b.submission_deadline.strftime('%Y-%m-%d') if b.submission_deadline else '' }}"
+                                    data-end="{{ b.end_date.strftime('%Y-%m-%d') if b.end_date else '' }}"
+                                    data-desc="{{ b.description or '' }}"
+                                    data-doc="{{ b.guidance_doc or '' }}"
+                                    onclick="openEditBatchModal(this)"
+                                    title="Chỉnh sửa thông tin đợt NCKH này">
+                                    <i class="fa-solid fa-pen-to-square me-1"></i> SỬA ĐỢT
+                                </button>
                                 <button class="btn btn-outline-danger rounded-3 px-3 fw-bold" style="font-size: 13px;" onclick="deleteBatch({{ b.id }}, '{{ b.name }}')" title="Xóa đợt NCKH này">
                                     <i class="fa-solid fa-trash-can me-1"></i> Xóa
                                 </button>
@@ -511,12 +524,15 @@
                         </div>
                     </div>
                     <div class="row g-3 mb-3">
-                        <div class="col-md-6"><label class="form-label">Loại hình</label><select id="batch-type" class="form-select"><option selected value="NCKH Standard">Nghiên cứu khoa học (Chuẩn)</option><option value="Khởi nghiệp">Khởi nghiệp sáng tạo</option></select></div>
-                        <div class="col-md-6"><label class="form-label">Hạn mức kinh phí tối đa (VNĐ)</label><input type="text" id="batch-max-budget" class="form-control" value="5,000,000"></div>
-                    </div>
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6"><label class="form-label">Ngày bắt đầu</label><input type="date" id="batch-start-date" class="form-control"></div>
-                        <div class="col-md-6"><label class="form-label">Hạn cuối nộp đề tài</label><input type="date" id="batch-end-date" class="form-control"></div>
+                        <div class="col-md-4">
+                            <label class="form-label">Loại hình</label>
+                            <select id="batch-type" class="form-select">
+                                <option selected value="NCKH Standard">Nghiên cứu khoa học (Chuẩn)</option>
+                                <option value="Khởi nghiệp">Khởi nghiệp sáng tạo</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4"><label class="form-label">Ngày bắt đầu</label><input type="date" id="batch-start-date" class="form-control"></div>
+                        <div class="col-md-4"><label class="form-label">Hạn cuối nộp đề tài</label><input type="date" id="batch-end-date" class="form-control"></div>
                     </div>
                     <div class="mb-3">
                         <div class="d-flex justify-content-between align-items-center mb-1">
@@ -555,16 +571,16 @@
                                 <div class="tool-separator"></div>
 
                                 <!-- Định dạng cơ bản: In đậm, in nghiêng, gạch chân, gạch ngang -->
-                                <button type="button" class="btn-tool" onclick="formatBatchDoc('bold')" title="In đậm (Ctrl+B)">
+                                <button type="button" class="btn-tool" data-cmd="bold" onclick="formatBatchDoc('bold')" title="In đậm (Ctrl+B)">
                                     <i class="fa-solid fa-bold"></i>
                                 </button>
-                                <button type="button" class="btn-tool" onclick="formatBatchDoc('italic')" title="In nghiêng (Ctrl+I)">
+                                <button type="button" class="btn-tool" data-cmd="italic" onclick="formatBatchDoc('italic')" title="In nghiêng (Ctrl+I)">
                                     <i class="fa-solid fa-italic"></i>
                                 </button>
-                                <button type="button" class="btn-tool" onclick="formatBatchDoc('underline')" title="Gạch chân (Ctrl+U)">
+                                <button type="button" class="btn-tool" data-cmd="underline" onclick="formatBatchDoc('underline')" title="Gạch chân (Ctrl+U)">
                                     <i class="fa-solid fa-underline"></i>
                                 </button>
-                                <button type="button" class="btn-tool" onclick="formatBatchDoc('strikeThrough')" title="Gạch ngang chữ">
+                                <button type="button" class="btn-tool" data-cmd="strikeThrough" onclick="formatBatchDoc('strikeThrough')" title="Gạch ngang chữ">
                                     <i class="fa-solid fa-strikethrough"></i>
                                 </button>
 
@@ -585,32 +601,32 @@
                                 <div class="tool-separator"></div>
 
                                 <!-- Căn lề / Chỉnh dòng -->
-                                <button type="button" class="btn-tool" onclick="formatBatchDoc('justifyLeft')" title="Căn lề trái">
+                                <button type="button" class="btn-tool" data-cmd="justifyLeft" onclick="formatBatchDoc('justifyLeft')" title="Căn lề trái">
                                     <i class="fa-solid fa-align-left"></i>
                                 </button>
-                                <button type="button" class="btn-tool" onclick="formatBatchDoc('justifyCenter')" title="Căn giữa">
+                                <button type="button" class="btn-tool" data-cmd="justifyCenter" onclick="formatBatchDoc('justifyCenter')" title="Căn giữa">
                                     <i class="fa-solid fa-align-center"></i>
                                 </button>
-                                <button type="button" class="btn-tool" onclick="formatBatchDoc('justifyRight')" title="Căn lề phải">
+                                <button type="button" class="btn-tool" data-cmd="justifyRight" onclick="formatBatchDoc('justifyRight')" title="Căn lề phải">
                                     <i class="fa-solid fa-align-right"></i>
                                 </button>
-                                <button type="button" class="btn-tool" onclick="formatBatchDoc('justifyFull')" title="Căn đều hai bên">
+                                <button type="button" class="btn-tool" data-cmd="justifyFull" onclick="formatBatchDoc('justifyFull')" title="Căn đều hai bên">
                                     <i class="fa-solid fa-align-justify"></i>
                                 </button>
 
                                 <div class="tool-separator"></div>
 
                                 <!-- Danh sách & thụt lề -->
-                                <button type="button" class="btn-tool" onclick="formatBatchDoc('insertUnorderedList')" title="Danh sách dấu chấm">
+                                <button type="button" class="btn-tool" data-cmd="insertUnorderedList" onclick="formatBatchDoc('insertUnorderedList')" title="Danh sách dấu chấm">
                                     <i class="fa-solid fa-list-ul"></i>
                                 </button>
-                                <button type="button" class="btn-tool" onclick="formatBatchDoc('insertOrderedList')" title="Danh sách đánh số">
+                                <button type="button" class="btn-tool" data-cmd="insertOrderedList" onclick="formatBatchDoc('insertOrderedList')" title="Danh sách đánh số">
                                     <i class="fa-solid fa-list-ol"></i>
                                 </button>
-                                <button type="button" class="btn-tool" onclick="formatBatchDoc('outdent')" title="Giảm thụt lề">
+                                <button type="button" class="btn-tool" data-cmd="outdent" onclick="formatBatchDoc('outdent')" title="Giảm thụt lề">
                                     <i class="fa-solid fa-outdent"></i>
                                 </button>
-                                <button type="button" class="btn-tool" onclick="formatBatchDoc('indent')" title="Tăng thụt lề">
+                                <button type="button" class="btn-tool" data-cmd="indent" onclick="formatBatchDoc('indent')" title="Tăng thụt lề">
                                     <i class="fa-solid fa-indent"></i>
                                 </button>
 
@@ -653,18 +669,199 @@
         </div>
     </div>
 
-    <div class="modal fade" id="modalManageFaculty" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
+    <!-- MODAL SỬA ĐỢT NCKH -->
+    <div class="modal fade" id="modalEditBatch" tabindex="-1" aria-labelledby="modalEditBatchLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow-lg rounded-4">
-                <div class="modal-header border-bottom-0 pb-0"><h5 class="modal-title fw-bold">Trạng thái triển khai các Khoa</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold text-primary" id="modalEditBatchLabel">
+                        <i class="fa-solid fa-pen-to-square me-2"></i>Chỉnh sửa Đợt NCKH
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
                 <div class="modal-body p-4">
-                    <div class="list-group">
-                        <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0"><div><div class="fw-bold">Khoa Công nghệ Thông tin</div><small class="text-success fw-bold">Đang nhận bài</small></div><div class="form-check form-switch"><input class="form-check-input" type="checkbox" checked></div></div>
-                        <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0"><div><div class="fw-bold">Khoa Luật</div><small class="text-success fw-bold">Đang nhận bài</small></div><div class="form-check form-switch"><input class="form-check-input" type="checkbox" checked></div></div>
-                        <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0"><div><div class="fw-bold">Khoa Du lịch</div><small class="text-danger fw-bold">Đã khóa</small></div><div class="form-check form-switch"><input class="form-check-input" type="checkbox"></div></div>
+                    <input type="hidden" id="editBatchId">
+                    <input type="hidden" id="editBatchSubmitDeadline">
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label fw-bold small text-muted">TÊN ĐỢT TRIỂN KHAI <span class="text-danger">*</span></label>
+                            <input type="text" id="editBatchName" class="form-control" placeholder="VD: NCKH Sinh viên 2025 - Đợt 2" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small text-muted">NĂM HỌC ÁP DỤNG</label>
+                            <input type="text" id="editBatchYear" list="batch-year-options" class="form-control" placeholder="2025-2026">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted">LOẠI HÌNH</label>
+                            <select id="editBatchType" class="form-select">
+                                <option value="NCKH Standard">Nghiên cứu khoa học (Chuẩn)</option>
+                                <option value="Khởi nghiệp">Khởi nghiệp sáng tạo</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted">TRẠNG THÁI ĐỢT</label>
+                            <select id="editBatchStatus" class="form-select">
+                                <option value="active">Đang mở (Nhận bài)</option>
+                                <option value="completed">Đã kết thúc (Khóa)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted">NGÀY BẮT ĐẦU</label>
+                            <input type="date" id="editBatchStart" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted">HẠN CUỐI NỘP ĐỀ TÀI</label>
+                            <input type="date" id="editBatchEnd" class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label fw-bold small text-dark mb-0">MÔ TẢ CHI TIẾT / GHI CHÚ</label>
+                            <span class="badge bg-light text-primary border border-primary-subtle rounded-pill px-2 py-1" style="font-size: 11px;">
+                                <i class="fa-solid fa-file-word me-1"></i> Trình soạn thảo văn bản
+                            </span>
+                        </div>
+
+                        <!-- Word-like Rich Text Editor Container -->
+                        <div class="word-editor-container">
+                            <!-- Toolbar -->
+                            <div class="word-editor-toolbar" id="editBatchDescEditorToolbar">
+                                <!-- Font family -->
+                                <select class="tool-select" id="toolEditBatchFontFamily" onchange="formatEditBatchDoc('fontName', this.value)" title="Kiểu chữ">
+                                    <option value="inherit">Kiểu chữ: Mặc định</option>
+                                    <option value="'Segoe UI', Tahoma, sans-serif">Segoe UI</option>
+                                    <option value="Roboto, sans-serif">Roboto</option>
+                                    <option value="Arial, sans-serif">Arial</option>
+                                    <option value="'Times New Roman', serif">Times New Roman</option>
+                                    <option value="Tahoma, sans-serif">Tahoma</option>
+                                    <option value="'Courier New', monospace">Courier New</option>
+                                </select>
+
+                                <!-- Font size -->
+                                <select class="tool-select" id="toolEditBatchFontSize" onchange="formatEditBatchDocFontSize(this.value)" title="Cỡ chữ">
+                                    <option value="">Cỡ chữ</option>
+                                    <option value="12px">12px (Nhỏ)</option>
+                                    <option value="14px" selected>14px (Chuẩn)</option>
+                                    <option value="16px">16px (Vừa)</option>
+                                    <option value="18px">18px (Lớn)</option>
+                                    <option value="20px">20px (Tiêu đề phụ)</option>
+                                    <option value="24px">24px (Tiêu đề)</option>
+                                </select>
+
+                                <div class="tool-separator"></div>
+
+                                <!-- Định dạng cơ bản: In đậm, in nghiêng, gạch chân, gạch ngang -->
+                                <button type="button" class="btn-tool" data-cmd="bold" onclick="formatEditBatchDoc('bold')" title="In đậm (Ctrl+B)">
+                                    <i class="fa-solid fa-bold"></i>
+                                </button>
+                                <button type="button" class="btn-tool" data-cmd="italic" onclick="formatEditBatchDoc('italic')" title="In nghiêng (Ctrl+I)">
+                                    <i class="fa-solid fa-italic"></i>
+                                </button>
+                                <button type="button" class="btn-tool" data-cmd="underline" onclick="formatEditBatchDoc('underline')" title="Gạch chân (Ctrl+U)">
+                                    <i class="fa-solid fa-underline"></i>
+                                </button>
+                                <button type="button" class="btn-tool" data-cmd="strikeThrough" onclick="formatEditBatchDoc('strikeThrough')" title="Gạch ngang chữ">
+                                    <i class="fa-solid fa-strikethrough"></i>
+                                </button>
+
+                                <div class="tool-separator"></div>
+
+                                <!-- Màu chữ & Highlight màu nền -->
+                                <label class="btn-tool mb-0 cursor-pointer position-relative" title="Màu chữ">
+                                    <i class="fa-solid fa-font text-danger"></i>
+                                    <input type="color" id="toolEditBatchTextColor" onchange="formatEditBatchDoc('foreColor', this.value)"
+                                        style="position: absolute; opacity: 0; width: 100%; height: 100%; top: 0; left: 0; cursor: pointer;">
+                                </label>
+                                <label class="btn-tool mb-0 cursor-pointer position-relative" title="Màu nền / Tô sáng (Highlight)">
+                                    <i class="fa-solid fa-highlighter text-warning"></i>
+                                    <input type="color" id="toolEditBatchBgColor" value="#ffffaa" onchange="formatEditBatchDoc('hiliteColor', this.value)"
+                                        style="position: absolute; opacity: 0; width: 100%; height: 100%; top: 0; left: 0; cursor: pointer;">
+                                </label>
+
+                                <div class="tool-separator"></div>
+
+                                <!-- Căn lề / Chỉnh dòng -->
+                                <button type="button" class="btn-tool" data-cmd="justifyLeft" onclick="formatEditBatchDoc('justifyLeft')" title="Căn lề trái">
+                                    <i class="fa-solid fa-align-left"></i>
+                                </button>
+                                <button type="button" class="btn-tool" data-cmd="justifyCenter" onclick="formatEditBatchDoc('justifyCenter')" title="Căn giữa">
+                                    <i class="fa-solid fa-align-center"></i>
+                                </button>
+                                <button type="button" class="btn-tool" data-cmd="justifyRight" onclick="formatEditBatchDoc('justifyRight')" title="Căn lề phải">
+                                    <i class="fa-solid fa-align-right"></i>
+                                </button>
+                                <button type="button" class="btn-tool" data-cmd="justifyFull" onclick="formatEditBatchDoc('justifyFull')" title="Căn đều hai bên">
+                                    <i class="fa-solid fa-align-justify"></i>
+                                </button>
+
+                                <div class="tool-separator"></div>
+
+                                <!-- Danh sách & thụt lề -->
+                                <button type="button" class="btn-tool" data-cmd="insertUnorderedList" onclick="formatEditBatchDoc('insertUnorderedList')" title="Danh sách dấu chấm">
+                                    <i class="fa-solid fa-list-ul"></i>
+                                </button>
+                                <button type="button" class="btn-tool" data-cmd="insertOrderedList" onclick="formatEditBatchDoc('insertOrderedList')" title="Danh sách đánh số">
+                                    <i class="fa-solid fa-list-ol"></i>
+                                </button>
+                                <button type="button" class="btn-tool" data-cmd="outdent" onclick="formatEditBatchDoc('outdent')" title="Giảm thụt lề">
+                                    <i class="fa-solid fa-outdent"></i>
+                                </button>
+                                <button type="button" class="btn-tool" data-cmd="indent" onclick="formatEditBatchDoc('indent')" title="Tăng thụt lề">
+                                    <i class="fa-solid fa-indent"></i>
+                                </button>
+
+                                <div class="tool-separator"></div>
+
+                                <!-- Undo / Redo & Clear format -->
+                                <button type="button" class="btn-tool" onclick="formatEditBatchDoc('undo')" title="Hoàn tác (Ctrl+Z)">
+                                    <i class="fa-solid fa-rotate-left"></i>
+                                </button>
+                                <button type="button" class="btn-tool" onclick="formatEditBatchDoc('redo')" title="Làm lại (Ctrl+Y)">
+                                    <i class="fa-solid fa-rotate-right"></i>
+                                </button>
+                                <button type="button" class="btn-tool" onclick="formatEditBatchDoc('removeFormat')" title="Xóa toàn bộ định dạng">
+                                    <i class="fa-solid fa-eraser text-secondary"></i>
+                                </button>
+                            </div>
+
+                            <!-- Editable Area -->
+                            <div id="editBatchDescEditor" class="word-editor-content" contenteditable="true"
+                                data-placeholder="Nhập mô tả chi tiết, kế hoạch, yêu cầu nộp đề tài, tiêu chuẩn hoặc các mốc thời gian quan trọng..."
+                                oninput="syncEditBatchDesc()" onblur="syncEditBatchDesc()"></div>
+
+                            <!-- Hidden textarea for form submission -->
+                            <textarea id="editBatchDesc" name="description" style="display:none;"></textarea>
+
+                            <!-- Footer -->
+                            <div class="word-editor-footer">
+                                <span class="d-flex align-items-center gap-2">
+                                    <i class="fa-regular fa-keyboard text-primary"></i>
+                                    <small>Phím tắt: <strong>Ctrl+B</strong> (Đậm), <strong>Ctrl+I</strong> (Nghiêng), <strong>Ctrl+U</strong> (Gạch chân)</small>
+                                </span>
+                                <span id="editBatchDescWordCount" class="fw-medium">0 từ • 0 ký tự</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-0">
+                        <label class="form-label fw-bold small text-muted">VĂN BẢN HƯỚNG DẪN (PDF/DOC)</label>
+                        <div id="editBatchDocCurrent" class="small mb-2 p-2 bg-light rounded-3 border"></div>
+                        <input type="file" id="editBatchDoc" name="guidance_doc" class="form-control">
+                        <small class="text-muted">Chọn tệp mới nếu muốn thay thế văn bản hướng dẫn hiện tại</small>
                     </div>
                 </div>
-                <div class="modal-footer border-0 px-4 pb-4 pt-0"><button type="button" class="btn btn-primary fw-bold w-100" onclick="showToast('Cập nhật trạng thái thành công!')" data-bs-dismiss="modal">Lưu thay đổi</button></div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="button" class="btn btn-primary fw-bold px-4" onclick="submitEditBatch()">Lưu thay đổi</button>
+                </div>
             </div>
         </div>
     </div>
