@@ -277,48 +277,69 @@ def register_topic():
             active_b = Batch.query.filter_by(status='active').order_by(Batch.id.desc()).first()
             batch_id = active_b.id if active_b else 1
             
-        group_id = data.get('group_id', 0)
+        raw_group_id = data.get('group_id', 0)
+        try:
+            group_id = int(raw_group_id) if raw_group_id else 0
+        except (ValueError, TypeError):
+            group_id = 0
+
         members_list = data.get('members', [])
         topic_title = data.get('name', '').strip() or 'Đề tài NCKH (Chưa đặt tên)'
-        # 1. Xác định group_id và tạo/cập nhật nhóm
-        if group_id == 0:
+
+        # 1. Xác định target_group hợp lệ (bảo vệ tuyệt đối khỏi ForeignKeyViolation)
+        target_group = None
+        if group_id > 0:
+            target_group = Group.query.get(group_id)
+            # Nếu group không thuộc quyền của user_id (không phải trưởng nhóm), coi như không hợp lệ
+            if target_group and target_group.leader_id != user_id:
+                target_group = None
+
+        if not target_group:
+            # Nếu group_id không tồn tại trong DB (hoặc = 0), tìm nhóm mà user đang làm trưởng nhóm trong đợt này
             existing_led_group = Group.query.filter_by(leader_id=user_id, batch_id=batch_id).first()
             if existing_led_group:
-                group_id = existing_led_group.id
-                existing_led_group.mentor_id = data['mentor_id']
-                existing_led_group.status = 'pending_mentor'
+                target_group = existing_led_group
+                group_id = target_group.id
+                target_group.mentor_id = data['mentor_id']
+                target_group.status = 'pending_mentor'
                 if topic_title != 'Đề tài NCKH (Chưa đặt tên)':
-                    existing_led_group.name = f"Nhóm {topic_title}"
+                    target_group.name = f"Nhóm {topic_title}"
             else:
-                # Auto-create group
+                # Auto-create group mới
                 group_name = f"Nhóm {topic_title}" if topic_title != 'Đề tài NCKH (Chưa đặt tên)' else f"Nhóm NCKH - SV{user_id}"
-                new_group = Group(
+                target_group = Group(
                     name=group_name,
                     batch_id=batch_id,
                     leader_id=user_id,
                     mentor_id=data['mentor_id'],
                     status='pending_mentor'
                 )
-                db.session.add(new_group)
-                db.session.flush() # To get new_group.id
-                group_id = new_group.id
+                db.session.add(target_group)
+                db.session.flush() # Để có target_group.id
+                group_id = target_group.id
                 
                 # Add leader as accepted member
-                new_member = GroupMember(group_id=group_id, student_id=user_id, status='accepted')
-                db.session.add(new_member)
+                leader_member = GroupMember(group_id=group_id, student_id=user_id, status='accepted')
+                db.session.add(leader_member)
         else:
+            group_id = target_group.id
             # Check if group already has a topic in this batch
             existing_topic = Topic.query.filter_by(group_id=group_id, batch_id=batch_id).first()
             if existing_topic:
                 return jsonify({'error': 'Nhóm đã đăng ký một đề tài trong đợt này rồi'}), 400
             
             # Update group mentor and name
-            target_group = Group.query.get(group_id)
-            if target_group:
-                target_group.mentor_id = data['mentor_id']
-                target_group.status = 'pending_mentor'
-                if topic_title != 'Đề tài NCKH (Chưa đặt tên)':
-                    target_group.name = f"Nhóm {topic_title}"
+            target_group.mentor_id = data['mentor_id']
+            target_group.status = 'pending_mentor'
+            if topic_title != 'Đề tài NCKH (Chưa đặt tên)':
+                target_group.name = f"Nhóm {topic_title}"
+
+        # Đảm bảo Trưởng nhóm luôn có mặt trong bảng group_members với trạng thái hợp lệ
+        leader_gm = GroupMember.query.filter_by(group_id=group_id, student_id=user_id).first()
+        if not leader_gm:
+            db.session.add(GroupMember(group_id=group_id, student_id=user_id, status='accepted'))
+        elif leader_gm.status not in ['accepted', 'joined']:
+            leader_gm.status = 'accepted'
 
         # 2. Xử lý thành viên nhóm khác user_id (dù là tạo mới hay nhóm có sẵn)
         other_member_ids = set()
@@ -329,13 +350,19 @@ def register_topic():
                 except (ValueError, TypeError):
                     pass
 
-        # Nếu group có các thành viên khác từ trước, cũng thêm vào danh sách
+        # Kiểm tra thành viên cũ của nhóm trên DB
         existing_other_gms = GroupMember.query.filter(
             GroupMember.group_id == group_id,
             GroupMember.student_id != user_id
         ).all()
+
+        # Nếu thành viên cũ (đặc biệt là thành viên đã từ chối hoặc pending) không còn trong members_list gửi lên:
+        # Tự động xóa khỏi GroupMember để tránh lỗi và không ép buộc thành viên cũ vào lại nhóm
         for gm in existing_other_gms:
-            other_member_ids.add(gm.student_id)
+            if gm.student_id not in other_member_ids:
+                db.session.delete(gm)
+            else:
+                other_member_ids.add(gm.student_id)
 
         has_pending_invitations = False
         # Với mỗi thành viên khác: nếu chưa chấp nhận thì mới đặt pending & gửi lời mời
@@ -508,7 +535,7 @@ def register_topic():
             db.session.add(leader_notif)
             db.session.commit()
                 
-        return jsonify({'message': 'Topic registered successfully', 'topic_id': new_topic.id, 'status': topic_status}), 201
+        return jsonify({'message': 'Topic registered successfully', 'topic_id': new_topic.id, 'status': topic_status, 'group_id': group_id}), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500

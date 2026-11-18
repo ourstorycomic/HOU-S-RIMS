@@ -53,6 +53,22 @@ def create_council():
     if len(valid_topics) == 0:
         return jsonify({'error': 'Không tìm thấy đề tài hợp lệ nào trong danh sách được chọn!'}), 400
 
+    # Kiểm tra điều kiện hồ sơ báo cáo (Đề cương chi tiết & Báo cáo tổng kết)
+    ineligible_topics = []
+    for t in valid_topics:
+        ok, reason = t.check_council_eligibility()
+        if not ok:
+            ineligible_topics.append(f"• {t.title}: {reason}")
+    if ineligible_topics:
+        return jsonify({
+            'error': f'Các đề tài sau chưa đủ điều kiện thành lập Hội đồng nghiệm thu:\n' + '\n'.join(ineligible_topics) + '\n\nQuy định: Nhóm đề tài bắt buộc phải nộp đầy đủ Đề cương chi tiết và Báo cáo tổng kết, được GVHD và Khoa phê duyệt đạt yêu cầu (không bị yêu cầu sửa).'
+        }), 400
+
+    already_assigned = Topic.query.filter(Topic.id.in_(topic_ids), Topic.council_id.isnot(None)).all()
+    if already_assigned:
+        titles = ", ".join([f"'{t.title}'" for t in already_assigned])
+        return jsonify({'error': f'Các đề tài sau đã được phân công vào Hội đồng khác: {titles}. Vui lòng kiểm tra lại!'}), 400
+
     # 3. Validate Thành phần Hội đồng
     presidents = [int(x) for x in (data.get('president') or []) if str(x).isdigit()]
     secretaries = [int(x) for x in (data.get('secretary') or []) if str(x).isdigit()]
@@ -80,15 +96,20 @@ def create_council():
         dup_names = [u.full_name for u in User.query.filter(User.id.in_(duplicates)).all()]
         return jsonify({'error': f'Mỗi giảng viên chỉ được đảm nhiệm một vai trò trong Hội đồng! Giảng viên sau đang bị gán trùng: {", ".join(dup_names)}'}), 400
 
-    # 4. Kiểm tra Giảng viên hướng dẫn không được ngồi Hội đồng nghiệm thu đề tài của mình
-    mentor_conflicts = []
-    for topic in valid_topics:
-        if topic.mentor_id and topic.mentor_id in all_lecturer_ids:
-            mentor_user = User.query.get(topic.mentor_id)
-            m_name = mentor_user.full_name if mentor_user else f"ID {topic.mentor_id}"
-            mentor_conflicts.append(f"{m_name} (là GVHD của đề tài '{topic.title}')")
-    if mentor_conflicts:
-        return jsonify({'error': f'Theo quy chế NCKH, Giảng viên hướng dẫn không được tham gia Hội đồng nghiệm thu đề tài do chính mình hướng dẫn: {"; ".join(mentor_conflicts)}'}), 400
+    # 4. Kiểm tra Giảng viên hướng dẫn không được ngồi Hội đồng nghiệm thu đề tài của mình (nếu bật chặn)
+    block_supervisor = data.get('block_supervisor', True)
+    if isinstance(block_supervisor, str):
+        block_supervisor = block_supervisor.lower() in ['true', '1', 'yes']
+
+    if block_supervisor:
+        mentor_conflicts = []
+        for topic in valid_topics:
+            if topic.mentor_id and topic.mentor_id in all_lecturer_ids:
+                mentor_user = User.query.get(topic.mentor_id)
+                m_name = mentor_user.full_name if mentor_user else f"ID {topic.mentor_id}"
+                mentor_conflicts.append(f"{m_name} (là GVHD của đề tài '{topic.title}')")
+        if mentor_conflicts:
+            return jsonify({'error': f'Theo quy chế NCKH, Giảng viên hướng dẫn không được tham gia Hội đồng nghiệm thu đề tài do chính mình hướng dẫn: {"; ".join(mentor_conflicts)}'}), 400
 
     # 5. Check if lecturers are already in another council for this batch
     existing_members = CouncilMember.query.join(Council).filter(
@@ -111,7 +132,7 @@ def create_council():
         db.session.add(new_council)
         db.session.flush()
 
-        from email_utils import send_notification_email
+        from email_utils import send_email_async
         lecturers_to_notify = set()
 
         for p_id in presidents:
@@ -142,7 +163,7 @@ def create_council():
 
         db.session.commit()
 
-        # Notifications logic
+        # Notifications logic (bất đồng bộ qua thread để không làm nghẽn quá trình tạo hội đồng)
         date_str = meeting_date.strftime('%d/%m/%Y') if meeting_date else 'chưa xác định'
         time_str = meeting_time.strftime('%H:%M') if meeting_time else 'chưa xác định'
         location_str = data.get('location') or 'chưa xác định'
@@ -152,13 +173,14 @@ def create_council():
             if lecturer:
                 notif_content = f"Bạn đã được thêm vào {new_council.name}. Thời gian: {time_str} ngày {date_str}, Địa điểm: {location_str}"
                 db.session.add(Notification(user_id=lecturer.id, content=notif_content))
-                try:
-                    send_notification_email(
-                        to_email=lecturer.email,
-                        subject="[HOU S-RIMS] Lời mời tham gia Hội đồng",
-                        content=f"Xin chào {lecturer.full_name},\n\n{notif_content}\n\nTrân trọng,\nHOU S-RIMS"
-                    )
-                except Exception as e: print(e)
+                if lecturer.email:
+                    try:
+                        send_email_async(
+                            to_email=lecturer.email,
+                            subject="[HOU S-RIMS] Lời mời tham gia Hội đồng",
+                            content=f"Xin chào {lecturer.full_name},\n\n{notif_content}\n\nTrân trọng,\nHOU S-RIMS"
+                        )
+                    except Exception as e: print(e)
 
         for s_id in students_to_notify:
             student = User.query.get(s_id)
@@ -166,13 +188,14 @@ def create_council():
                 # Task 2.5: Ẩn giờ báo cáo chi tiết đối với sinh viên nếu chưa công bố chính thức
                 notif_content = f"Nhóm của bạn đã được sắp xếp báo cáo trước {new_council.name}. Hạn báo cáo: ngày {date_str}, Địa điểm: {location_str}. (Lịch giờ cụ thể sẽ được cập nhật trước phiên họp)."
                 db.session.add(Notification(user_id=student.id, content=notif_content))
-                try:
-                    send_notification_email(
-                        to_email=student.email,
-                        subject="[HOU S-RIMS] Lịch báo cáo Hội đồng",
-                        content=f"Xin chào {student.full_name},\n\n{notif_content}\n\nTrân trọng,\nHOU S-RIMS"
-                    )
-                except Exception as e: print(e)
+                if student.email:
+                    try:
+                        send_email_async(
+                            to_email=student.email,
+                            subject="[HOU S-RIMS] Lịch báo cáo Hội đồng",
+                            content=f"Xin chào {student.full_name},\n\n{notif_content}\n\nTrân trọng,\nHOU S-RIMS"
+                        )
+                    except Exception as e: print(e)
 
         db.session.commit()
         return jsonify({'message': 'Council created', 'id': new_council.id}), 201
@@ -190,17 +213,18 @@ def delete_council(council_id):
         Topic.query.filter_by(council_id=council.id).update({'council_id': None, 'presentation_time': None})
         
         # Notify lecturers before deletion
-        from email_utils import send_notification_email
+        from email_utils import send_email_async
         members = CouncilMember.query.filter_by(council_id=council.id).all()
         for m in members:
             lecturer = User.query.get(m.mentor_id)
             if lecturer:
                 msg = f"Hội đồng '{council.name}' đã bị hủy bỏ."
                 db.session.add(Notification(user_id=lecturer.id, content=msg))
-                try:
-                    send_notification_email(lecturer.email, "[HOU S-RIMS] Hủy Hội đồng", msg)
-                except:
-                    pass
+                if lecturer.email:
+                    try:
+                        send_email_async(lecturer.email, "[HOU S-RIMS] Hủy Hội đồng", msg)
+                    except:
+                        pass
         
         # Delete CouncilMembers and Council
         CouncilMember.query.filter_by(council_id=council.id).delete()
@@ -277,16 +301,21 @@ def update_council(council_id):
                 dup_names = [u.full_name for u in User.query.filter(User.id.in_(duplicates)).all()]
                 return jsonify({'error': f'Mỗi giảng viên chỉ được đảm nhiệm một vai trò trong Hội đồng! Giảng viên sau đang bị gán trùng: {", ".join(dup_names)}'}), 400
 
-            # Check mentor conflict
-            assigned_topics = Topic.query.filter_by(council_id=council.id).all() if raw_topics is None else [Topic.query.get(t.get('id') if isinstance(t, dict) else t) for t in raw_topics if Topic.query.get(t.get('id') if isinstance(t, dict) else t)]
-            mentor_conflicts = []
-            for t in assigned_topics:
-                if t and t.mentor_id and t.mentor_id in all_lecturer_ids:
-                    mentor_user = User.query.get(t.mentor_id)
-                    m_name = mentor_user.full_name if mentor_user else f"ID {t.mentor_id}"
-                    mentor_conflicts.append(f"{m_name} (là GVHD của đề tài: {t.title})")
-            if mentor_conflicts:
-                return jsonify({'error': f'Theo quy chế NCKH, Giảng viên hướng dẫn không được tham gia Hội đồng nghiệm thu đề tài do chính mình hướng dẫn: {"; ".join(mentor_conflicts)}'}), 400
+            # Check mentor conflict if blocking enabled
+            block_supervisor = data.get('block_supervisor', True)
+            if isinstance(block_supervisor, str):
+                block_supervisor = block_supervisor.lower() in ['true', '1', 'yes']
+
+            if block_supervisor:
+                assigned_topics = Topic.query.filter_by(council_id=council.id).all() if raw_topics is None else [Topic.query.get(t.get('id') if isinstance(t, dict) else t) for t in raw_topics if Topic.query.get(t.get('id') if isinstance(t, dict) else t)]
+                mentor_conflicts = []
+                for t in assigned_topics:
+                    if t and t.mentor_id and t.mentor_id in all_lecturer_ids:
+                        mentor_user = User.query.get(t.mentor_id)
+                        m_name = mentor_user.full_name if mentor_user else f"ID {t.mentor_id}"
+                        mentor_conflicts.append(f"{m_name} (là GVHD của đề tài: {t.title})")
+                if mentor_conflicts:
+                    return jsonify({'error': f'Theo quy chế NCKH, Giảng viên hướng dẫn không được tham gia Hội đồng nghiệm thu đề tài do chính mình hướng dẫn: {"; ".join(mentor_conflicts)}'}), 400
 
             # Check conflict with other councils in same batch
             existing_members = CouncilMember.query.join(Council).filter(
@@ -308,6 +337,26 @@ def update_council(council_id):
 
         # Update topics
         if raw_topics is not None:
+            topic_ids = [t.get('id') if isinstance(t, dict) else t for t in raw_topics]
+            selected_topics = Topic.query.filter(Topic.id.in_(topic_ids)).all()
+
+            ineligible_topics = []
+            for t in selected_topics:
+                # Nếu đề tài mới được thêm (chưa có trong Hội đồng này), bắt buộc phải đủ điều kiện
+                if t.council_id != council.id:
+                    ok, reason = t.check_council_eligibility()
+                    if not ok:
+                        ineligible_topics.append(f"• {t.title}: {reason}")
+            if ineligible_topics:
+                return jsonify({
+                    'error': f'Các đề tài sau chưa đủ điều kiện đưa vào Hội đồng:\n' + '\n'.join(ineligible_topics) + '\n\nQuy định: Nhóm đề tài bắt buộc phải nộp đầy đủ Đề cương chi tiết và Báo cáo tổng kết, được GVHD và Khoa phê duyệt đạt yêu cầu.'
+                }), 400
+
+            already_assigned = Topic.query.filter(Topic.id.in_(topic_ids), Topic.council_id.isnot(None), Topic.council_id != council.id).all()
+            if already_assigned:
+                titles = ", ".join([f"'{t.title}'" for t in already_assigned])
+                return jsonify({'error': f'Các đề tài sau đã được phân công vào Hội đồng khác: {titles}. Vui lòng kiểm tra lại!'}), 400
+
             Topic.query.filter_by(council_id=council.id).update({'council_id': None, 'presentation_time': None})
             for t_item in raw_topics:
                 t_id = t_item.get('id') if isinstance(t_item, dict) else t_item
@@ -318,16 +367,18 @@ def update_council(council_id):
                     topic.presentation_time = t_time
 
         # Notify lecturers
+        from email_utils import send_email_async
         members = CouncilMember.query.filter_by(council_id=council.id).all()
         for m in members:
             lecturer = User.query.get(m.mentor_id)
             if lecturer:
                 msg = f"Thông tin hội đồng '{council.name}' đã được cập nhật."
                 db.session.add(Notification(user_id=lecturer.id, content=msg))
-                try:
-                    send_notification_email(lecturer.email, "[HOU S-RIMS] Cập nhật Hội đồng", msg)
-                except:
-                    pass
+                if lecturer.email:
+                    try:
+                        send_email_async(lecturer.email, "[HOU S-RIMS] Cập nhật Hội đồng", msg)
+                    except:
+                        pass
 
         db.session.commit()
         return jsonify({'message': 'Updated successfully'})
@@ -716,14 +767,16 @@ def auto_group_topics():
     if not batch_id:
         return jsonify({'error': 'Không tìm thấy đợt NCKH phù hợp!'}), 400
 
-    # Lấy các đề tài trong đợt chưa được phân vào Hội đồng
-    unassigned_topics = Topic.query.filter(
+    # Lấy các đề tài trong đợt chưa được phân vào Hội đồng (chỉ lấy đề tài đã duyệt chính thức và đủ điều kiện hồ sơ)
+    candidate_topics = Topic.query.filter(
         Topic.batch_id == batch_id,
-        Topic.council_id.is_(None)
+        Topic.council_id.is_(None),
+        Topic.status == 'approved'
     ).all()
+    unassigned_topics = [t for t in candidate_topics if t.check_council_eligibility()[0]]
 
     if not unassigned_topics:
-        return jsonify({'error': 'Tất cả các đề tài trong đợt này đã được phân công vào Hội đồng!'}), 400
+        return jsonify({'error': 'Không có đề tài nào đủ điều kiện hồ sơ (đã nộp Đề cương chi tiết & Báo cáo tổng kết được Khoa duyệt đạt) để thành lập Hội đồng!'}), 400
 
     all_lecturers = User.query.filter(func.lower(User.role) == 'lecturer').all()
     if len(all_lecturers) < 3:

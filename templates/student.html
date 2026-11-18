@@ -4731,9 +4731,14 @@
                 const res = await fetch(`/api/groups/${window.currentGroupId}/members/${studentId}`, {
                     method: 'DELETE'
                 });
-                const d = await res.json();
-                if (!res.ok || !d.success) {
-                    console.warn('Xóa thành viên từ server:', d);
+                if (res.status === 404) {
+                    // Nhóm không còn tồn tại trên server (đã bị xóa do hủy đề tài), reset group_id về 0
+                    window.currentGroupId = 0;
+                } else {
+                    const d = await res.json();
+                    if (!res.ok || !d.success) {
+                        console.warn('Xóa thành viên từ server:', d);
+                    }
                 }
             } catch (err) {
                 console.warn('Lỗi gọi API xóa thành viên:', err);
@@ -4988,6 +4993,9 @@
             });
             const data = await resp.json();
             if (resp.ok) {
+                if (data.group_id) {
+                    window.currentGroupId = data.group_id;
+                }
                 if (typeof window.clearRegistrationDraft === 'function') {
                     window.clearRegistrationDraft();
                 }
@@ -6113,6 +6121,7 @@
         window.currentMyTopic = null;
 
         if (forceReset) {
+            window.currentGroupId = 0;
             // Chỉ xóa trắng dữ liệu khi có yêu cầu xóa cứng (hủy đề tài hoặc reset sau khi nộp)
             window.regInvitedMembers = [];
             if (typeof renderRegMembersTable === 'function') {
@@ -6249,6 +6258,8 @@
                             bio: ''
                         };
                     }
+                } else {
+                    window.currentGroupId = 0;
                 }
                 window.renderTopicFormView(false);
             }

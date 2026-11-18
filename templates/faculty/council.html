@@ -18,8 +18,6 @@
                             <i class="fa-solid fa-plus me-2"></i> THÀNH LẬP HỘI ĐỒNG
                         </button>
                     </div>
-                        <i class="fa-solid fa-plus me-2"></i> THÀNH LẬP HỘI ĐỒNG
-                    </button>
                 </div>
                 
                 {% if councils %}
@@ -285,12 +283,24 @@
                         {% if not topics or topics|length == 0 %}
                         <div class="col-12 text-center py-4">
                             <i class="fa-solid fa-folder-open fs-2 text-muted mb-2 d-block"></i>
-                            <div class="fw-bold text-dark mb-1">Chưa có nhóm đề tài nào trong đợt này</div>
-                            <small class="text-muted">Bạn cần có ít nhất 1 nhóm đề tài để phân công vào Hội đồng nghiệm thu.</small>
+                            <div class="fw-bold text-dark mb-1">Chưa có đề tài nào đã được duyệt trong đợt này</div>
+                            <small class="text-muted">Chỉ các đề tài đã được Giảng viên hướng dẫn và Khoa phê duyệt chính thức mới đủ điều kiện phân công vào Hội đồng nghiệm thu.</small>
                         </div>
                         {% else %}
+                        <div class="col-12 text-center py-4" id="emptyAllAssignedTopics" style="display: none;">
+                            <i class="fa-solid fa-folder-open fs-2 text-warning mb-2 d-block"></i>
+                            <div class="fw-bold text-dark mb-1">Chưa có đề tài nào đủ điều kiện thành lập Hội đồng</div>
+                            <small class="text-muted">Nhóm đề tài bắt buộc phải nộp đầy đủ <strong>Đề cương chi tiết</strong> và <strong>Báo cáo tổng kết</strong>, đồng thời được Giảng viên &amp; Khoa phê duyệt đạt yêu cầu (không bị yêu cầu sửa) mới đủ điều kiện thành lập Hội đồng nghiệm thu.</small>
+                        </div>
                         {% for t in topics %}
-                        <div class="col-md-6 topic-item-card" data-field="{{ t.field or 'Khác' }}" data-mentor-id="{{ t.mentor_id or '' }}" data-mentor-name="{{ t.mentor.full_name if t.mentor else '' }}">
+                        {% set eligible_tuple = t.check_council_eligibility() %}
+                        <div class="col-md-6 topic-item-card" 
+                             data-field="{{ t.field or 'Khác' }}" 
+                             data-mentor-id="{{ t.mentor_id or '' }}" 
+                             data-mentor-name="{{ t.mentor.full_name if t.mentor else '' }}" 
+                             data-council-id="{{ t.council_id or '' }}"
+                             data-eligible="{{ 'true' if eligible_tuple[0] else 'false' }}"
+                             data-reason="{{ eligible_tuple[1] }}">
                             <div class="card border rounded-3 p-3 h-100 bg-white shadow-xs">
                                 <div class="form-check">
                                     <input class="form-check-input council-topic-cb" type="checkbox" value="{{ t.id }}" id="cbTopic{{ t.id }}" onchange="handleTopicSelectChange({{ t.id }})">
@@ -302,6 +312,17 @@
                                         <div class="fw-bold text-dark text-truncate-2" style="font-size: 13px;">{{ t.title }}</div>
                                         <div class="text-muted mt-1" style="font-size: 11px;">
                                             <i class="fa-solid fa-user-tie me-1 text-primary"></i>GVHD: <strong>{{ t.mentor.full_name if t.mentor else 'Chưa có' }}</strong>
+                                        </div>
+                                        <div class="mt-2 pt-1 border-top">
+                                            {% if eligible_tuple[0] %}
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 10px;">
+                                                <i class="fa-solid fa-circle-check me-1"></i>Đủ hồ sơ (Đề cương &amp; Báo cáo đạt)
+                                            </span>
+                                            {% else %}
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 10px;">
+                                                <i class="fa-solid fa-triangle-exclamation me-1"></i>{{ eligible_tuple[1] }}
+                                            </span>
+                                            {% endif %}
                                         </div>
                                     </label>
                                 </div>
@@ -361,7 +382,7 @@
                             <select class="form-select form-select-sm mb-2" id="picker-{{ role_id }}" onchange="addCouncilMember('{{ role_id }}', '{{ badge_class }}')">
                                 <option value="">-- Chọn giảng viên --</option>
                                 {% for m in mentors %}
-                                <option value="{{ m.id }}" data-name="{{ m.full_name }}" data-base-name="{{ m.full_name }}" data-bio="{{ m.bio or '' }}">{{ m.full_name }} ({{ m.faculty or 'CNTT' }})</option>
+                                <option value="{{ m.id }}" data-name="{{ m.full_name }}" data-base-name="{{ m.full_name }}" data-faculty="{{ m.faculty or 'CNTT' }}" data-bio="{{ m.bio or '' }}">{{ m.full_name }} ({{ m.faculty or 'CNTT' }})</option>
                                 {% endfor %}
                             </select>
                             <div id="tags-{{ role_id }}" class="d-flex flex-wrap gap-1 min-height-tag"></div>
@@ -492,6 +513,17 @@ function addCouncilMember(role, badgeClass) {
     const val = picker.value;
     const name = picker.options[picker.selectedIndex]?.dataset?.name;
     if (!val || !name) return;
+
+    // Kiểm tra giảng viên hướng dẫn bị loại trừ
+    const isBlockEnabled = document.getElementById('blockSupervisorCheck')?.checked ?? true;
+    if (isBlockEnabled && typeof getBlockedMentorIds === 'function') {
+        const { ids: blockedIds } = getBlockedMentorIds();
+        if (blockedIds.has(parseInt(val))) {
+            Swal.fire('Không hợp lệ', `Giảng viên "${name}" đang là GVHD của đề tài đã chọn trong Hội đồng này! Vui lòng chọn giảng viên khác để đảm bảo tính khách quan.`, 'warning');
+            picker.value = '';
+            return;
+        }
+    }
     
     // Check single President
     if (role === 'president' && councilState.president.length >= 1) {
@@ -540,7 +572,47 @@ function renderTags(role, badgeClass) {
     `).join('');
 }
 
-// Gom nhóm theo lĩnh vực: khởi tạo filter tabs
+// Gom nhóm theo lĩnh vực: khởi tạo filter tabs & quản lý hiển thị đề tài theo Hội đồng
+let _currentFieldFilter = 'all';
+
+function refreshTopicCardsVisibility() {
+    const cards = document.querySelectorAll('.topic-item-card');
+    let visibleCount = 0;
+    
+    cards.forEach(c => {
+        const cId = (c.getAttribute('data-council-id') || '').trim();
+        const field = c.getAttribute('data-field') || 'Khác';
+        const isEligible = c.getAttribute('data-eligible') === 'true';
+        
+        let eligibleForCouncil = false;
+        if (!_editingCouncilId) {
+            // Khi tạo mới: Chỉ hiển thị các đề tài chưa thuộc Hội đồng nào VÀ ĐỦ ĐIỀU KIỆN hồ sơ
+            eligibleForCouncil = (!cId || cId === 'None') && isEligible;
+        } else {
+            // Khi sửa Hội đồng: Hiển thị các đề tài của chính Hội đồng này + các đề tài chưa gán đủ điều kiện
+            eligibleForCouncil = (cId === String(_editingCouncilId)) || ((!cId || cId === 'None') && isEligible);
+        }
+        
+        const matchesField = (_currentFieldFilter === 'all' || field === _currentFieldFilter);
+        
+        if (eligibleForCouncil && matchesField) {
+            c.style.display = 'block';
+            visibleCount++;
+        } else {
+            c.style.display = 'none';
+        }
+    });
+
+    const emptyAllMsg = document.getElementById('emptyAllAssignedTopics');
+    if (emptyAllMsg) {
+        if (visibleCount === 0 && !_editingCouncilId && cards.length > 0) {
+            emptyAllMsg.style.display = 'block';
+        } else {
+            emptyAllMsg.style.display = 'none';
+        }
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const cards = document.querySelectorAll('.topic-item-card');
     const fields = new Set();
@@ -561,6 +633,7 @@ document.addEventListener('DOMContentLoaded', () => {
             filterContainer.appendChild(btn);
         });
     }
+    refreshTopicCardsVisibility();
 });
 
 function filterTopicsByField(field, btnEl) {
@@ -571,14 +644,8 @@ function filterTopicsByField(field, btnEl) {
     btnEl.classList.remove('btn-outline-primary');
     btnEl.classList.add('btn-primary', 'active');
 
-    const cards = document.querySelectorAll('.topic-item-card');
-    cards.forEach(c => {
-        if (field === 'all' || c.dataset.field === field) {
-            c.style.display = 'block';
-        } else {
-            c.style.display = 'none';
-        }
-    });
+    _currentFieldFilter = field;
+    refreshTopicCardsVisibility();
 }
 
 function handleTopicSelectChange(topicId) {
@@ -586,6 +653,104 @@ function handleTopicSelectChange(topicId) {
     const timeRow = document.getElementById(`timeRow${topicId}`);
     if (timeRow) {
         timeRow.style.display = cb.checked ? 'block' : 'none';
+    }
+    updateCouncilEligibleMentors();
+}
+
+function getBlockedMentorIds() {
+    const isBlockEnabled = document.getElementById('blockSupervisorCheck')?.checked ?? true;
+    if (!isBlockEnabled) return { ids: new Set(), names: [] };
+
+    const blockedIds = new Set();
+    const blockedNames = [];
+    document.querySelectorAll('.council-topic-cb:checked').forEach(cb => {
+        const card = cb.closest('.topic-item-card');
+        if (card) {
+            const mid = card.getAttribute('data-mentor-id');
+            const mname = card.getAttribute('data-mentor-name');
+            if (mid && mid !== 'None' && mid !== '') {
+                const idNum = parseInt(mid);
+                if (!isNaN(idNum) && !blockedIds.has(idNum)) {
+                    blockedIds.add(idNum);
+                    if (mname) blockedNames.push(mname);
+                }
+            }
+        }
+    });
+    return { ids: blockedIds, names: blockedNames };
+}
+
+function updateCouncilEligibleMentors() {
+    const isBlockEnabled = document.getElementById('blockSupervisorCheck')?.checked ?? true;
+    const { ids: blockedIds, names: blockedNames } = getBlockedMentorIds();
+    const count = blockedIds.size;
+
+    // 1. Cập nhật badge hiển thị số lượng GVHD bị loại trừ
+    const badge = document.getElementById('blockedMentorsCountBadge');
+    if (badge) {
+        if (!isBlockEnabled) {
+            badge.textContent = '0 GVHD bị loại trừ (Đã tắt chặn)';
+            badge.className = 'badge bg-secondary-subtle text-muted border rounded-pill px-3 py-1.5 fw-semibold';
+            badge.removeAttribute('title');
+        } else {
+            badge.textContent = `${count} GVHD bị loại trừ`;
+            badge.className = count > 0 
+                ? 'badge bg-danger text-white border border-danger rounded-pill px-3 py-1.5 fw-bold shadow-xs' 
+                : 'badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1.5 fw-bold';
+            if (count > 0 && blockedNames.length > 0) {
+                badge.title = 'GVHD bị loại trừ: ' + blockedNames.join(', ');
+            } else {
+                badge.removeAttribute('title');
+            }
+        }
+    }
+
+    // 2. Cập nhật các dropdown chọn giảng viên (Chủ tịch, Thư ký, Ủy viên)
+    ['president', 'secretary', 'member'].forEach(role => {
+        const picker = document.getElementById('picker-' + role);
+        if (!picker) return;
+
+        Array.from(picker.options).forEach(opt => {
+            if (!opt.value) return; // Bỏ qua placeholder
+            const optVal = parseInt(opt.value);
+            const baseName = opt.getAttribute('data-base-name') || opt.getAttribute('data-name') || opt.textContent;
+            const faculty = opt.getAttribute('data-faculty') || 'CNTT';
+
+            if (isBlockEnabled && blockedIds.has(optVal)) {
+                opt.disabled = true;
+                opt.textContent = `🚫 ${baseName} (GVHD đề tài - Bị loại trừ)`;
+                opt.classList.add('text-danger');
+            } else {
+                opt.disabled = false;
+                opt.textContent = `${baseName} (${faculty})`;
+                opt.classList.remove('text-danger');
+            }
+        });
+    });
+
+    // 3. Nếu giảng viên đang được gán vào hội đồng mà thuộc diện bị chặn, tự động loại bỏ
+    if (isBlockEnabled && count > 0) {
+        ['president', 'secretary', 'member'].forEach(role => {
+            const badgeClass = role === 'president' ? 'bg-danger' : (role === 'secretary' ? 'bg-warning text-dark' : 'bg-primary');
+            const removed = [];
+            councilState[role] = councilState[role].filter(m => {
+                if (blockedIds.has(parseInt(m.id))) {
+                    removed.push(m.name);
+                    return false;
+                }
+                return true;
+            });
+            if (removed.length > 0) {
+                renderTags(role, badgeClass);
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Tự động loại bỏ GVHD',
+                    text: `Giảng viên "${removed.join(', ')}" đang là GVHD của đề tài được chọn nên đã được tự động loại khỏi vai trò ${role === 'president' ? 'Chủ tịch' : (role === 'secretary' ? 'Thư ký' : 'Ủy viên')} của Hội đồng!`,
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            }
+        });
     }
 }
 
@@ -638,6 +803,18 @@ async function createCouncil() {
         return Swal.fire('Chưa chọn nhóm đề tài', 'Hội đồng nghiệm thu bắt buộc phải có ít nhất 1 nhóm đề tài để đánh giá! Vui lòng tích chọn nhóm đề tài trong danh sách bên trên.', 'warning');
     }
 
+    // Kiểm tra điều kiện hồ sơ của các đề tài đã chọn
+    for (const t of selectedTopics) {
+        const cb = document.getElementById(`cbTopic${t.id}`);
+        const card = cb?.closest('.topic-item-card');
+        if (card && card.getAttribute('data-eligible') !== 'true') {
+            const reason = card.getAttribute('data-reason') || 'Chưa đủ điều kiện hồ sơ';
+            _councilSubmitting = false;
+            if (btn) { btn.disabled = false; btn.textContent = 'Xác nhận thành lập'; }
+            return Swal.fire('Chưa đủ điều kiện thành lập Hội đồng', `Đề tài chưa đủ điều kiện: ${reason}. Nhóm cần nộp đầy đủ Đề cương chi tiết và Báo cáo tổng kết được Khoa duyệt đạt.`, 'warning');
+        }
+    }
+
     const president = councilState.president.map(m => m.id);
     const secretary = councilState.secretary.map(m => m.id);
     const members = councilState.member.map(m => m.id);
@@ -662,6 +839,18 @@ async function createCouncil() {
         return Swal.fire('Lỗi trùng lặp', 'Có giảng viên đang được gán nhiều vai trò trong cùng một hội đồng. Vui lòng kiểm tra lại!', 'warning');
     }
 
+    // Kiểm tra không để GVHD của các đề tài đã chọn tham gia Hội đồng (nếu bật chặn)
+    const isBlockEnabled = document.getElementById('blockSupervisorCheck')?.checked ?? true;
+    if (isBlockEnabled && typeof getBlockedMentorIds === 'function') {
+        const { ids: blockedIds } = getBlockedMentorIds();
+        const invalidMembers = allMemberIds.filter(id => blockedIds.has(parseInt(id)));
+        if (invalidMembers.length > 0) {
+            _councilSubmitting = false;
+            if (btn) { btn.disabled = false; btn.textContent = 'Xác nhận thành lập'; }
+            return Swal.fire('Vi phạm tính khách quan', 'Có thành viên trong Hội đồng đang là Giảng viên hướng dẫn của đề tài được phân công vào Hội đồng này! Vui lòng thay đổi thành phần Hội đồng để đảm bảo tính khách quan.', 'warning');
+        }
+    }
+
     try {
         const url = _editingCouncilId ? `/api/councils/${_editingCouncilId}` : '/api/councils';
         const method = _editingCouncilId ? 'PUT' : 'POST';
@@ -671,12 +860,29 @@ async function createCouncil() {
             body: JSON.stringify({
                 name, decision_number, meeting_date, meeting_time, location,
                 president, secretary, members, topics: selectedTopics,
+                block_supervisor: isBlockEnabled,
                 batch_id: {{ active_batch.id if active_batch else 'null' }}
             })
         });
         const data = await res.json();
         if (res.ok) {
-            Swal.fire('Thành công', _editingCouncilId ? 'Đã cập nhật Hội đồng!' : 'Đã thành lập Hội đồng mới thành công!', 'success').then(() => location.reload());
+            // 1. Đóng modal ngay lập tức để trở về giao diện danh sách hội đồng
+            const addModalEl = document.getElementById('modalAddCouncil');
+            if (addModalEl) {
+                const modalInstance = bootstrap.Modal.getInstance(addModalEl) || new bootstrap.Modal(addModalEl);
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+            }
+            // 2. Thông báo thành công và tự động tải lại trang để hiển thị ngay Hội đồng mới
+            await Swal.fire({
+                icon: 'success',
+                title: 'Thành công!',
+                text: _editingCouncilId ? 'Đã cập nhật Hội đồng thành công!' : 'Đã thành lập Hội đồng mới thành công!',
+                timer: 1200,
+                showConfirmButton: false
+            });
+            window.location.reload();
         } else {
             _councilSubmitting = false;
             if (btn) { btn.disabled = false; btn.textContent = 'Xác nhận thành lập'; }
@@ -701,6 +907,9 @@ function editCouncil(id) {
     document.getElementById('councilTime').value = data.meeting_time;
     document.getElementById('councilLocation').value = data.location;
     
+    // Cập nhật lại hiển thị đề tài: hiển thị đề tài của Hội đồng này + đề tài chưa gán
+    refreshTopicCardsVisibility();
+
     // Check topics
     document.querySelectorAll('.council-topic-cb').forEach(cb => {
         const tid = parseInt(cb.value);
@@ -723,12 +932,31 @@ function editCouncil(id) {
     const btn = document.getElementById('btnSubmitCouncil');
     if (btn) btn.textContent = 'Lưu thay đổi';
 
+    updateCouncilEligibleMentors();
+
     const modal = new bootstrap.Modal(document.getElementById('modalAddCouncil'));
     modal.show();
 }
 
+document.getElementById('modalAddCouncil').addEventListener('shown.bs.modal', () => {
+    refreshTopicCardsVisibility();
+    updateCouncilEligibleMentors();
+});
+
 document.getElementById('modalAddCouncil').addEventListener('hidden.bs.modal', () => {
     _editingCouncilId = null;
+    _currentFieldFilter = 'all';
+    document.querySelectorAll('.filter-field-btn').forEach(b => {
+        if (b.dataset.field === 'all') {
+            b.classList.remove('btn-outline-primary');
+            b.classList.add('btn-primary', 'active');
+        } else {
+            b.classList.remove('btn-primary', 'active');
+            b.classList.add('btn-outline-primary');
+        }
+    });
+    refreshTopicCardsVisibility();
+
     document.getElementById('modalCouncilTitle').innerHTML = '<i class="fa-solid fa-gavel me-2"></i> Thành lập Hội đồng Mới';
     document.getElementById('councilName').value = '';
     document.getElementById('councilDecision').value = '';
@@ -747,6 +975,10 @@ document.getElementById('modalAddCouncil').addEventListener('hidden.bs.modal', (
         const tags = document.getElementById('tags-' + role);
         if (tags) tags.innerHTML = '';
     });
+    const blockCb = document.getElementById('blockSupervisorCheck');
+    if (blockCb) blockCb.checked = true;
+    updateCouncilEligibleMentors();
+
     const btn = document.getElementById('btnSubmitCouncil');
     if (btn) btn.textContent = 'Xác nhận thành lập';
 });
@@ -754,7 +986,7 @@ document.getElementById('modalAddCouncil').addEventListener('hidden.bs.modal', (
 async function deleteCouncil(id) {
     const result = await Swal.fire({
         title: 'Xác nhận xóa Hội đồng?',
-        text: 'Hội đồng sẽ bị xóa và các đề tài sẽ được giải phóng.',
+        text: 'Hội đồng sẽ bị xóa và các nhóm đề tài sẽ được giải phóng để xếp lại Hội đồng mới.',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#dc3545',
@@ -766,7 +998,14 @@ async function deleteCouncil(id) {
         const res = await fetch(`/api/councils/${id}`, { method: 'DELETE' });
         const data = await res.json();
         if (res.ok) {
-            Swal.fire('Đã xóa', 'Hội đồng đã được xóa.', 'success').then(() => location.reload());
+            await Swal.fire({
+                icon: 'success',
+                title: 'Đã xóa!',
+                text: 'Hội đồng đã được xóa và các nhóm đề tài đã được giải phóng.',
+                timer: 1200,
+                showConfirmButton: false
+            });
+            window.location.reload();
         } else {
             Swal.fire('Lỗi', data.error || 'Có lỗi xảy ra', 'error');
         }

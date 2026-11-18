@@ -177,7 +177,10 @@ def council():
     active_batch = Batch.query.filter_by(academic_year=current_year, status='active').first()
     councils = Council.query.join(Batch).filter(Batch.academic_year == current_year).all()
     mentors = User.query.filter(func.lower(User.role) == 'lecturer').all()
-    topics = Topic.query.join(Batch).filter(Batch.academic_year == current_year).all()
+    topics = Topic.query.join(Batch).filter(
+        Batch.academic_year == current_year,
+        Topic.status == 'approved'
+    ).all()
     return render_template('faculty/council.html', councils=councils, mentors=mentors, active_batch=active_batch, topics=topics)
 
 @faculty_bp.route('/rubric')

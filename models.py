@@ -157,6 +157,46 @@ class Topic(db.Model):
     meetings = db.relationship('Meeting', backref='topic', lazy=True)
     milestones = db.relationship('Milestone', backref='topic', lazy=True)
 
+    def check_council_eligibility(self):
+        """
+        Kiểm tra điều kiện thành lập Hội đồng nghiệm thu:
+        1. Đề tài status == 'approved' (đã được duyệt chính thức)
+        2. Nhóm đã nộp Đề cương chi tiết ('outline') và Báo cáo tổng kết ('final')
+        3. Cả 2 tài liệu phải có bản mới nhất được GVHD duyệt (status == 'approved')
+           và được Khoa duyệt (faculty_status == 'approved').
+           Nếu Khoa yêu cầu sửa lại (revision_required) hoặc chưa duyệt (pending), đề tài không đủ điều kiện.
+        """
+        if self.status != 'approved':
+            return False, 'Đề tài chưa được Khoa phê duyệt chính thức.'
+        
+        subs = self.submissions or []
+        
+        # 1. Đề cương chi tiết (outline)
+        outline_subs = [s for s in subs if s.type == 'outline']
+        if not outline_subs:
+            return False, 'Chưa nộp Đề cương chi tiết.'
+        latest_outline = max(outline_subs, key=lambda s: (s.version or 1, s.submitted_at or datetime.min))
+        if latest_outline.status != 'approved':
+            return False, 'Đề cương chi tiết chưa được GVHD phê duyệt đạt.'
+        if latest_outline.faculty_status == 'revision_required':
+            return False, 'Đề cương chi tiết đang bị Khoa yêu cầu sửa lại.'
+        if latest_outline.faculty_status != 'approved':
+            return False, 'Đề cương chi tiết đang chờ Khoa phê duyệt.'
+
+        # 2. Báo cáo tổng kết (final)
+        final_subs = [s for s in subs if s.type == 'final']
+        if not final_subs:
+            return False, 'Chưa nộp Báo cáo tổng kết.'
+        latest_final = max(final_subs, key=lambda s: (s.version or 1, s.submitted_at or datetime.min))
+        if latest_final.status != 'approved':
+            return False, 'Báo cáo tổng kết chưa được GVHD phê duyệt đạt.'
+        if latest_final.faculty_status == 'revision_required':
+            return False, 'Báo cáo tổng kết đang bị Khoa yêu cầu sửa lại.'
+        if latest_final.faculty_status != 'approved':
+            return False, 'Báo cáo tổng kết đang chờ Khoa phê duyệt.'
+
+        return True, 'Đủ điều kiện thành lập Hội đồng.'
+
 class TopicRegistration(db.Model):
     __tablename__ = 'topic_registrations'
     id = db.Column(db.Integer, primary_key=True)

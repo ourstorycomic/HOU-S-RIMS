@@ -338,6 +338,19 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             const data = await resp.json();
             if (resp.ok) {
+                // Đặt lại ID nhóm và trạng thái đề tài trên client
+                window.currentGroupId = 0;
+                window.currentMyTopic = null;
+
+                // Tự động loại bỏ các thành viên đã từ chối khỏi danh sách mời tạm thời
+                if (Array.isArray(window.regInvitedMembers)) {
+                    window.regInvitedMembers = window.regInvitedMembers.filter(m => m.status !== 'rejected' && m.status !== 'declined');
+                    window.regInvitedMembers.forEach(m => { m.status = 'pending'; });
+                }
+                if (typeof window.saveRegistrationDraft === 'function') {
+                    window.saveRegistrationDraft();
+                }
+
                 Swal.fire({icon: 'success', title: 'Đã hủy', text: 'Đã hủy đăng ký đề tài thành công.', timer: 2000, showConfirmButton: false});
                 if (typeof renderTopicFormView === 'function') {
                     renderTopicFormView();
