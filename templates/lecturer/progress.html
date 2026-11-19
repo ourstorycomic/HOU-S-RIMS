@@ -143,19 +143,32 @@
                             
                             <!-- SECTION 1: TÀI LIỆU & BÁO CÁO ĐÃ NỘP (Đề cương chi tiết, Báo cáo tiến độ, Slide...) -->
                             <div class="mt-4 pt-3 border-top">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
                                     <h6 class="fw-bold mb-0 text-dark">
-                                        <i class="fa-solid fa-file-signature me-2 text-primary"></i>Tài liệu & Đề cương / Báo cáo sinh viên đã nộp
+                                        <i class="fa-solid fa-file-signature me-2 text-primary"></i>Tài liệu &amp; Đề cương / Báo cáo sinh viên đã nộp
                                     </h6>
-                                    <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-1 fw-bold">
-                                        {{ t.submissions|length if t.submissions else 0 }} tệp
-                                    </span>
+                                    <!-- Filter tabs: Lọc theo trạng thái chấm -->
+                                    <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                        <button type="button" class="btn btn-sm rounded-pill px-3 py-1 fw-bold sub-filter-btn shadow-2xs" 
+                                                onclick="filterSubmissionsList({{ t.id }}, 'all', this)" style="background: #2563eb; color: white;">
+                                            Tất cả hồ sơ ({{ t.submissions|length if t.submissions else 0 }})
+                                        </button>
+                                        <button type="button" class="btn btn-sm rounded-pill px-3 py-1 fw-bold sub-filter-btn border" 
+                                                onclick="filterSubmissionsList({{ t.id }}, 'pending', this)" style="background: #f8fafc; color: #1e293b;">
+                                            <i class="fa-regular fa-clock text-warning me-1"></i> Chờ đánh giá ({{ t.submissions|selectattr('status', 'equalto', 'submitted')|list|length }})
+                                        </button>
+                                        <button type="button" class="btn btn-sm rounded-pill px-3 py-1 fw-bold sub-filter-btn border" 
+                                                onclick="filterSubmissionsList({{ t.id }}, 'approved', this)" style="background: #f8fafc; color: #1e293b;">
+                                            <i class="fa-solid fa-check text-success me-1"></i> Đã duyệt Đạt ({{ t.submissions|selectattr('status', 'equalto', 'approved')|list|length }})
+                                        </button>
+                                    </div>
                                 </div>
                                 
                                 {% if t.submissions %}
                                     <div class="list-group list-group-flush border rounded-3 overflow-hidden shadow-sm">
                                     {% for sub in t.submissions %}
-                                        <div class="list-group-item p-3 border-bottom {% if not sub.is_latest %}bg-light bg-opacity-75{% endif %}"
+                                        <div class="list-group-item p-3 border-bottom submission-item-{{ t.id }} {% if not sub.is_latest %}bg-light bg-opacity-75{% endif %}"
+                                             data-status="{{ sub.status or 'submitted' }}"
                                              style="{% if not sub.is_latest %}background-color: #f8fafc; border-left: 4px solid #cbd5e1;{% else %}border-left: 4px solid #3b82f6;{% endif %}">
                                             <div class="d-flex justify-content-between align-items-start gap-3">
                                                 <div class="flex-grow-1">
@@ -316,16 +329,42 @@
 
                                                 <div class="d-flex flex-column gap-2 flex-shrink-0 ms-2">
                                                     {% if sub.is_latest %}
-                                                    <button type="button" class="btn btn-sm btn-outline-warning rounded-pill fw-bold text-nowrap d-inline-flex align-items-center justify-content-center gap-1.5 px-3 py-1.5 shadow-sm" 
-                                                        data-sub-id="{{ sub.id }}"
-                                                        data-feedbacks='{{ sub.feedback_list|tojson if sub.feedback_list else "[]" }}'
-                                                        data-status="{{ sub.status or 'submitted' }}"
-                                                        data-file-url="{{ sub.feedback_file_url or '' }}"
-                                                        data-file-name="{{ sub.feedback_file_name or '' }}"
-                                                        onclick="handleFeedbackClick(this)">
-                                                        <i class="fa-solid fa-star-half-stroke text-warning"></i>
-                                                        <span>Nhận xét & Đánh giá</span>
-                                                    </button>
+                                                        {% if sub.status == 'approved' %}
+                                                        <button type="button" class="btn btn-sm btn-outline-success rounded-pill fw-bold text-nowrap d-inline-flex align-items-center justify-content-center gap-1.5 px-3 py-1.5 shadow-2xs" 
+                                                            data-sub-id="{{ sub.id }}"
+                                                            data-feedbacks='{{ sub.feedback_list|tojson if sub.feedback_list else "[]" }}'
+                                                            data-status="{{ sub.status or 'submitted' }}"
+                                                            data-file-url="{{ sub.feedback_file_url or '' }}"
+                                                            data-file-name="{{ sub.feedback_file_name or '' }}"
+                                                            onclick="handleFeedbackClick(this)"
+                                                            title="Bấm để xem lại hoặc sửa nhận xét đánh giá">
+                                                            <i class="fa-solid fa-circle-check text-success"></i>
+                                                            <span>Đã duyệt (Sửa)</span>
+                                                        </button>
+                                                        {% elif sub.status == 'revision_required' %}
+                                                        <button type="button" class="btn btn-sm btn-outline-danger rounded-pill fw-bold text-nowrap d-inline-flex align-items-center justify-content-center gap-1.5 px-3 py-1.5 shadow-2xs" 
+                                                            data-sub-id="{{ sub.id }}"
+                                                            data-feedbacks='{{ sub.feedback_list|tojson if sub.feedback_list else "[]" }}'
+                                                            data-status="{{ sub.status or 'submitted' }}"
+                                                            data-file-url="{{ sub.feedback_file_url or '' }}"
+                                                            data-file-name="{{ sub.feedback_file_name or '' }}"
+                                                            onclick="handleFeedbackClick(this)"
+                                                            title="Bấm để xem lại hoặc cập nhật yêu cầu chỉnh sửa">
+                                                            <i class="fa-solid fa-triangle-exclamation text-danger"></i>
+                                                            <span>Yêu cầu sửa</span>
+                                                        </button>
+                                                        {% else %}
+                                                        <button type="button" class="btn btn-sm btn-warning text-dark rounded-pill fw-bold text-nowrap d-inline-flex align-items-center justify-content-center gap-1.5 px-3 py-1.5 shadow-sm" 
+                                                            data-sub-id="{{ sub.id }}"
+                                                            data-feedbacks='{{ sub.feedback_list|tojson if sub.feedback_list else "[]" }}'
+                                                            data-status="{{ sub.status or 'submitted' }}"
+                                                            data-file-url="{{ sub.feedback_file_url or '' }}"
+                                                            data-file-name="{{ sub.feedback_file_name or '' }}"
+                                                            onclick="handleFeedbackClick(this)">
+                                                            <i class="fa-solid fa-star-half-stroke"></i>
+                                                            <span>Nhận xét &amp; Đánh giá</span>
+                                                        </button>
+                                                        {% endif %}
                                                     {% else %}
                                                     <button type="button" class="btn btn-sm btn-light border text-muted rounded-pill fw-bold text-nowrap d-inline-flex align-items-center justify-content-center gap-1.5 px-3 py-1.5 disabled" 
                                                         disabled 
@@ -783,6 +822,33 @@ function saveFeedback() {
             saveBtn.innerHTML = '<i class="fa-solid fa-paper-plane me-2"></i>Lưu đánh giá & Thông báo SV';
         }
     });
+}
+
+function filterSubmissionsList(topicId, filterType, btn) {
+    const items = document.querySelectorAll(`.submission-item-${topicId}`);
+    items.forEach(el => {
+        const status = el.getAttribute('data-status') || 'submitted';
+        if (filterType === 'all') {
+            el.style.display = '';
+        } else if (filterType === 'pending') {
+            el.style.display = (status === 'submitted') ? '' : 'none';
+        } else if (filterType === 'approved') {
+            el.style.display = (status === 'approved') ? '' : 'none';
+        }
+    });
+    
+    // Cập nhật trạng thái active của nút bấm lọc
+    if (btn && btn.parentElement) {
+        const btns = btn.parentElement.querySelectorAll('.sub-filter-btn');
+        btns.forEach(b => {
+            b.style.background = '#f8fafc';
+            b.style.color = '#1e293b';
+            b.classList.remove('shadow-sm');
+        });
+        btn.style.background = '#2563eb';
+        btn.style.color = 'white';
+        btn.classList.add('shadow-sm');
+    }
 }
 </script>
 {% endblock %}
