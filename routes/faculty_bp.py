@@ -133,6 +133,9 @@ def topics():
 
     for t in all_topics:
         approved = [s for s in t.submissions if s.status == 'approved']
+        pending = [s for s in t.submissions if s.status == 'submitted']
+        t.total_submission_count = len(t.submissions)
+        t.pending_submission_count = len(pending)
         seen = {}
         for s in sorted(approved, key=lambda x: (x.submitted_at or datetime.min, x.version or 1), reverse=True):
             if s.type not in seen:

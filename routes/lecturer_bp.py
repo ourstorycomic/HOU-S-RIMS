@@ -85,15 +85,18 @@ def progress():
             # Phân loại bài nộp theo chu trình tiến độ NCKH
             outline_subs = [s for s in t.submissions if s.type == 'outline']
             progress_subs = [s for s in t.submissions if s.type == 'progress']
-            final_subs = [s for s in t.submissions if s.type in ['final', 'slide']]
+            final_subs = [s for s in t.submissions if s.type == 'final']
+            slide_subs = [s for s in t.submissions if s.type == 'slide']
             
             latest_outline = next((s for s in outline_subs if getattr(s, 'is_latest', False)), None)
             latest_progress = next((s for s in progress_subs if getattr(s, 'is_latest', False)), None)
             latest_final = next((s for s in final_subs if getattr(s, 'is_latest', False)), None)
+            latest_slide = next((s for s in slide_subs if getattr(s, 'is_latest', False)), None)
 
             t.outline_status = latest_outline.status if latest_outline else 'none'
             t.progress_status = latest_progress.status if latest_progress else 'none'
             t.final_status = latest_final.status if latest_final else 'none'
+            t.slide_status = latest_slide.status if latest_slide else 'none'
             
             evaluations = Evaluation.query.filter_by(topic_id=t.id).all()
             t.is_evaluated = len(evaluations) > 0
@@ -117,7 +120,10 @@ def progress():
                     ms_pct_sum += m.progress_pct
                     all_milestones.append(m)
                 avg_ms = ms_pct_sum / len(t.milestones_list)
-                pct += int(round(avg_ms * 0.3))
+                if avg_ms == 0 and t.progress_status in ['approved', 'submitted']:
+                    pct += 30 if t.progress_status == 'approved' else 15
+                else:
+                    pct += int(round(avg_ms * 0.3))
             else:
                 if t.progress_status == 'approved':
                     pct += 30
@@ -125,10 +131,15 @@ def progress():
                     pct += 15
                     
             # 4. Giai đoạn Báo cáo tổng kết & Slide (Trọng số 20%):
+            # Báo cáo tổng kết là tài liệu cốt lõi (15%), Slide là tài liệu bổ trợ (5%)
             if t.final_status == 'approved':
-                pct += 20
+                pct += 20 if t.slide_status == 'approved' else 15
             elif t.final_status == 'submitted':
-                pct += 10
+                pct += 12 if t.slide_status == 'approved' else 8
+            elif t.slide_status == 'approved':
+                pct += 5
+            elif t.slide_status == 'submitted':
+                pct += 3
                 
             # 5. Giai đoạn Nghiệm thu & Bảo vệ hội đồng (Trọng số 10%):
             if t.is_evaluated:

@@ -124,6 +124,18 @@ def student_page(tab_name='explore'):
                     Topic.batch_id == active_batch_id
                 ).order_by(Topic.id.desc()).all()
 
+        # Fallback an toàn nếu chưa gắn batch_id
+        if not my_topics and current_user:
+            if my_groups:
+                g_ids = [g.id for g in my_groups]
+                my_topics = Topic.query.filter(Topic.group_id.in_(g_ids)).order_by(Topic.id.desc()).all()
+            if not my_topics:
+                my_topics = Topic.query.join(Group).filter(Group.leader_id == current_user.id).order_by(Topic.id.desc()).all()
+            if not my_topics:
+                user_g_ids = [m.group_id for m in GroupMember.query.filter_by(student_id=current_user.id, status='accepted').all()]
+                if user_g_ids:
+                    my_topics = Topic.query.filter(Topic.group_id.in_(user_g_ids)).order_by(Topic.id.desc()).all()
+
             pending_invitations = GroupMember.query.join(Group).filter(
                 GroupMember.student_id == current_user.id,
                 Group.batch_id == active_batch_id,

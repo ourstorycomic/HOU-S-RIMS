@@ -444,13 +444,27 @@
                                     class="fa-regular fa-clock me-1"></i>Đến 17:30 (Giờ HC)</small>
                         </div>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Đề tài & Giảng viên</label>
+                        {% if my_topics %}
+                            <select id="meetingTopicId" class="form-select rounded-3">
+                                {% for topic in my_topics %}
+                                <option value="{{ topic.id }}">
+                                    DT-00{{ topic.id }} - {{ topic.title }} (GVHD: {{ topic.mentor.full_name if topic.mentor else 'Chưa phân công' }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        {% else %}
+                            <input type="hidden" id="meetingTopicId" value="">
+                            <small class="text-muted d-block fst-italic">Yêu cầu đặt lịch sẽ gửi theo tài khoản của bạn.</small>
+                        {% endif %}
+                    </div>
                     <!-- Hidden field to keep backwards compatibility -->
                     <input type="hidden" id="meetingTime">
-                    <input type="hidden" id="meetingTopicId" value="{{ my_topics[0].id if my_topics else '' }}">
                 </div>
                 <div class="modal-footer border-0 px-4 pb-4">
                     <button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy</button>
-                    <button id="btnSubmitMeeting" class="btn btn-primary fw-bold px-4">
+                    <button id="btnSubmitMeeting" class="btn btn-primary fw-bold px-4" onclick="submitStudentMeetingRequest()">
                         <i class="fa-solid fa-paper-plane me-1"></i> Gửi yêu cầu
                     </button>
                 </div>

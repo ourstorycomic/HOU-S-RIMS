@@ -54,12 +54,12 @@
                                         </td>
                                         <td>
                                             {% if t.approved_submission_types and t.approved_submission_types|length > 0 %}
-                                            <div class="d-flex flex-column align-items-start gap-2 py-1" style="gap: 8px !important;">
+                                            <div class="d-flex flex-column align-items-start gap-1 py-1">
                                                 {% for item in t.approved_submission_types %}
                                                 <button type="button" class="btn btn-sm rounded-pill px-3 py-1.5 fw-bold shadow-2xs d-inline-flex align-items-center text-nowrap" 
                                                         style="background: {{ item.bg }}; color: {{ item.color }}; border: 1px solid {{ item.border }}; font-size: 12px; transition: transform 0.15s ease;"
                                                         title="Xem chi tiết &amp; phê duyệt"
-                                                        onclick="openFacultySubmissionsModal({{ t.id }}, '{{ t.title|replace('\'', '\\\'') }}', '{{ t.status }}')">
+                                                        onclick="openFacultySubmissionsModal({{ t.id }}, '{{ t.title|replace('\'', '\\\'') }}', '{{ t.status }}', 'approved')">
                                                     <i class="fa-solid {{ item.icon }} me-2"></i>
                                                     <span>{{ item.label }}</span>
                                                     {% if item.faculty_status == 'approved' %}
@@ -73,31 +73,53 @@
                                                     {% endif %}
                                                 </button>
                                                 {% endfor %}
+                                                {% if t.pending_submission_count and t.pending_submission_count > 0 %}
+                                                <button type="button" class="btn btn-sm rounded-pill px-2.5 py-1 text-muted border border-dashed d-inline-flex align-items-center mt-1"
+                                                        style="font-size: 11px; background: #fafafa;"
+                                                        title="Xem tất cả bài nộp (bao gồm bài đang chờ GVHD duyệt)"
+                                                        onclick="openFacultySubmissionsModal({{ t.id }}, '{{ t.title|replace('\'', '\\\'') }}', '{{ t.status }}', 'all')">
+                                                    <i class="fa-regular fa-clock text-warning me-1.5"></i>
+                                                    <span>+{{ t.pending_submission_count }} bài chờ GVHD duyệt</span>
+                                                </button>
+                                                {% endif %}
                                             </div>
-                                            {% elif t.submissions and (t.submissions|selectattr('status', 'equalto', 'approved')|list)|length > 0 %}
-                                            {% set approved_subs = t.submissions|selectattr('status', 'equalto', 'approved')|list %}
+                                            {% elif t.pending_submission_count and t.pending_submission_count > 0 %}
                                             <button type="button" class="btn btn-sm rounded-pill px-3 py-1.5 fw-bold shadow-2xs d-inline-flex align-items-center text-nowrap" 
-                                                    style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 12px;"
-                                                    onclick="openFacultySubmissionsModal({{ t.id }}, '{{ t.title|replace('\'', '\\\'') }}', '{{ t.status }}')">
-                                                <i class="fa-solid fa-book-bookmark text-primary me-2"></i>
-                                                <span>Tài liệu: {% if approved_subs[0].type == 'outline' %}Đề cương chi tiết{% elif approved_subs[0].type == 'progress' %}Báo cáo tiến độ{% elif approved_subs[0].type == 'final' %}Báo cáo tổng kết{% elif approved_subs[0].type == 'slide' %}Slide &amp; Phụ lục{% else %}{{ approved_subs[0].type }}{% endif %}</span>
+                                                    style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-size: 12px;"
+                                                    title="Bấm để xem các tài liệu sinh viên đã nộp"
+                                                    onclick="openFacultySubmissionsModal({{ t.id }}, '{{ t.title|replace('\'', '\\\'') }}', '{{ t.status }}', 'all')">
+                                                <i class="fa-regular fa-clock text-warning me-2"></i>
+                                                <span>Có {{ t.pending_submission_count }} bài nộp (Chờ GVHD duyệt)</span>
+                                            </button>
+                                            {% elif t.total_submission_count and t.total_submission_count > 0 %}
+                                            <button type="button" class="btn btn-sm rounded-pill px-3 py-1.5 fw-semibold d-inline-flex align-items-center text-nowrap border" 
+                                                    style="background: #f8fafc; color: #475569;"
+                                                    title="Bấm để xem các bài nộp của nhóm đề tài"
+                                                    onclick="openFacultySubmissionsModal({{ t.id }}, '{{ t.title|replace('\'', '\\\'') }}', '{{ t.status }}', 'all')">
+                                                <i class="fa-regular fa-folder-open text-primary me-2"></i>
+                                                <span>{{ t.total_submission_count }} bài nộp</span>
                                             </button>
                                             {% else %}
-                                            <span class="text-muted small d-inline-flex align-items-center gap-2">
-                                                <i class="fa-regular fa-clock text-muted"></i>
-                                                <span>Chưa có bản đạt</span>
+                                            <span class="text-muted small d-inline-flex align-items-center gap-1.5">
+                                                <i class="fa-regular fa-folder-open text-muted"></i>
+                                                <span>Chưa nộp bài</span>
                                             </span>
                                             {% endif %}
                                         </td>
                                         <td>
                                             <span class="badge {% if t.status == 'approved' %}bg-success-subtle text-success border-success-subtle{% elif t.status == 'pending' %}bg-secondary-subtle text-secondary border-secondary-subtle{% elif t.status == 'faculty_pending' %}bg-warning-subtle text-warning border-warning-subtle{% elif t.status == 'rejected' %}bg-danger-subtle text-danger border-danger-subtle{% else %}bg-primary-subtle text-primary border-primary-subtle{% endif %} border rounded-pill px-3 py-1 small">{{ t.status | upper }}</span>
                                         </td>
-                                        <td class="text-end pe-4">
+                                        <td class="text-end pe-4 text-nowrap">
+                                            <button type="button" class="btn btn-sm btn-outline-primary fw-bold me-1 shadow-2xs" 
+                                                    title="Xem toàn bộ hồ sơ & tài liệu bài nộp của nhóm đề tài"
+                                                    onclick="openFacultySubmissionsModal({{ t.id }}, '{{ t.title|replace('\'', '\\\'') }}', '{{ t.status }}')">
+                                                <i class="fa-regular fa-folder-open me-1"></i> Hồ sơ
+                                            </button>
                                             {% if t.status == 'faculty_pending' %}
                                             <button class="btn btn-sm btn-success fw-bold me-1" onclick="facultyApprove({{ t.id }})"><i class="fa-solid fa-check me-1"></i> Duyệt</button>
-                                            <button class="btn btn-sm btn-outline-primary fw-bold me-2" onclick="openTopicReassignModalFromBtn(this)" data-topic-id="{{ t.id }}" data-topic-title="{{ t.title|e }}" data-mentor-id="{{ t.mentor_id or '' }}" data-mentor-name="{{ (t.mentor.full_name if t.mentor else 'Chưa phân công')|e }}"><i class="fa-solid fa-shuffle me-1"></i> Chuyển GV</button>
+                                            <a class="btn btn-sm btn-outline-primary fw-bold me-1" href="{{ url_for('faculty.assignment') }}?status=faculty_pending&topic_id={{ t.id }}"><i class="fa-solid fa-shuffle me-1"></i> Chuyển GV</a>
                                             {% elif t.status == 'approved' %}
-                                            <button class="btn btn-sm btn-outline-secondary fw-bold me-2" onclick="openTopicReassignModalFromBtn(this)" data-topic-id="{{ t.id }}" data-topic-title="{{ t.title|e }}" data-mentor-id="{{ t.mentor_id or '' }}" data-mentor-name="{{ (t.mentor.full_name if t.mentor else 'Chưa phân công')|e }}"><i class="fa-solid fa-shuffle me-1"></i> Chuyển GV</button>
+                                            <a class="btn btn-sm btn-outline-secondary fw-bold me-1" href="{{ url_for('faculty.assignment') }}?status=approved&topic_id={{ t.id }}"><i class="fa-solid fa-shuffle me-1"></i> Chuyển GV</a>
                                             {% endif %}
                                             <button class="btn btn-sm text-primary" onclick="openEditTopicModal({{ t.id }}, '{{ t.title|replace('\'', '\\\'') }}', '{{ t.description|replace('\'', '\\\'') }}', '{{ t.mentor_id or '' }}', '{{ t.batch_id or '' }}', '{{ t.status }}')"><i class="fa-solid fa-pen-to-square"></i></button>
                                         </td>
@@ -351,12 +373,12 @@
             }
         });
 
-        async function openFacultySubmissionsModal(topicId, topicTitle, topicStatus) {
+        async function openFacultySubmissionsModal(topicId, topicTitle, topicStatus, activeTab = 'auto') {
             const modalEl = document.getElementById('modalFacultySubmissions');
             const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             modal.show();
 
-            await loadFacultySubmissionsContent(topicId, topicTitle, topicStatus);
+            await loadFacultySubmissionsContent(topicId, topicTitle, topicStatus, activeTab);
         }
 
         function closeFacultyModalAndApprove(topicId) {
@@ -369,15 +391,15 @@
             facultyApprove(topicId);
         }
 
-        async function loadFacultySubmissionsContent(topicId, topicTitle, topicStatus) {
+        async function loadFacultySubmissionsContent(topicId, topicTitle, topicStatus, activeTab = 'auto') {
             document.getElementById('facultySubTopicTitle').textContent = topicTitle || `Đề tài #${topicId}`;
-            document.getElementById('facultySubTopicMeta').textContent = `Mã đề tài: DT-00${topicId} • Báo cáo & Đề cương đã được GVHD duyệt Đạt yêu cầu`;
+            document.getElementById('facultySubTopicMeta').textContent = `Mã đề tài: DT-00${topicId} • Hồ sơ tài liệu & Toàn bộ bài nộp NCKH`;
             
             const bodyEl = document.getElementById('facultySubModalBody');
             bodyEl.innerHTML = `
                 <div class="text-center py-5 text-muted">
                     <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
-                    <div class="small">Đang tải hồ sơ bài nộp đã duyệt...</div>
+                    <div class="small">Đang tải hồ sơ bài nộp của nhóm đề tài...</div>
                 </div>
             `;
 
@@ -393,78 +415,187 @@
             }
 
             try {
-                const res = await fetch(`/api/submissions/topic/${topicId}?status=approved`);
+                // Tải toàn bộ bài nộp của đề tài (không giới hạn status)
+                const res = await fetch(`/api/submissions/topic/${topicId}`);
                 const data = await res.json();
                 
-                // Lọc chỉ những bản nộp đã đạt yêu cầu (GVHD đã duyệt)
-                const approvedSubmissions = (data.submissions || []).filter(s => s.status === 'approved');
+                const allSubmissions = data.submissions || [];
+                const approvedSubmissions = allSubmissions.filter(s => s.status === 'approved');
+                const pendingSubmissions = allSubmissions.filter(s => s.status === 'submitted');
 
-                if (!data.success || approvedSubmissions.length === 0) {
+                if (!data.success || allSubmissions.length === 0) {
                     bodyEl.innerHTML = `
                         <div class="text-center py-5 text-muted">
                             <div class="bg-light rounded-circle d-inline-flex p-3 mb-2 text-muted">
-                                <i class="fa-solid fa-clock-rotate-left fs-2 opacity-50"></i>
+                                <i class="fa-regular fa-folder-open fs-2 opacity-50"></i>
                             </div>
-                            <div class="fw-bold text-dark">Chưa có bản báo cáo nào đạt yêu cầu</div>
+                            <div class="fw-bold text-dark fs-6 mb-1">Chưa có bài nộp nào từ nhóm sinh viên</div>
                             <div class="small text-muted" style="max-width: 480px; margin: 0 auto;">
-                                Hệ thống chỉ gửi lên cấp Khoa các bản đề cương/báo cáo đã được Giảng viên hướng dẫn đánh giá <strong>Đạt yêu cầu</strong>. Các bản nháp hoặc cần sửa lại sẽ được lưu ở cấp Nhóm và GVHD.
+                                Nhóm sinh viên chưa tải lên bản đề cương hay báo cáo nào trên hệ thống. Sau khi sinh viên nộp bài, toàn bộ tệp tin sẽ xuất hiện tại đây để Khoa và GVHD cùng theo dõi.
                             </div>
                         </div>
                     `;
                     return;
                 }
 
-                let html = '<div class="d-flex flex-column gap-3">';
-                approvedSubmissions.forEach(s => {
-                    const typeLabelMap = {
-                        'outline': 'Đề cương chi tiết',
-                        'progress': 'Báo cáo tiến độ',
-                        'final': 'Báo cáo tổng kết',
-                        'slide': 'Slide & Phụ lục'
-                    };
-                    const typeName = typeLabelMap[s.type] || 'Báo cáo';
+                // Xác định tab được chọn mặc định
+                let selectedTab = 'approved';
+                if (activeTab === 'all') {
+                    selectedTab = 'all';
+                } else if (activeTab === 'approved') {
+                    selectedTab = 'approved';
+                } else {
+                    selectedTab = approvedSubmissions.length > 0 ? 'approved' : 'all';
+                }
 
-                    let feedbackSection = '';
-                    if (s.feedback) {
-                        feedbackSection = `
-                            <div class="mt-2.5 p-3 rounded-3" style="background: #ecfdf5; border-left: 4px solid #10b981;">
-                                <div class="fw-bold text-dark small mb-1">
-                                    <i class="fa-solid fa-circle-check text-success me-1"></i> Đánh giá & Nhận xét của Giảng viên hướng dẫn:
-                                </div>
-                                <div class="text-dark small" style="white-space: pre-wrap; line-height: 1.5;">${s.feedback}</div>
+                const typeLabelMap = {
+                    'outline': 'Đề cương chi tiết',
+                    'progress': 'Báo cáo tiến độ',
+                    'final': 'Báo cáo tổng kết',
+                    'slide': 'Slide & Phụ lục'
+                };
+
+                function getFileIcon(fileName) {
+                    const ext = (fileName || '').split('.').pop().toLowerCase();
+                    if (['doc', 'docx'].includes(ext)) return 'fa-file-word text-primary';
+                    if (ext === 'pdf') return 'fa-file-pdf text-danger';
+                    if (['ppt', 'pptx'].includes(ext)) return 'fa-file-powerpoint text-warning';
+                    if (['xls', 'xlsx'].includes(ext)) return 'fa-file-excel text-success';
+                    if (['zip', 'rar', '7z'].includes(ext)) return 'fa-file-zipper text-secondary';
+                    return 'fa-file-lines text-muted';
+                }
+
+                let html = `
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 pb-2 border-bottom gap-2">
+                        <ul class="nav nav-pills gap-1" id="facultySubTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link rounded-pill px-3 py-1.5 fw-bold small ${selectedTab === 'approved' ? 'active' : ''}" 
+                                        id="tab-fac-approved-btn" data-bs-toggle="pill" data-bs-target="#tab-fac-approved-pane" type="button" role="tab">
+                                    <i class="fa-solid fa-stamp me-1"></i> Cần Khoa phê duyệt 
+                                    <span class="badge ${selectedTab === 'approved' ? 'bg-white text-primary' : 'bg-primary text-white'} rounded-pill ms-1">${approvedSubmissions.length}</span>
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link rounded-pill px-3 py-1.5 fw-bold small ${selectedTab === 'all' ? 'active' : ''}" 
+                                        id="tab-fac-all-btn" data-bs-toggle="pill" data-bs-target="#tab-fac-all-pane" type="button" role="tab">
+                                    <i class="fa-regular fa-folder-open me-1"></i> Tất cả bài nộp của nhóm 
+                                    <span class="badge ${selectedTab === 'all' ? 'bg-white text-secondary' : 'bg-secondary text-white'} rounded-pill ms-1">${allSubmissions.length}</span>
+                                </button>
+                            </li>
+                        </ul>
+                        <div class="text-muted small">
+                            <span class="badge bg-white text-dark border shadow-2xs py-1 px-2.5">
+                                <i class="fa-solid fa-layer-group text-primary me-1"></i>Tổng số: <strong>${allSubmissions.length}</strong> tệp đã nộp
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="facultySubTabContent">
+                        <!-- TAB 1: CẦN KHOA PHÊ DUYỆT -->
+                        <div class="tab-pane fade ${selectedTab === 'approved' ? 'show active' : ''}" id="tab-fac-approved-pane" role="tabpanel">
+                `;
+
+                if (approvedSubmissions.length === 0) {
+                    html += `
+                        <div class="p-4 text-center bg-white rounded-4 border border-dashed text-muted my-2">
+                            <div class="bg-warning-subtle text-warning rounded-circle d-inline-flex p-3 mb-2">
+                                <i class="fa-solid fa-clock-rotate-left fs-3"></i>
                             </div>
-                        `;
-                    }
+                            <div class="fw-bold text-dark fs-6 mb-1">Chưa có bản báo cáo nào được GVHD đánh giá Đạt</div>
+                            <div class="small text-muted mb-3" style="max-width: 520px; margin: 0 auto;">
+                                Hiện tại nhóm đã tải lên <strong>${allSubmissions.length}</strong> tài liệu/báo cáo, nhưng Giảng viên hướng dẫn chưa chấm đạt yêu cầu. Sau khi GVHD đánh giá Đạt, bản nộp sẽ hiển thị tại đây để Khoa phê duyệt chính thức.
+                            </div>
+                            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 fw-bold shadow-sm" onclick="document.getElementById('tab-fac-all-btn').click()">
+                                <i class="fa-regular fa-folder-open me-1"></i> Chuyển sang xem trước tất cả bài nộp (${allSubmissions.length})
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    html += '<div class="d-flex flex-column gap-3">';
+                    approvedSubmissions.forEach(s => {
+                        const typeName = typeLabelMap[s.type] || 'Báo cáo';
+                        const fileIcon = getFileIcon(s.file_name);
+                        const uploaderName = s.uploader_name || (s.uploader && s.uploader.full_name) || 'Sinh viên';
 
-                    // Faculty Approval Section (INLINE FORM - NO FOCUS BLOCKING)
-                    let facultySection = '';
-                    let facultyBadge = '';
-                    if (s.faculty_status === 'approved') {
-                        facultyBadge = '<span class="badge bg-primary text-white rounded-pill px-2.5 py-1 small"><i class="fa-solid fa-stamp me-1"></i>Khoa đã phê duyệt</span>';
-                        facultySection = `
-                            <div class="mt-2.5 p-3 rounded-3" style="background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6;">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <div class="fw-bold text-dark small">
-                                        <i class="fa-solid fa-stamp text-primary me-1"></i> Quyết định & Ý kiến của Cấp Khoa:
+                        let feedbackSection = '';
+                        if (s.feedback) {
+                            feedbackSection = `
+                                <div class="mt-2.5 p-3 rounded-3" style="background: #ecfdf5; border-left: 4px solid #10b981;">
+                                    <div class="fw-bold text-dark small mb-1">
+                                        <i class="fa-solid fa-circle-check text-success me-1"></i> Đánh giá & Nhận xét của Giảng viên hướng dẫn:
                                     </div>
-                                    <button type="button" class="btn btn-xs btn-outline-primary rounded-pill py-0.5 px-2.5 fw-semibold" style="font-size: 11px;" 
-                                            onclick="toggleFacultyEditBox(${s.id})">
-                                        <i class="fa-solid fa-pen-to-square me-1"></i>Chỉnh sửa ý kiến
-                                    </button>
+                                    <div class="text-dark small" style="white-space: pre-wrap; line-height: 1.5;">${s.feedback}</div>
                                 </div>
-                                <div class="text-dark small rich-content-display" id="faculty-view-text-${s.id}" style="line-height: 1.6;">${s.faculty_feedback || 'Khoa CNTT đã phê duyệt thông qua báo cáo/đề cương này.'}</div>
-                                ${s.faculty_reviewed_at ? `<div class="text-muted mt-1.5" style="font-size: 10.5px;"><i class="fa-regular fa-clock me-1"></i>Thời gian phê duyệt: ${s.faculty_reviewed_at}</div>` : ''}
+                            `;
+                        }
 
-                                <!-- Inline Edit Box (hidden by default) -->
-                                <div id="faculty-edit-box-${s.id}" class="d-none mt-3 pt-3 border-top">
-                                    <div class="mb-2">
-                                        <label class="form-label small fw-bold text-muted">QUYẾT ĐỊNH CỦA KHOA</label>
+                        let facultySection = '';
+                        let facultyBadge = '';
+                        if (s.faculty_status === 'approved') {
+                            facultyBadge = '<span class="badge bg-primary text-white rounded-pill px-2.5 py-1 small"><i class="fa-solid fa-stamp me-1"></i>Khoa đã phê duyệt</span>';
+                            facultySection = `
+                                <div class="mt-2.5 p-3 rounded-3" style="background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6;">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <div class="fw-bold text-dark small">
+                                            <i class="fa-solid fa-stamp text-primary me-1"></i> Quyết định & Ý kiến của Cấp Khoa:
+                                        </div>
+                                        <button type="button" class="btn btn-xs btn-outline-primary rounded-pill py-0.5 px-2.5 fw-semibold" style="font-size: 11px;" 
+                                                onclick="toggleFacultyEditBox(${s.id})">
+                                            <i class="fa-solid fa-pen-to-square me-1"></i>Chỉnh sửa ý kiến
+                                        </button>
+                                    </div>
+                                    <div class="text-dark small rich-content-display" id="faculty-view-text-${s.id}" style="line-height: 1.6;">${s.faculty_feedback || 'Khoa CNTT đã phê duyệt thông qua báo cáo/đề cương này.'}</div>
+                                    ${s.faculty_reviewed_at ? `<div class="text-muted mt-1.5" style="font-size: 10.5px;"><i class="fa-regular fa-clock me-1"></i>Thời gian phê duyệt: ${s.faculty_reviewed_at}</div>` : ''}
+
+                                    <!-- Inline Edit Box -->
+                                    <div id="faculty-edit-box-${s.id}" class="d-none mt-3 pt-3 border-top">
+                                        <div class="mb-2">
+                                            <label class="form-label small fw-bold text-muted">QUYẾT ĐỊNH CỦA KHOA</label>
+                                            <select id="faculty-status-${s.id}" class="form-select form-select-sm">
+                                                <option value="approved" selected>✔ Khoa phê duyệt ĐẠT (Chính thức thông qua)</option>
+                                                <option value="revision_required">⚠ Khoa yêu cầu chỉnh sửa / hoàn thiện thêm</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-2">
+                                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                                <label class="form-label small fw-bold text-muted mb-0">
+                                                    <i class="fa-solid fa-file-word text-primary me-1"></i> Ý KIẾN / CHỈ ĐẠO CỦA KHOA
+                                                </label>
+                                                <span class="badge bg-light text-secondary border px-2 py-0.5" style="font-size: 10px;">
+                                                    <i class="fa-solid fa-file-word text-primary me-1"></i>Trình soạn thảo văn bản
+                                                </span>
+                                            </div>
+                                            ${renderFacultyWordEditorHtml(s.id, s.faculty_feedback || '', true)}
+                                        </div>
+                                        <div class="d-flex justify-content-end gap-2 pt-2">
+                                            <button type="button" class="btn btn-sm btn-light rounded-pill px-3" onclick="toggleFacultyEditBox(${s.id})">Hủy</button>
+                                            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold shadow-sm" onclick="submitFacultyReviewInline(${s.id}, ${topicId}, '${(topicTitle || '').replace(/'/g, "\\'")}', '${topicStatus}')">
+                                                <i class="fa-solid fa-check me-1"></i> Lưu thay đổi
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            facultyBadge = '<span class="badge bg-warning text-dark rounded-pill px-2.5 py-1 small"><i class="fa-solid fa-hourglass-half me-1"></i>Chờ Khoa phê duyệt</span>';
+                            facultySection = `
+                                <div class="mt-3 p-3 bg-white rounded-3 border border-primary border-opacity-30 shadow-xs">
+                                    <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                                        <div class="fw-bold text-dark small">
+                                            <i class="fa-solid fa-stamp text-primary me-1.5"></i> Phê duyệt của Khoa cho bản báo cáo này:
+                                        </div>
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill">Chờ duyệt</span>
+                                    </div>
+
+                                    <div class="mb-2.5">
+                                        <label class="form-label small fw-bold text-muted">QUYẾT ĐỊNH CỦA KHOA <span class="text-danger">*</span></label>
                                         <select id="faculty-status-${s.id}" class="form-select form-select-sm">
-                                            <option value="approved" selected>✔ Khoa phê duyệt ĐẠT (Chính thức thông qua)</option>
+                                            <option value="approved" selected>✔ Khoa phê duyệt ĐẠT (Chính thức thông qua đề cương/báo cáo)</option>
                                             <option value="revision_required">⚠ Khoa yêu cầu chỉnh sửa / hoàn thiện thêm</option>
                                         </select>
                                     </div>
-                                    <div class="mb-2">
+
+                                    <div class="mb-2.5">
                                         <div class="d-flex align-items-center justify-content-between mb-1">
                                             <label class="form-label small fw-bold text-muted mb-0">
                                                 <i class="fa-solid fa-file-word text-primary me-1"></i> Ý KIẾN / CHỈ ĐẠO CỦA KHOA
@@ -473,95 +604,148 @@
                                                 <i class="fa-solid fa-file-word text-primary me-1"></i>Trình soạn thảo văn bản
                                             </span>
                                         </div>
-                                        ${renderFacultyWordEditorHtml(s.id, s.faculty_feedback || '', true)}
+                                        ${renderFacultyWordEditorHtml(s.id, '', false)}
                                     </div>
+
                                     <div class="d-flex justify-content-end gap-2 pt-2">
-                                        <button type="button" class="btn btn-sm btn-light rounded-pill px-3" onclick="toggleFacultyEditBox(${s.id})">Hủy</button>
-                                        <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold shadow-sm" onclick="submitFacultyReviewInline(${s.id}, ${topicId}, '${(topicTitle || '').replace(/'/g, "\\'")}', '${topicStatus}')">
-                                            <i class="fa-solid fa-check me-1"></i> Lưu thay đổi
+                                        <button type="button" class="btn btn-sm btn-primary rounded-pill px-4 py-1.5 fw-bold shadow-sm" 
+                                                onclick="submitFacultyReviewInline(${s.id}, ${topicId}, '${(topicTitle || '').replace(/'/g, "\\'")}', '${topicStatus}')">
+                                            <i class="fa-solid fa-stamp me-1.5"></i> Xác nhận phê duyệt cấp Khoa
                                         </button>
                                     </div>
                                 </div>
-                            </div>
-                        `;
-                    } else {
-                        facultyBadge = '<span class="badge bg-warning text-dark rounded-pill px-2.5 py-1 small"><i class="fa-solid fa-hourglass-half me-1"></i>Chờ Khoa phê duyệt</span>';
-                        facultySection = `
-                            <div class="mt-3 p-3 bg-white rounded-3 border border-primary border-opacity-30 shadow-xs">
-                                <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
-                                    <div class="fw-bold text-dark small">
-                                        <i class="fa-solid fa-stamp text-primary me-1.5"></i> Phê duyệt của Khoa cho bản báo cáo này:
-                                    </div>
-                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill">Chờ duyệt</span>
-                                </div>
+                            `;
+                        }
 
-                                <div class="mb-2.5">
-                                    <label class="form-label small fw-bold text-muted">QUYẾT ĐỊNH CỦA KHOA <span class="text-danger">*</span></label>
-                                    <select id="faculty-status-${s.id}" class="form-select form-select-sm">
-                                        <option value="approved" selected>✔ Khoa phê duyệt ĐẠT (Chính thức thông qua đề cương/báo cáo)</option>
-                                        <option value="revision_required">⚠ Khoa yêu cầu chỉnh sửa / hoàn thiện thêm</option>
-                                    </select>
-                                </div>
-
-                                <div class="mb-2.5">
-                                    <div class="d-flex align-items-center justify-content-between mb-1">
-                                        <label class="form-label small fw-bold text-muted mb-0">
-                                            <i class="fa-solid fa-file-word text-primary me-1"></i> Ý KIẾN / CHỈ ĐẠO CỦA KHOA
-                                        </label>
-                                        <span class="badge bg-light text-secondary border px-2 py-0.5" style="font-size: 10px;">
-                                            <i class="fa-solid fa-file-word text-primary me-1"></i>Trình soạn thảo văn bản
+                        html += `
+                            <div class="p-3 bg-white border border-success-subtle rounded-4 shadow-xs">
+                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="badge bg-dark rounded-pill px-2.5 py-1">v${s.version || 1}</span>
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1">${typeName}</span>
+                                        <span class="badge bg-success text-white rounded-pill px-2.5 py-1 small">
+                                            <i class="fa-solid fa-check me-1"></i> Đạt yêu cầu (GVHD đã duyệt)
                                         </span>
+                                        ${facultyBadge}
                                     </div>
-                                    ${renderFacultyWordEditorHtml(s.id, '', false)}
+                                    <div class="text-muted small" style="font-size: 11px;">
+                                        <i class="fa-regular fa-clock me-1"></i>${s.submitted_at || ''}
+                                    </div>
                                 </div>
 
-                                <div class="d-flex justify-content-end gap-2 pt-2">
-                                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-4 py-1.5 fw-bold shadow-sm" 
-                                            onclick="submitFacultyReviewInline(${s.id}, ${topicId}, '${(topicTitle || '').replace(/'/g, "\\'")}', '${topicStatus}')">
-                                        <i class="fa-solid fa-stamp me-1.5"></i> Xác nhận phê duyệt cấp Khoa
-                                    </button>
+                                <div class="d-flex justify-content-between align-items-center gap-3 p-2.5 bg-light rounded-3 mb-2">
+                                    <div class="d-flex align-items-center gap-2.5 text-truncate">
+                                        <i class="fa-solid ${fileIcon} fs-3"></i>
+                                        <div class="text-truncate">
+                                            <div class="fw-bold text-dark text-truncate small">${s.file_name}</div>
+                                            <div class="text-muted" style="font-size: 11px;">Nộp bởi: ${uploaderName} • Thời gian: ${s.submitted_at || 'Không rõ'}</div>
+                                        </div>
+                                    </div>
+                                    <a href="/api/submissions/download/${s.id}" class="btn btn-sm btn-success rounded-pill px-3 fw-bold flex-shrink-0 shadow-2xs" target="_blank">
+                                        <i class="fa-solid fa-download me-1"></i> Tải về xem
+                                    </a>
                                 </div>
+
+                                ${s.notes ? `<div class="small text-muted mb-1"><span class="fw-bold">Ghi chú của SV:</span> ${s.notes}</div>` : ''}
+                                ${s.external_link ? `<div class="small mb-1"><a href="${s.external_link}" target="_blank" class="text-decoration-underline text-primary"><i class="fa-solid fa-link me-1"></i>${s.external_link}</a></div>` : ''}
+                                ${feedbackSection}
+                                ${facultySection}
                             </div>
                         `;
+                    });
+                    html += '</div>';
+                }
+                html += `</div>`; // End tab-fac-approved-pane
+
+                // TAB 2: TẤT CẢ BÀI NỘP CỦA NHÓM
+                html += `
+                    <div class="tab-pane fade ${selectedTab === 'all' ? 'show active' : ''}" id="tab-fac-all-pane" role="tabpanel">
+                        <div class="d-flex flex-column gap-3">
+                `;
+
+                allSubmissions.forEach(s => {
+                    const typeName = typeLabelMap[s.type] || 'Báo cáo/Tài liệu';
+                    const milestoneText = s.milestone_name ? ` • Cột mốc: ${s.milestone_name}` : '';
+                    const fileIcon = getFileIcon(s.file_name);
+                    const uploaderName = s.uploader_name || (s.uploader && s.uploader.full_name) || 'Sinh viên';
+
+                    // Trạng thái GVHD
+                    let mentorStatusBadge = '';
+                    if (s.status === 'approved') {
+                        mentorStatusBadge = '<span class="badge bg-success text-white rounded-pill px-2.5 py-1 small"><i class="fa-solid fa-check me-1"></i>GVHD: Đạt yêu cầu</span>';
+                    } else if (s.status === 'revision_required') {
+                        mentorStatusBadge = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1 small"><i class="fa-solid fa-triangle-exclamation me-1"></i>GVHD: Yêu cầu sửa</span>';
+                    } else {
+                        mentorStatusBadge = '<span class="badge bg-warning text-dark rounded-pill px-2.5 py-1 small"><i class="fa-regular fa-clock me-1"></i>Chờ GVHD duyệt</span>';
+                    }
+
+                    // Trạng thái Khoa
+                    let facultyStatusBadge = '';
+                    if (s.faculty_status === 'approved') {
+                        facultyStatusBadge = '<span class="badge bg-primary text-white rounded-pill px-2.5 py-1 small"><i class="fa-solid fa-stamp me-1"></i>Khoa đã duyệt</span>';
+                    } else if (s.faculty_status === 'revision_required') {
+                        facultyStatusBadge = '<span class="badge bg-danger text-white rounded-pill px-2.5 py-1 small"><i class="fa-solid fa-triangle-exclamation me-1"></i>Khoa: Cần sửa</span>';
                     }
 
                     html += `
-                        <div class="p-3 bg-white border border-success-subtle rounded-4 shadow-xs">
+                        <div class="p-3 bg-white border rounded-4 shadow-xs">
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="badge bg-dark rounded-pill px-2.5 py-1">v${s.version}</span>
-                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1">${typeName}</span>
-                                    <span class="badge bg-success text-white rounded-pill px-2.5 py-1 small">
-                                        <i class="fa-solid fa-check me-1"></i> Đạt yêu cầu (GVHD đã duyệt)
-                                    </span>
-                                    ${facultyBadge}
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <span class="badge bg-dark rounded-pill px-2.5 py-1">v${s.version || 1}</span>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1">${typeName}${milestoneText}</span>
+                                    ${mentorStatusBadge}
+                                    ${facultyStatusBadge}
                                 </div>
                                 <div class="text-muted small" style="font-size: 11px;">
                                     <i class="fa-regular fa-clock me-1"></i>${s.submitted_at || ''}
                                 </div>
                             </div>
 
-                            <div class="d-flex justify-content-between align-items-center gap-3 p-2 bg-light rounded-3 mb-2">
-                                <div class="d-flex align-items-center gap-2 text-truncate">
-                                    <i class="fa-solid fa-file-lines text-success fs-4"></i>
+                            <div class="d-flex justify-content-between align-items-center gap-3 p-2.5 bg-light rounded-3 mb-2">
+                                <div class="d-flex align-items-center gap-2.5 text-truncate">
+                                    <i class="fa-solid ${fileIcon} fs-3"></i>
                                     <div class="text-truncate">
                                         <div class="fw-bold text-dark text-truncate small">${s.file_name}</div>
-                                        <div class="text-muted" style="font-size: 11px;">Nộp bởi: ${s.uploader ? s.uploader.full_name : 'Sinh viên'}</div>
+                                        <div class="text-muted" style="font-size: 11px;">Nộp bởi: ${uploaderName} • Thời gian: ${s.submitted_at || 'Không rõ'}</div>
                                     </div>
                                 </div>
-                                <a href="/api/submissions/download/${s.id}" class="btn btn-sm btn-success rounded-pill px-3 fw-bold flex-shrink-0" target="_blank">
+                                <a href="/api/submissions/download/${s.id}" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold flex-shrink-0 shadow-2xs" target="_blank">
                                     <i class="fa-solid fa-download me-1"></i> Tải về xem
                                 </a>
                             </div>
 
-                            ${s.notes ? `<div class="small text-muted mb-1"><span class="fw-bold">Ghi chú của SV:</span> ${s.notes}</div>` : ''}
+                            ${s.notes ? `<div class="small text-muted mb-1"><span class="fw-bold text-dark">Ghi chú của SV:</span> ${s.notes}</div>` : ''}
                             ${s.external_link ? `<div class="small mb-1"><a href="${s.external_link}" target="_blank" class="text-decoration-underline text-primary"><i class="fa-solid fa-link me-1"></i>${s.external_link}</a></div>` : ''}
-                            ${feedbackSection}
-                            ${facultySection}
+                            
+                            ${s.feedback ? `
+                                <div class="mt-2 p-2.5 rounded-3 bg-light border-start border-3 border-success small">
+                                    <div class="fw-bold text-dark" style="font-size: 11.5px;"><i class="fa-solid fa-comment-dots text-success me-1"></i>Nhận xét từ GVHD:</div>
+                                    <div class="text-secondary" style="white-space: pre-wrap;">${s.feedback}</div>
+                                </div>
+                            ` : ''}
+
+                            ${s.faculty_feedback ? `
+                                <div class="mt-2 p-2.5 rounded-3 bg-light border-start border-3 border-primary small">
+                                    <div class="fw-bold text-dark" style="font-size: 11.5px;"><i class="fa-solid fa-stamp text-primary me-1"></i>Ý kiến cấp Khoa:</div>
+                                    <div class="text-secondary rich-content-display">${s.faculty_feedback}</div>
+                                </div>
+                            ` : ''}
+
+                            ${s.status === 'submitted' ? `
+                                <div class="mt-2 text-muted small fst-italic" style="font-size: 11px;">
+                                    <i class="fa-solid fa-circle-info text-warning me-1"></i>Bản nộp này đang chờ Giảng viên hướng dẫn chấm duyệt. Cấp Khoa có thể tải file về xem trước bất cứ lúc nào.
+                                </div>
+                            ` : ''}
                         </div>
                     `;
                 });
-                html += '</div>';
+
+                html += `
+                        </div>
+                    </div> <!-- End tab-fac-all-pane -->
+                </div> <!-- End tab-content -->
+                `;
+
                 bodyEl.innerHTML = html;
             } catch (err) {
                 bodyEl.innerHTML = `
@@ -570,6 +754,7 @@
                     </div>
                 `;
             }
+        }
         }
 
         function renderFacultyWordEditorHtml(subId, initialContent = '', isEdit = false) {
@@ -800,192 +985,4 @@
             </div>
         </div>
     </div>
-    <!-- Modal Điều chuyển Giảng viên Hướng dẫn -->
-    <div class="modal fade" id="modalTopicReassign" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-            <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
-                <div class="modal-header bg-primary text-white py-3 px-4">
-                    <h5 class="fw-bold mb-0"><i class="fa-solid fa-shuffle me-2"></i>ĐIỀU CHUYỂN GIẢNG VIÊN HƯỚNG DẪN</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <div class="alert alert-info py-2 px-3 small border-0 mb-3 rounded-3" id="reassignTopicInfo">
-                        <!-- Loaded dynamically -->
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div class="fw-bold text-dark small" id="reassignSuggestTitle">
-                            <i class="fa-solid fa-sparkles text-warning me-1"></i> Giảng viên cùng chuyên môn & bộ môn
-                        </div>
-                        <div class="form-check form-switch small">
-                            <input class="form-check-input" type="checkbox" id="reassignShowAll">
-                            <label class="form-check-label" for="reassignShowAll">Hiện tất cả giảng viên</label>
-                        </div>
-                    </div>
-                    <div id="reassignSuggestList" style="max-height: 380px; overflow-y: auto;">
-                        <div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-2"></i> Đang tải danh sách GV...</div>
-                    </div>
-                    <div class="mt-3">
-                        <label class="form-label small fw-bold text-dark">Lý do điều chuyển (sẽ ghi vào thông báo gửi GV và SV):</label>
-                        <input type="text" id="reassignReasonInput" class="form-control form-control-sm rounded-3" maxlength="300" placeholder="Ví dụ: Giảng viên đã đủ chỉ tiêu, điều phối giảng viên cùng chuyên môn...">
-                    </div>
-                </div>
-                <div class="modal-footer border-0 px-4 pb-4">
-                    <button type="button" class="btn btn-light fw-bold px-4 rounded-pill" data-bs-dismiss="modal">Đóng</button>
-                    <button type="button" class="btn btn-primary fw-bold px-4 rounded-pill shadow-sm" id="btnConfirmTopicReassign" disabled onclick="executeTopicReassign()">
-                        <i class="fa-solid fa-paper-plane me-1"></i> Xác nhận chuyển
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        let currentReassignTopic = { id: null, title: '', mentorId: null, mentorName: '' };
-        let currentSelectedNewMentor = null;
-        let reassignSuggestions = [];
-
-        function openTopicReassignModalFromBtn(btn) {
-            const topicId = parseInt(btn.getAttribute('data-topic-id'), 10);
-            const topicTitle = btn.getAttribute('data-topic-title') || '';
-            const mentorId = btn.getAttribute('data-mentor-id') ? parseInt(btn.getAttribute('data-mentor-id'), 10) : null;
-            const mentorName = btn.getAttribute('data-mentor-name') || 'Chưa phân công';
-            openTopicReassignModal(topicId, topicTitle, mentorId, mentorName);
-        }
-
-        function openTopicReassignModal(topicId, topicTitle, currentMentorId, currentMentorName) {
-            currentReassignTopic = { id: topicId, title: topicTitle, mentorId: currentMentorId, mentorName: currentMentorName };
-            currentSelectedNewMentor = null;
-
-            document.getElementById('reassignTopicInfo').innerHTML = `
-                Đề tài: <strong>${topicTitle}</strong><br>
-                Giảng viên hiện tại: <strong>${currentMentorName || 'Chưa phân công'}</strong>
-            `;
-            document.getElementById('reassignReasonInput').value = '';
-            document.getElementById('reassignShowAll').checked = false;
-            document.getElementById('btnConfirmTopicReassign').disabled = true;
-
-            const modalEl = document.getElementById('modalTopicReassign');
-            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-            modal.show();
-
-            loadReassignSuggestions();
-        }
-
-        async function loadReassignSuggestions() {
-            const box = document.getElementById('reassignSuggestList');
-            box.innerHTML = '<div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-2"></i> Đang tìm giảng viên phù hợp...</div>';
-            document.getElementById('btnConfirmTopicReassign').disabled = true;
-            currentSelectedNewMentor = null;
-
-            const isAll = document.getElementById('reassignShowAll').checked ? 1 : 0;
-            document.getElementById('reassignSuggestTitle').innerHTML = isAll 
-                ? '<i class="fa-solid fa-users text-primary me-1"></i> Tất cả giảng viên' 
-                : '<i class="fa-solid fa-wand-magic-sparkles text-warning me-1"></i> Giảng viên cùng chuyên môn & bộ môn';
-
-            try {
-                const res = await fetch(`/api/assignment/suggest?topic_id=${currentReassignTopic.id}&all=${isAll}`);
-                if (!res.ok) throw new Error('Không thể tải danh sách gợi ý');
-                const data = await res.json();
-                reassignSuggestions = data.suggestions || [];
-
-                if (!reassignSuggestions.length) {
-                    box.innerHTML = '<div class="text-muted text-center py-4">Không tìm thấy giảng viên cùng bộ môn. Hãy bật "Hiện tất cả giảng viên" để chọn.</div>';
-                    return;
-                }
-
-                box.innerHTML = reassignSuggestions.map((s, idx) => {
-                    const isCurrent = s.id === currentReassignTopic.mentorId;
-                    const pct = Math.min(100, Math.round((s.current_topics / s.quota) * 100));
-                    const color = pct >= 100 ? 'danger' : (pct >= 60 ? 'warning' : 'primary');
-                    const badges = (s.matched_keywords || []).map(k => `<span class="badge bg-primary-subtle text-primary border me-1">${k}</span>`).join('');
-
-                    return `
-                        <label class="d-flex gap-3 align-items-start border rounded-3 p-3 mb-2 ${isCurrent ? 'bg-light opacity-50' : 'bg-white'}" style="cursor: ${isCurrent ? 'not-allowed' : 'pointer'};">
-                            <input type="radio" name="reassignRadio" class="form-check-input mt-1" value="${idx}" ${isCurrent ? 'disabled' : ''} onchange="onSelectNewMentor(${idx})">
-                            <div class="flex-grow-1">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="fw-bold text-dark">${s.full_name} ${isCurrent ? '<span class="badge bg-secondary ms-1">Hiện tại</span>' : ''}</span>
-                                    <span>${s.available ? '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Còn chỗ</span>' : '<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">Đã đủ</span>'}</span>
-                                </div>
-                                <div class="small text-muted">${s.faculty || 'Khoa CNTT'} ${s.same_department ? '· <span class="text-primary fw-bold">Cùng bộ môn</span>' : ''}</div>
-                                ${badges ? `<div class="mt-1">${badges}</div>` : ''}
-                                <div class="mt-2">
-                                    <div class="progress" style="height: 5px;">
-                                        <div class="progress-bar bg-${color}" style="width: ${pct}%"></div>
-                                    </div>
-                                    <div class="small text-muted mt-1">Đang hướng dẫn ${s.current_topics}/${s.quota} đề tài (${s.approved} đã duyệt, ${s.pending} đang chờ)</div>
-                                </div>
-                            </div>
-                        </label>
-                    `;
-                }).join('');
-            } catch (err) {
-                box.innerHTML = `<div class="text-danger text-center py-4">Lỗi: ${err.message}</div>`;
-            }
-        }
-
-        function onSelectNewMentor(idx) {
-            currentSelectedNewMentor = reassignSuggestions[idx];
-            document.getElementById('btnConfirmTopicReassign').disabled = !currentSelectedNewMentor;
-        }
-
-        document.getElementById('reassignShowAll')?.addEventListener('change', loadReassignSuggestions);
-
-        async function executeTopicReassign() {
-            if (!currentSelectedNewMentor || !currentReassignTopic.id) return;
-
-            const isFull = !currentSelectedNewMentor.available;
-            const reason = document.getElementById('reassignReasonInput').value.trim();
-
-            let confirmHtml = `Xác nhận điều chuyển đề tài <strong>"${currentReassignTopic.title}"</strong> sang Thầy/Cô <strong>${currentSelectedNewMentor.full_name}</strong>?<br><br>
-                <small class="text-muted"><i class="fa-solid fa-bell me-1"></i>Hệ thống sẽ gửi thông báo đến Sinh viên, Giảng viên cũ và Giảng viên mới, đồng thời tự động cập nhật nhóm chat.</small>`;
-
-            if (isFull) {
-                confirmHtml = `<div class="text-danger small mb-2"><i class="fa-solid fa-triangle-exclamation me-1"></i>Cảnh báo: Thầy/Cô ${currentSelectedNewMentor.full_name} hiện đã giữ ${currentSelectedNewMentor.current_topics}/${currentSelectedNewMentor.quota} đề tài (đủ quota). Bạn đang thực hiện đặc cách chuyển.</div>` + confirmHtml;
-            }
-
-            const c = await Swal.fire({
-                title: 'Xác nhận điều chuyển?',
-                html: confirmHtml,
-                icon: isFull ? 'warning' : 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Xác nhận chuyển',
-                cancelButtonText: 'Hủy'
-            });
-
-            if (!c.isConfirmed) return;
-
-            try {
-                Swal.fire({ title: 'Đang xử lý...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-                const res = await fetch('/api/assignment/reassign', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        topic_id: currentReassignTopic.id,
-                        new_mentor_id: currentSelectedNewMentor.id,
-                        reason: reason,
-                        force: isFull,
-                        confirm_approved: true
-                    })
-                });
-
-                const data = await res.json();
-                if (res.ok) {
-                    bootstrap.Modal.getInstance(document.getElementById('modalTopicReassign'))?.hide();
-                    await Swal.fire({
-                        icon: 'success',
-                        title: 'Thành công!',
-                        text: data.message || 'Đã điều chuyển giảng viên hướng dẫn thành công!',
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                    window.location.reload();
-                } else {
-                    Swal.fire('Lỗi', data.error || 'Không thể điều chuyển', 'error');
-                }
-            } catch (err) {
-                Swal.fire('Lỗi kết nối', err.message, 'error');
-            }
-        }
-    </script>
 {% endblock %}

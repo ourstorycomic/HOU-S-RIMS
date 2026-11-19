@@ -1082,7 +1082,7 @@
             <div class="col-md-3 col-sm-6">
                 <select id="studentMemberMajor" onchange="filterStudentMembers()"
                     class="form-select bg-white rounded-3 shadow-xs border py-2 fw-medium text-secondary">
-                    <option value="all" selected>Tất cả chuyên ngành</option>
+                    <option value="all" selected>Tất cả hướng nghiên cứu</option>
                     <option value="Kỹ thuật phần mềm">Kỹ thuật phần mềm</option>
                     <option value="Hệ thống thông tin">Hệ thống thông tin</option>
                     <option value="Khoa học máy tính">Khoa học máy tính</option>
@@ -1679,10 +1679,10 @@
                     </div>
 
                     <div class="row g-3 mb-4">
-                        <!-- Cột Trái: Chọn Chuyên ngành -->
+                        <!-- Cột Trái: Chọn Hướng nghiên cứu -->
                         <div class="col-md-6 col-12">
                             <label class="form-label small fw-bold text-muted">
-                                <i class="fa-solid fa-graduation-cap text-primary me-1"></i> CHỌN CHUYÊN NGÀNH <span
+                                <i class="fa-solid fa-graduation-cap text-primary me-1"></i> CHỌN HƯỚNG NGHIÊN CỨU <span
                                     class="text-danger">*</span>
                             </label>
                             <div class="input-group">
@@ -1691,7 +1691,7 @@
                                 </span>
                                 <select id="registerMajorSelect" class="form-select bg-light py-2.5 border-start-0"
                                     onchange="onRegisterMajorChange(this.value)">
-                                    <option value="">-- Chọn chuyên ngành đào tạo (Khoa CNTT) --</option>
+                                    <option value="">-- Chọn hướng nghiên cứu (Khoa CNTT) --</option>
                                     <option value="Công nghệ phần mềm" selected>Công nghệ phần mềm</option>
                                     <option value="Hệ thống thông tin">Hệ thống thông tin</option>
                                     <option value="Mạng máy tính & An toàn thông tin">Mạng máy tính & An toàn thông tin</option>
@@ -1702,7 +1702,7 @@
                             </div>
                             <input type="hidden" id="registerFacultySelect" value="Khoa Công nghệ Thông tin">
                             <div class="form-text text-muted" style="font-size: 11px;">
-                                <i class="fa-solid fa-circle-info me-1 text-primary"></i> Gợi ý GVHD sẽ tự động lọc theo chuyên ngành bạn chọn.
+                                <i class="fa-solid fa-circle-info me-1 text-primary"></i> Gợi ý GVHD sẽ tự động lọc theo hướng nghiên cứu bạn chọn.
                             </div>
                         </div>
 
@@ -2900,148 +2900,134 @@
 
     <div id="view-s-calendar" class="fade-in {% if current_active_tab != 's-calendar' %}hidden{% endif %}">
         <div class="row g-4">
-            <div class="col-md-8">
-                <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h5 class="fw-bold mb-0 text-primary"><i class="fa-regular fa-calendar-check me-2"></i> LỊCH
-                            TRÌNH
-                            NCKH CỦA TÔI</h5>
-                        <div class="d-flex align-items-center gap-2 bg-light rounded-pill px-2 py-1">
-                            <button class="btn btn-light btn-sm rounded-circle shadow-none"><i
-                                    class="fa-solid fa-chevron-left text-muted"></i></button>
-                            <span class="fw-bold small text-muted px-2">THÁNG 01, 2026</span>
-                            <button class="btn btn-light btn-sm rounded-circle shadow-none"><i
-                                    class="fa-solid fa-chevron-right text-muted"></i></button>
+            <div class="col-xl-8 col-lg-7 col-12">
+                <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-column">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                        <div>
+                            <h5 class="fw-bold mb-1 text-primary"><i class="fa-regular fa-calendar-check me-2"></i> LỊCH TRÌNH NCKH CỦA TÔI</h5>
+                            <small class="text-muted">Theo dõi thời hạn nộp bài, lịch họp với Giảng viên và sự kiện quan trọng</small>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <button class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm fw-bold d-flex align-items-center gap-1" onclick="openStudentScheduleModal()">
+                                <i class="fa-solid fa-plus"></i>
+                                <span>Đặt lịch họp với GV</span>
+                            </button>
+                            <div class="d-flex align-items-center gap-1 bg-light rounded-pill px-2 py-1 border">
+                                <button class="btn btn-light btn-sm rounded-circle shadow-none p-1" style="width: 28px; height: 28px;" onclick="changeStudentCalMonth(-1)" title="Tháng trước">
+                                    <i class="fa-solid fa-chevron-left text-muted"></i>
+                                </button>
+                                <span class="fw-bold small text-dark px-2 user-select-none" id="studentCalMonthTitle" style="min-width: 130px; text-align: center;">THÁNG 11, 2026</span>
+                                <button class="btn btn-light btn-sm rounded-circle shadow-none p-1" style="width: 28px; height: 28px;" onclick="changeStudentCalMonth(1)" title="Tháng sau">
+                                    <i class="fa-solid fa-chevron-right text-muted"></i>
+                                </button>
+                            </div>
+                            <button class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-semibold" onclick="goToStudentCalToday()" title="Quay lại tháng hiện tại">
+                                Hôm nay
+                            </button>
                         </div>
                     </div>
 
-                    <div class="table-responsive">
-                        <table class="table table-bordered align-top" style="height: 450px;">
-                            <thead class="text-muted small text-uppercase text-center border-0">
+                    <!-- Legend Chú thích màu sắc -->
+                    <div class="d-flex flex-wrap align-items-center gap-3 mb-3 p-2 px-3 bg-light rounded-3 small">
+                        <span class="text-muted fw-bold" style="font-size: 11px;">CHÚ THÍCH:</span>
+                        <span class="d-inline-flex align-items-center gap-1 text-danger fw-semibold" style="font-size: 12px;">
+                            <span class="badge bg-danger rounded-circle p-1" style="width: 8px; height: 8px;"></span> Deadline / Cột mốc NCKH
+                        </span>
+                        <span class="d-inline-flex align-items-center gap-1 text-success fw-semibold" style="font-size: 12px;">
+                            <span class="badge bg-success rounded-circle p-1" style="width: 8px; height: 8px;"></span> Lịch họp đã duyệt
+                        </span>
+                        <span class="d-inline-flex align-items-center gap-1 text-warning fw-semibold" style="font-size: 12px;">
+                            <span class="badge bg-warning rounded-circle p-1" style="width: 8px; height: 8px;"></span> Lịch hẹn chờ duyệt
+                        </span>
+                        <span class="ms-auto text-muted fst-italic d-none d-md-inline" style="font-size: 11px;">
+                            <i class="fa-solid fa-hand-pointer me-1"></i> Bấm vào ngày để đặt lịch hẹn
+                        </span>
+                    </div>
+
+                    <!-- Bảng Calendar Grid -->
+                    <div class="table-responsive flex-grow-1">
+                        <table class="table table-bordered align-top mb-0" id="studentCalendarTable" style="min-height: 480px; table-layout: fixed;">
+                            <thead class="text-muted small text-uppercase text-center bg-light border-0">
                                 <tr>
-                                    <th class="border-0 fw-bold">T2</th>
-                                    <th class="border-0 fw-bold">T3</th>
-                                    <th class="border-0 fw-bold">T4</th>
-                                    <th class="border-0 fw-bold">T5</th>
-                                    <th class="border-0 fw-bold">T6</th>
-                                    <th class="border-0 fw-bold">T7</th>
-                                    <th class="border-0 fw-bold">CN</th>
+                                    <th class="border-0 fw-bold py-2" style="width: 14.28%;">T2</th>
+                                    <th class="border-0 fw-bold py-2" style="width: 14.28%;">T3</th>
+                                    <th class="border-0 fw-bold py-2" style="width: 14.28%;">T4</th>
+                                    <th class="border-0 fw-bold py-2" style="width: 14.28%;">T5</th>
+                                    <th class="border-0 fw-bold py-2" style="width: 14.28%;">T6</th>
+                                    <th class="border-0 fw-bold py-2" style="width: 14.28%;">T7</th>
+                                    <th class="border-0 fw-bold py-2 text-danger" style="width: 14.28%;">CN</th>
                                 </tr>
                             </thead>
-                            <tbody class="text-muted fw-bold small">
-                                <tr>
-                                    <td>1</td>
-                                    <td>2</td>
-                                    <td>3</td>
-                                    <td>4</td>
-                                    <td>5</td>
-                                    <td>6</td>
-                                    <td>7</td>
-                                </tr>
-                                <tr>
-                                    <td>8</td>
-                                    <td>9</td>
-                                    <td>10</td>
-                                    <td>11</td>
-                                    <td>12</td>
-                                    <td>13</td>
-                                    <td class="text-center position-relative bg-light">
-                                        <div class="calendar-day-circle active mb-1">14</div>
-                                        <div
-                                            class="calendar-event-tag bg-warning-subtle text-warning border border-warning-subtle">
-                                            Họp nhóm ...</div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>15</td>
-                                    <td>16</td>
-                                    <td>17</td>
-                                    <td>18</td>
-                                    <td>19</td>
-                                    <td class="text-center">
-                                        <div class="calendar-day-circle mb-1">20</div>
-                                        <div
-                                            class="calendar-event-tag bg-danger-subtle text-danger border border-danger-subtle">
-                                            Hạn nộp đợ...</div>
-                                    </td>
-                                    <td>21</td>
-                                </tr>
-                                <tr>
-                                    <td>22</td>
-                                    <td>23</td>
-                                    <td>24</td>
-                                    <td class="position-relative">
-                                        <div class="calendar-day-circle">25</div>
-                                        <div class="position-absolute translate-middle p-1 bg-primary border border-light rounded-circle"
-                                            style="top: 60%; left: 50%;"></div>
-                                    </td>
-                                    <td>26</td>
-                                    <td>27</td>
-                                    <td>28</td>
-                                </tr>
-                                <tr>
-                                    <td>29</td>
-                                    <td>30</td>
-                                    <td>31</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                </tr>
+                            <tbody id="studentCalGridBody" class="small fw-semibold">
+                                <!-- Được tạo động bởi renderStudentCalendar() -->
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-4 d-flex flex-column gap-4">
+            <div class="col-xl-4 col-lg-5 col-12 d-flex flex-column gap-4">
+                <!-- Card Thông báo mới (Real) -->
                 <div class="card border-0 shadow-sm rounded-4 p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="fw-bold mb-0 text-dark"><i class="fa-regular fa-bell me-2 text-danger"></i> Thông báo
-                            mới
+                        <h6 class="fw-bold mb-0 text-dark">
+                            <i class="fa-regular fa-bell me-2 text-danger"></i> Thông báo mới
+                            {% if notifications %}
+                            <span class="badge bg-danger rounded-pill ms-1" style="font-size: 10px;">{{ notifications|length }}</span>
+                            {% endif %}
                         </h6>
-                        <a href="#" class="small fw-bold text-primary text-decoration-none">Xem tất cả</a>
+                        <a href="javascript:void(0)" class="small fw-bold text-primary text-decoration-none" onclick="event.preventDefault(); window.showAllNotifications()">Xem tất cả</a>
                     </div>
 
-                    <div class="d-flex flex-column gap-3">
-                        <div class="bg-danger-subtle p-3 rounded-3 notif-card-item cursor-pointer">
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="badge bg-white text-danger fw-bold border border-danger-subtle">PHÒNG
-                                    QLKH</span>
-                                <small class="text-muted" style="font-size: 10px;">10p trước</small>
+                    <div class="d-flex flex-column gap-2" id="studentCalNotifsList">
+                        {% if notifications %}
+                            {% for notif in notifications[:4] %}
+                            <div class="p-3 rounded-3 border bg-light notif-card-item cursor-pointer" onclick="window.handleNotifItemClick(this, event)" data-notif-id="{{ notif.id }}" data-notif-content="{{ notif.content | e }}">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill" style="font-size: 9px;">HỆ THỐNG</span>
+                                    <small class="text-muted" style="font-size: 10px;">{{ notif.created_at.strftime('%d/%m %H:%M') if notif.created_at else '' }}</small>
+                                </div>
+                                <div class="fw-semibold text-dark small" style="line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                    {{ notif.content | striptags }}
+                                </div>
                             </div>
-                            <div class="fw-bold text-dark small" style="line-height: 1.4;">Mở đợt đăng ký NCKH đợt 2 cấp
-                                Trường.</div>
-                        </div>
-                        <div class="bg-info-subtle p-3 rounded-3 notif-card-item cursor-pointer">
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="badge bg-white text-info fw-bold border border-info-subtle">MENTOR A</span>
-                                <small class="text-muted" style="font-size: 10px;">1h trước</small>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-3 text-muted small">
+                                <i class="fa-regular fa-bell-slash fs-4 d-block mb-1 text-secondary opacity-50"></i>
+                                Chưa có thông báo mới nào
                             </div>
-                            <div class="fw-bold text-dark small" style="line-height: 1.4;">Thầy đã gửi nhận xét Chương 2
-                                cho
-                                nhóm.</div>
-                        </div>
-                        <div class="bg-light p-3 rounded-3 border notif-card-item cursor-pointer">
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="badge bg-white text-dark fw-bold border">KHOA CNTT</span>
-                                <small class="text-muted" style="font-size: 10px;">Hôm qua</small>
-                            </div>
-                            <div class="fw-bold text-dark small" style="line-height: 1.4;">Danh sách đề tài đủ điều kiện
-                                bảo
-                                vệ thử.</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Card Sự kiện & Lịch hẹn sắp tới (Dynamic) -->
+                <div class="card border-0 shadow-sm rounded-4 p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold mb-0 text-dark">
+                            <i class="fa-regular fa-calendar-days me-2 text-primary"></i> Sự kiện & Lịch hẹn sắp tới
+                        </h6>
+                        <button class="btn btn-link btn-sm p-0 text-primary fw-bold text-decoration-none small" onclick="openStudentScheduleModal()">
+                            + Đặt lịch
+                        </button>
+                    </div>
+                    <div class="d-flex flex-column gap-2" id="studentUpcomingEventsList" style="max-height: 280px; overflow-y: auto;">
+                        <div class="text-center py-3 text-muted small">
+                            <div class="spinner-border spinner-border-sm text-primary me-1" role="status"></div>
+                            Đang tải sự kiện...
                         </div>
                     </div>
                 </div>
 
+                <!-- Card Hỗ trợ NCKH -->
                 <div class="card border-0 shadow-sm rounded-4 p-4 text-white text-center position-relative overflow-hidden mt-auto"
                     style="background-color: #1e1b4b;">
                     <h5 class="fw-bold mb-1">HỖ TRỢ NCKH</h5>
                     <i class="fa-solid fa-headset fs-1 mb-3 text-white-50"></i>
-                    <p class="small opacity-75 mb-4 px-2" style="font-size: 11px;">"Mọi thắc mắc về kỹ thuật và quy chế,
-                        sinh viên có thể liên hệ trực tiếp Ban quản trị."</p>
-                    <button class="btn btn-light text-primary fw-bold rounded-pill w-100 shadow-sm">CHAT VỚI
-                        SUPPORT</button>
+                    <p class="small opacity-75 mb-3 px-2" style="font-size: 11px;">"Mọi thắc mắc về quy chế NCKH hoặc cần trợ giúp đặt lịch, sinh viên có thể trao đổi với Giảng viên qua Chatgroups."</p>
+                    <button class="btn btn-light text-primary fw-bold rounded-pill w-100 shadow-sm" onclick="switchTab('s-chat')">
+                        <i class="fa-regular fa-comments me-1"></i> MỞ CHATGROUPS
+                    </button>
                     <i class="fa-regular fa-life-ring position-absolute"
                         style="font-size: 100px; right: -20px; bottom: -20px; opacity: 0.05;"></i>
                 </div>
@@ -3470,6 +3456,106 @@
 {% endblock %}
 
 {% block modals %}
+<!-- MODAL ĐẶT LỊCH HỌP VỚI GIẢNG VIÊN HƯỚNG DẪN -->
+<div class="modal fade" id="modalScheduleMeeting" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-primary text-white p-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle bg-white bg-opacity-25 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                        <i class="fa-regular fa-calendar-check fs-5"></i>
+                    </div>
+                    <h5 class="modal-title fw-bold mb-0">Đặt lịch họp với Giảng viên</h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="formStudentScheduleMeeting" onsubmit="event.preventDefault(); submitStudentMeetingRequest(event);">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Đề tài & Giảng viên hướng dẫn <span class="text-danger">*</span></label>
+                        {% if my_topics %}
+                            <select id="meetingTopicId" class="form-select rounded-3 py-2">
+                                {% for topic in my_topics %}
+                                <option value="{{ topic.id }}">
+                                    DT-00{{ topic.id }} - {{ topic.title }} (GVHD: {{ topic.mentor.full_name if topic.mentor else 'Chưa phân công' }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        {% else %}
+                            <div class="alert alert-warning small rounded-3 p-3 mb-2">
+                                <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                                Bạn chưa có đề tài NCKH đã phân công GVHD. Yêu cầu đặt lịch sẽ gửi theo thông tin tài khoản của bạn.
+                            </div>
+                            <input type="hidden" id="meetingTopicId" value="">
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Tiêu đề cuộc họp <span class="text-danger">*</span></label>
+                        <input type="text" id="meetingTitle" class="form-control rounded-3 py-2"
+                            placeholder="Ví dụ: Báo cáo tiến độ Chương 1, Thảo luận phương pháp nghiên cứu..." required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Nội dung trao đổi / Câu hỏi dự kiến</label>
+                        <textarea id="meetingDesc" class="form-control rounded-3" rows="3"
+                            placeholder="Mô tả tóm tắt nội dung nhóm muốn báo cáo hoặc những câu hỏi cần GVHD giải đáp..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase">
+                            <i class="fa-solid fa-calendar-day text-primary me-1"></i> Ngày họp dự kiến <span class="text-danger">*</span>
+                        </label>
+                        <input type="date" id="meetingDate" class="form-control rounded-3 py-2" required>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Giờ bắt đầu <span class="text-danger">*</span></label>
+                            <input type="time" id="meetingStartTime" class="form-control rounded-3 py-2" value="08:30" min="07:30" max="17:30" required>
+                            <small class="text-muted" style="font-size: 11px;"><i class="fa-regular fa-clock me-1"></i>Từ 07:30 (Giờ HC)</small>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Giờ kết thúc <span class="text-danger">*</span></label>
+                            <input type="time" id="meetingEndTime" class="form-control rounded-3 py-2" value="09:30" min="07:30" max="17:30" required>
+                            <small class="text-muted" style="font-size: 11px;"><i class="fa-regular fa-clock me-1"></i>Đến 17:30 (Giờ HC)</small>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-light rounded-3 small text-muted border border-dashed mb-1">
+                        <i class="fa-solid fa-circle-info text-primary me-1"></i>
+                        Lịch hẹn sau khi gửi sẽ ở trạng thái <strong>Chờ phê duyệt</strong>. Giảng viên hướng dẫn sẽ nhận được thông báo để xác nhận hoặc từ chối.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4 pt-0">
+                <button type="button" class="btn btn-light fw-bold rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
+                <button type="submit" form="formStudentScheduleMeeting" id="btnSubmitMeeting" class="btn btn-primary fw-bold rounded-pill px-4 shadow-sm">
+                    <i class="fa-solid fa-paper-plane me-1"></i> Gửi yêu cầu đặt lịch
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL XEM CHI TIẾT SỰ KIỆN / LỊCH HỌP -->
+<div class="modal fade" id="modalStudentEventDetail" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-bottom p-3 px-4" id="modalStudentEventHeader">
+                <h6 class="modal-title fw-bold mb-0" id="modalStudentEventTitle">Chi tiết sự kiện</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4" id="modalStudentEventBody">
+                <!-- Nội dung được điền động -->
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4 pt-0 d-flex justify-content-between" id="modalStudentEventFooter">
+                <button type="button" class="btn btn-light fw-bold rounded-pill px-4 ms-auto" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL THÊM THÀNH VIÊN VÀO NHÓM -->
 <div class="modal fade" id="modalAddMember" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -6645,6 +6731,11 @@
             window.onRegisterBatchSelectChange();
         }
 
+        // Khởi tạo Lịch trình & Sự kiện NCKH
+        if (typeof window.initStudentCalendar === 'function') {
+            window.initStudentCalendar();
+        }
+
         // Khởi tạo state lịch sử duyệt web để khi ấn Back trên trình duyệt sẽ quay về tab trước / Trang chủ thay vì bị văng ra Login
         try {
             if (window.history && window.history.replaceState) {
@@ -6657,5 +6748,607 @@
             }
         } catch(e) {}
     });
+
+    // ==========================================
+    // QUẢN LÝ LỊCH TRÌNH & ĐẶT LỊCH HỌP CHO SINH VIÊN
+    // ==========================================
+    window.currentUserId = {{ current_user.id if current_user else 'null' }};
+    window.studentCalCurrentDate = new Date();
+    window.studentCalEvents = [];
+
+    window.initStudentCalendar = function() {
+        window.loadStudentCalendarEvents();
+    };
+
+    window.loadStudentCalendarEvents = async function() {
+        try {
+            const res = await fetch('/api/calendar/events');
+            if (res.ok) {
+                window.studentCalEvents = await res.json();
+            } else {
+                console.warn('Không thể tải sự kiện lịch:', res.status);
+                window.studentCalEvents = [];
+            }
+        } catch(err) {
+            console.error('Lỗi khi fetch sự kiện lịch:', err);
+            window.studentCalEvents = [];
+        }
+        window.renderStudentCalendar();
+        window.renderStudentUpcomingEvents();
+    };
+
+    window.changeStudentCalMonth = function(offset) {
+        window.studentCalCurrentDate.setMonth(window.studentCalCurrentDate.getMonth() + offset);
+        window.renderStudentCalendar();
+    };
+
+    window.goToStudentCalToday = function() {
+        window.studentCalCurrentDate = new Date();
+        window.renderStudentCalendar();
+    };
+
+    function formatCalDateStr(d) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    }
+
+    window.renderStudentCalendar = function() {
+        const tbody = document.getElementById('studentCalGridBody');
+        const titleEl = document.getElementById('studentCalMonthTitle');
+        if (!tbody || !titleEl) return;
+
+        const cur = window.studentCalCurrentDate;
+        const year = cur.getFullYear();
+        const month = cur.getMonth(); // 0..11
+
+        titleEl.textContent = `THÁNG ${String(month + 1).padStart(2, '0')}, ${year}`;
+
+        const todayStr = formatCalDateStr(new Date());
+
+        // Ngày 1 của tháng hiện tại
+        const firstDay = new Date(year, month, 1);
+        // Thứ trong tuần của ngày 1 (T2=0, T3=1, ..., CN=6)
+        let startDayOfWeek = (firstDay.getDay() + 6) % 7;
+
+        // Tổng số ngày của tháng hiện tại
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        // Tổng số ngày của tháng trước
+        const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+        let html = '';
+        let dayCount = 1;
+        let nextMonthDay = 1;
+
+        // 6 tuần tối đa
+        for (let r = 0; r < 6; r++) {
+            let rowHtml = '<tr>';
+            let rowHasCurrentMonthDays = false;
+
+            for (let c = 0; c < 7; c++) {
+                let cellDateStr = '';
+                let dayNum = 0;
+                let isCurrentMonth = false;
+                let isToday = false;
+
+                if (r === 0 && c < startDayOfWeek) {
+                    // Ngày tháng trước
+                    dayNum = daysInPrevMonth - (startDayOfWeek - 1 - c);
+                    const prevM = month === 0 ? 11 : month - 1;
+                    const prevY = month === 0 ? year - 1 : year;
+                    cellDateStr = formatCalDateStr(new Date(prevY, prevM, dayNum));
+                } else if (dayCount > daysInMonth) {
+                    // Ngày tháng sau
+                    dayNum = nextMonthDay++;
+                    const nextM = month === 11 ? 0 : month + 1;
+                    const nextY = month === 11 ? year + 1 : year;
+                    cellDateStr = formatCalDateStr(new Date(nextY, nextM, dayNum));
+                } else {
+                    // Ngày trong tháng hiện tại
+                    dayNum = dayCount++;
+                    isCurrentMonth = true;
+                    rowHasCurrentMonthDays = true;
+                    cellDateStr = formatCalDateStr(new Date(year, month, dayNum));
+                    if (cellDateStr === todayStr) {
+                        isToday = true;
+                    }
+                }
+
+                // Tìm sự kiện trên ngày này
+                const dayEvents = (window.studentCalEvents || []).filter(ev => {
+                    if (!ev.start) return false;
+                    return ev.start.substring(0, 10) === cellDateStr;
+                });
+
+                // Cell background & text style
+                const cellClass = isCurrentMonth ? (isToday ? 'bg-primary-subtle bg-opacity-25' : '') : 'bg-light text-muted opacity-50';
+                const circleClass = isToday ? 'calendar-day-circle active' : 'calendar-day-circle';
+
+                rowHtml += `<td class="${cellClass} align-top p-2 position-relative" style="height: 95px; cursor: pointer; transition: background 0.15s;" onclick="handleStudentCalCellClick('${cellDateStr}', event)">`;
+                rowHtml += `<div class="d-flex justify-content-between align-items-center mb-1">`;
+                rowHtml += `<span class="${circleClass}" style="font-size: 13px;">${dayNum}</span>`;
+                if (dayEvents.length > 0) {
+                    rowHtml += `<span class="badge rounded-pill bg-light text-dark border" style="font-size: 9px;">${dayEvents.length}</span>`;
+                }
+                rowHtml += `</div>`;
+
+                // Render tags sự kiện (tối đa 2 thẻ, còn lại hiển thị +X)
+                const maxVisible = 2;
+                dayEvents.slice(0, maxVisible).forEach(ev => {
+                    let badgeClass = 'bg-primary-subtle text-primary border border-primary-subtle';
+                    let iconHtml = '<i class="fa-regular fa-clock me-1"></i>';
+                    let statusLabel = '';
+
+                    if (ev.status === 'milestone') {
+                        badgeClass = 'bg-danger-subtle text-danger border border-danger-subtle';
+                        iconHtml = '<i class="fa-solid fa-flag me-1"></i>';
+                    } else if (ev.status === 'approved') {
+                        badgeClass = 'bg-success-subtle text-success border border-success-subtle';
+                        iconHtml = '<i class="fa-solid fa-check-circle me-1"></i>';
+                    } else if (ev.status === 'pending') {
+                        const isLecturerMeeting = (ev.organizer_id && window.currentUserId && ev.organizer_id !== window.currentUserId);
+                        if (isLecturerMeeting) {
+                            badgeClass = 'bg-primary-subtle text-primary border border-primary fw-bold';
+                            iconHtml = '<i class="fa-solid fa-envelope-open-text me-1"></i>';
+                            statusLabel = ' (GV hẹn)';
+                        } else {
+                            badgeClass = 'bg-warning-subtle text-dark border border-warning-subtle';
+                            iconHtml = '<i class="fa-regular fa-hourglass-half me-1"></i>';
+                            statusLabel = ' (Chờ GV duyệt)';
+                        }
+                    } else if (ev.status === 'rejected') {
+                        badgeClass = 'bg-secondary-subtle text-muted text-decoration-line-through';
+                        iconHtml = '<i class="fa-solid fa-ban me-1"></i>';
+                        statusLabel = ' (Từ chối)';
+                    }
+
+                    const evTitle = (ev.title || 'Sự kiện') + statusLabel;
+                    const safeTitle = evTitle.replace(/"/g, '&quot;');
+                    const evId = String(ev.id);
+
+                    rowHtml += `<div class="calendar-event-tag ${badgeClass} text-truncate" title="${safeTitle}" onclick="openStudentEventDetail('${evId}', event)">`;
+                    rowHtml += `${iconHtml}<span>${evTitle}</span>`;
+                    rowHtml += `</div>`;
+                });
+
+                if (dayEvents.length > maxVisible) {
+                    const moreCount = dayEvents.length - maxVisible;
+                    rowHtml += `<div class="text-muted text-center fw-bold mt-1" style="font-size: 9px;">+${moreCount} sự kiện khác</div>`;
+                }
+
+                rowHtml += `</td>`;
+            }
+
+            rowHtml += '</tr>';
+            if (rowHasCurrentMonthDays || r < 4) {
+                html += rowHtml;
+            }
+        }
+
+        tbody.innerHTML = html;
+    };
+
+    window.handleStudentCalCellClick = function(dateStr, e) {
+        if (e.target.closest('.calendar-event-tag')) return;
+        window.openStudentScheduleModal(dateStr);
+    };
+
+    window.renderStudentUpcomingEvents = function() {
+        const listEl = document.getElementById('studentUpcomingEventsList');
+        if (!listEl) return;
+
+        const now = new Date();
+        const todayStr = formatCalDateStr(now);
+
+        const upcoming = (window.studentCalEvents || [])
+            .filter(ev => ev.start && ev.start.substring(0, 10) >= todayStr)
+            .sort((a, b) => new Date(a.start) - new Date(b.start))
+            .slice(0, 5);
+
+        if (upcoming.length === 0) {
+            listEl.innerHTML = `
+                <div class="text-center py-4 text-muted small">
+                    <i class="fa-regular fa-calendar-xmark fs-4 d-block mb-1 text-secondary opacity-50"></i>
+                    Không có sự kiện hoặc lịch hẹn sắp tới
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        upcoming.forEach(ev => {
+            let badge = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill" style="font-size: 9px;">LỊCH HỌP</span>';
+            const isLecturerMeetingPending = (ev.status === 'pending' && ev.organizer_id && window.currentUserId && ev.organizer_id !== window.currentUserId);
+
+            if (ev.status === 'milestone') {
+                badge = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill" style="font-size: 9px;">DEADLINE</span>';
+            } else if (isLecturerMeetingPending) {
+                badge = '<span class="badge bg-primary text-white rounded-pill" style="font-size: 9px;"><i class="fa-solid fa-envelope me-1"></i>GV HẸN LỊCH</span>';
+            } else if (ev.status === 'pending') {
+                badge = '<span class="badge bg-warning-subtle text-dark border border-warning-subtle rounded-pill" style="font-size: 9px;">CHỜ GV DUYỆT</span>';
+            } else if (ev.status === 'approved') {
+                badge = '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill" style="font-size: 9px;">ĐÃ DUYỆT</span>';
+            } else if (ev.status === 'rejected') {
+                badge = '<span class="badge bg-secondary-subtle text-secondary rounded-pill" style="font-size: 9px;">ĐÃ TỪ CHỐI</span>';
+            }
+
+            let timeStr = '';
+            if (ev.start) {
+                const d = new Date(ev.start);
+                const dateFmt = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+                const timeFmt = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                timeStr = `${timeFmt} ngày ${dateFmt}`;
+            }
+
+            let actionBtns = '';
+            if (isLecturerMeetingPending) {
+                actionBtns = `
+                    <div class="d-flex gap-2 mt-2 pt-2 border-top">
+                        <button class="btn btn-sm btn-success rounded-pill px-3 py-1 fw-bold" style="font-size: 11px;" onclick="respondToMeeting('${ev.id}', 'approved', event)">
+                            <i class="fa-solid fa-check me-1"></i> Đồng ý
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1 fw-bold" style="font-size: 11px;" onclick="respondToMeeting('${ev.id}', 'rejected', event)">
+                            <i class="fa-solid fa-xmark me-1"></i> Từ chối
+                        </button>
+                    </div>
+                `;
+            }
+
+            html += `
+                <div class="p-3 rounded-3 border bg-white notif-card-item cursor-pointer shadow-xs" onclick="openStudentEventDetail('${ev.id}', event)">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        ${badge}
+                        <small class="text-muted" style="font-size: 11px;"><i class="fa-regular fa-clock me-1"></i>${timeStr}</small>
+                    </div>
+                    <div class="fw-bold text-dark small" style="line-height: 1.4;">${ev.title || 'Sự kiện'}</div>
+                    ${ev.topic_title ? `<div class="text-muted small mt-1 text-truncate" style="font-size: 11px;"><i class="fa-regular fa-folder me-1"></i>${ev.topic_title}</div>` : ''}
+                    ${actionBtns}
+                </div>
+            `;
+        });
+
+        listEl.innerHTML = html;
+    };
+
+    window.openStudentScheduleModal = function(prefillDate) {
+        const modalEl = document.getElementById('modalScheduleMeeting');
+        if (!modalEl) return;
+
+        const dateInput = document.getElementById('meetingDate');
+        const todayStr = formatCalDateStr(new Date());
+
+        if (dateInput) {
+            dateInput.min = todayStr;
+            if (prefillDate && prefillDate >= todayStr) {
+                dateInput.value = prefillDate;
+            } else {
+                // Mặc định ngày mai
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                dateInput.value = formatCalDateStr(tomorrow);
+            }
+        }
+
+        const titleInput = document.getElementById('meetingTitle');
+        if (titleInput) titleInput.value = '';
+        const descInput = document.getElementById('meetingDesc');
+        if (descInput) descInput.value = '';
+
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    };
+
+    window.isSubmittingMeeting = false;
+    window.submitStudentMeetingRequest = async function(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        if (window.isSubmittingMeeting) return;
+
+        const topicSelect = document.getElementById('meetingTopicId');
+        const topicId = topicSelect ? topicSelect.value : null;
+        const titleInput = document.getElementById('meetingTitle');
+        const title = titleInput ? titleInput.value.trim() : '';
+        const descInput = document.getElementById('meetingDesc');
+        const desc = descInput ? descInput.value.trim() : '';
+        const dateInput = document.getElementById('meetingDate');
+        const date = dateInput ? dateInput.value : '';
+        const startTimeInput = document.getElementById('meetingStartTime');
+        const startTime = startTimeInput ? startTimeInput.value : '';
+        const endTimeInput = document.getElementById('meetingEndTime');
+        const endTime = endTimeInput ? endTimeInput.value : '';
+
+        if (!title) {
+            return Swal.fire({ icon: 'warning', title: 'Thiếu thông tin', text: 'Vui lòng nhập tiêu đề cuộc họp.' });
+        }
+        if (!date) {
+            return Swal.fire({ icon: 'warning', title: 'Thiếu thông tin', text: 'Vui lòng chọn ngày họp.' });
+        }
+        if (!startTime || !endTime) {
+            return Swal.fire({ icon: 'warning', title: 'Thiếu thông tin', text: 'Vui lòng chọn đầy đủ giờ bắt đầu và giờ kết thúc.' });
+        }
+
+        const startDT = new Date(`${date}T${startTime}`);
+        const endDT = new Date(`${date}T${endTime}`);
+        const now = new Date();
+
+        if (startDT <= now) {
+            return Swal.fire({ icon: 'warning', title: 'Thời gian không hợp lệ', text: 'Thời gian họp phải sau thời điểm hiện tại.' });
+        }
+        if (endDT <= startDT) {
+            return Swal.fire({ icon: 'warning', title: 'Thời gian không hợp lệ', text: 'Giờ kết thúc phải sau giờ bắt đầu.' });
+        }
+
+        // Check giờ hành chính (07:30 -> 17:30)
+        if (startTime < '07:30' || endTime > '17:30') {
+            return Swal.fire({ icon: 'warning', title: 'Ngoài giờ hành chính', text: 'Lịch hẹn phải trong khung giờ hành chính từ 07:30 đến 17:30.' });
+        }
+
+        window.isSubmittingMeeting = true;
+        const btn = document.getElementById('btnSubmitMeeting');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang gửi...';
+        }
+
+        try {
+            const payload = {
+                topic_id: topicId ? parseInt(topicId) : null,
+                title: title,
+                description: desc,
+                start_time: `${date}T${startTime}`,
+                end_time: `${date}T${endTime}`
+            };
+
+            const res = await fetch('/api/calendar/events', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            if (res.ok) {
+                const modalEl = document.getElementById('modalScheduleMeeting');
+                if (modalEl) {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Đặt lịch thành công!',
+                    text: 'Yêu cầu hẹn đã được gửi tới Giảng viên hướng dẫn để phê duyệt.',
+                    confirmButtonColor: '#4f46e5'
+                });
+
+                await window.loadStudentCalendarEvents();
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Đặt lịch thất bại',
+                    text: data.error || 'Có lỗi xảy ra khi tạo cuộc họp, vui lòng thử lại.'
+                });
+            }
+        } catch(err) {
+            console.error('Lỗi kết nối submit meeting:', err);
+            Swal.fire({
+                icon: 'error',
+                title: 'Lỗi kết nối',
+                text: err.message || 'Không thể kết nối đến máy chủ.'
+            });
+        } finally {
+            window.isSubmittingMeeting = false;
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i> Gửi yêu cầu đặt lịch';
+            }
+        }
+    };
+
+    window.openStudentEventDetail = function(eventId, e) {
+        if (e) e.stopPropagation();
+
+        const ev = (window.studentCalEvents || []).find(item => String(item.id) === String(eventId));
+        if (!ev) return;
+
+        const modalEl = document.getElementById('modalStudentEventDetail');
+        const titleEl = document.getElementById('modalStudentEventTitle');
+        const bodyEl = document.getElementById('modalStudentEventBody');
+        const footerEl = document.getElementById('modalStudentEventFooter');
+
+        if (!modalEl || !bodyEl) return;
+
+        const isLecturerMeetingPending = (ev.status === 'pending' && ev.organizer_id && window.currentUserId && ev.organizer_id !== window.currentUserId);
+
+        let badgeHtml = '';
+        let statusText = '';
+        if (ev.status === 'milestone') {
+            badgeHtml = '<span class="badge bg-danger text-white rounded-pill px-3 py-1">Cột mốc / Deadline</span>';
+            statusText = 'Hạn nộp chính thức';
+        } else if (isLecturerMeetingPending) {
+            badgeHtml = '<span class="badge bg-primary text-white rounded-pill px-3 py-1"><i class="fa-solid fa-envelope me-1"></i>Giảng viên đề xuất</span>';
+            statusText = 'Chờ bạn xác nhận';
+        } else if (ev.status === 'pending') {
+            badgeHtml = '<span class="badge bg-warning text-dark rounded-pill px-3 py-1">Chờ Giảng viên duyệt</span>';
+            statusText = 'Đang chờ GV xác nhận';
+        } else if (ev.status === 'approved') {
+            badgeHtml = '<span class="badge bg-success text-white rounded-pill px-3 py-1">Đã phê duyệt</span>';
+            statusText = 'Lịch hẹn chính thức';
+        } else if (ev.status === 'rejected') {
+            badgeHtml = '<span class="badge bg-secondary text-white rounded-pill px-3 py-1">Đã từ chối</span>';
+            statusText = 'Lịch hẹn không thực hiện';
+        }
+
+        let startStr = ev.start ? new Date(ev.start).toLocaleString('vi-VN') : 'Chưa xác định';
+        let endStr = ev.end ? new Date(ev.end).toLocaleString('vi-VN') : '';
+
+        titleEl.textContent = ev.title || 'Chi tiết sự kiện';
+
+        let noticeHtml = '';
+        if (isLecturerMeetingPending) {
+            noticeHtml = `
+                <div class="alert alert-primary bg-primary-subtle border-0 text-primary small p-3 rounded-3 mb-3 fw-semibold">
+                    <i class="fa-solid fa-envelope-open-text me-1"></i> Thầy/Cô <strong>${ev.mentor_name || ev.organizer_name || 'Giảng viên'}</strong> đã lên lịch làm việc này cho nhóm. Bạn hãy xác nhận tham gia hoặc từ chối để Thầy/Cô nắm được thông tin.
+                </div>
+            `;
+        }
+
+        let contentHtml = `
+            ${noticeHtml}
+            <div class="mb-3 d-flex align-items-center justify-content-between">
+                ${badgeHtml}
+                <small class="text-muted">${statusText}</small>
+            </div>
+            <div class="p-3 bg-light rounded-3 mb-3 border">
+                <div class="mb-2">
+                    <span class="small fw-bold text-muted text-uppercase d-block mb-1">Thời gian:</span>
+                    <span class="fw-bold text-dark"><i class="fa-regular fa-clock text-primary me-1"></i>${startStr} ${endStr && endStr !== startStr ? ' — ' + endStr : ''}</span>
+                </div>
+                ${ev.topic_title ? `
+                <div class="mb-2">
+                    <span class="small fw-bold text-muted text-uppercase d-block mb-1">Đề tài NCKH:</span>
+                    <span class="fw-semibold text-dark">${ev.topic_title}</span>
+                </div>` : ''}
+                ${ev.mentor_name ? `
+                <div class="mb-2">
+                    <span class="small fw-bold text-muted text-uppercase d-block mb-1">Giảng viên hướng dẫn:</span>
+                    <span class="fw-semibold text-primary"><i class="fa-solid fa-user-tie me-1"></i>${ev.mentor_name}</span>
+                </div>` : ''}
+                ${ev.organizer_name ? `
+                <div>
+                    <span class="small fw-bold text-muted text-uppercase d-block mb-1">Người tạo:</span>
+                    <span class="text-muted">${ev.organizer_name}</span>
+                </div>` : ''}
+            </div>
+        `;
+
+        if (ev.description) {
+            contentHtml += `
+                <div class="mb-3">
+                    <span class="small fw-bold text-muted text-uppercase d-block mb-1">Nội dung / Ghi chú:</span>
+                    <div class="p-3 bg-white border rounded-3 small text-dark" style="white-space: pre-wrap;">${ev.description}</div>
+                </div>
+            `;
+        }
+
+        bodyEl.innerHTML = contentHtml;
+
+        // Footer actions
+        let footerHtml = '<button type="button" class="btn btn-light fw-bold rounded-pill px-4 ms-auto" data-bs-dismiss="modal">Đóng</button>';
+        if (isLecturerMeetingPending) {
+            footerHtml = `
+                <div class="d-flex align-items-center gap-2 w-100 flex-wrap">
+                    <button type="button" class="btn btn-success fw-bold rounded-pill px-4 shadow-sm" onclick="respondToMeeting('${ev.id}', 'approved')">
+                        <i class="fa-solid fa-check me-1"></i> Chấp nhận lịch họp
+                    </button>
+                    <button type="button" class="btn btn-outline-danger fw-bold rounded-pill px-3" onclick="respondToMeeting('${ev.id}', 'rejected')">
+                        <i class="fa-solid fa-xmark me-1"></i> Từ chối
+                    </button>
+                    <button type="button" class="btn btn-light fw-bold rounded-pill px-4 ms-auto" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            `;
+        } else if (ev.status === 'pending' && !String(ev.id).startsWith('ms_')) {
+            footerHtml = `
+                <button type="button" class="btn btn-outline-danger fw-bold rounded-pill px-3" onclick="cancelStudentMeeting('${ev.id}')">
+                    <i class="fa-regular fa-trash-can me-1"></i> Hủy yêu cầu đặt lịch
+                </button>
+                <button type="button" class="btn btn-light fw-bold rounded-pill px-4 ms-auto" data-bs-dismiss="modal">Đóng</button>
+            `;
+        }
+        footerEl.innerHTML = footerHtml;
+
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    };
+
+    window.respondToMeeting = async function(meetingId, newStatus, e) {
+        if (e && e.stopPropagation) e.stopPropagation();
+
+        const actionText = (newStatus === 'approved') ? 'chấp nhận' : 'từ chối';
+        const confirmColor = (newStatus === 'approved') ? '#10b981' : '#ef4444';
+
+        const result = await Swal.fire({
+            title: `Xác nhận ${actionText} lịch hẹn?`,
+            text: (newStatus === 'approved') 
+                ? 'Bạn sẽ xác nhận tham gia buổi làm việc này với Giảng viên.' 
+                : 'Bạn sẽ từ chối lịch hẹn này. Giảng viên sẽ nhận được thông báo phản hồi.',
+            icon: (newStatus === 'approved') ? 'question' : 'warning',
+            showCancelButton: true,
+            confirmButtonColor: confirmColor,
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: `Đồng ý ${actionText}`,
+            cancelButtonText: 'Hủy bỏ'
+        });
+
+        if (!result.isConfirmed) return;
+
+        try {
+            const res = await fetch(`/api/calendar/events/${meetingId}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+            const data = await res.json().catch(() => ({}));
+
+            if (res.ok) {
+                const modalEl = document.getElementById('modalStudentEventDetail');
+                if (modalEl) {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Thành công',
+                    text: (newStatus === 'approved') ? 'Đã chấp nhận lịch hẹn với Giảng viên!' : 'Đã từ chối lịch hẹn.',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+
+                await window.loadStudentCalendarEvents();
+            } else {
+                Swal.fire('Lỗi', data.error || 'Không thể cập nhật trạng thái', 'error');
+            }
+        } catch(err) {
+            console.error('Lỗi khi phản hồi lịch:', err);
+            Swal.fire('Lỗi kết nối', err.message, 'error');
+        }
+    };
+
+    window.cancelStudentMeeting = async function(meetingId) {
+        const confirm = await Swal.fire({
+            title: 'Hủy lịch hẹn?',
+            text: 'Bạn có chắc chắn muốn hủy yêu cầu đặt lịch này không?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Đồng ý hủy',
+            cancelButtonText: 'Không'
+        });
+
+        if (!confirm.isConfirmed) return;
+
+        try {
+            const res = await fetch(`/api/calendar/events/${meetingId}`, {
+                method: 'DELETE'
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) {
+                const modalEl = document.getElementById('modalStudentEventDetail');
+                if (modalEl) {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
+                Swal.fire('Đã hủy', 'Đã hủy yêu cầu đặt lịch hẹn.', 'success');
+                await window.loadStudentCalendarEvents();
+            } else {
+                Swal.fire('Lỗi', data.error || 'Không thể hủy lịch hẹn.', 'error');
+            }
+        } catch(err) {
+            console.error(err);
+            Swal.fire('Lỗi', err.message, 'error');
+        }
+    };
 </script>
 {% endblock %}

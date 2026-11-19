@@ -294,6 +294,9 @@ function switchTab(tabName, element, pushHistory = true) {
         if (tabName === 's-register' && typeof checkAndLoadMyTopic === 'function') {
             checkAndLoadMyTopic();
         }
+        if (tabName === 's-calendar' && typeof window.loadStudentCalendarEvents === 'function') {
+            window.loadStudentCalendarEvents();
+        }
         if (tabName === 's-mentors' && typeof hideStudentMentorDetail === 'function') {
             hideStudentMentorDetail();
         }

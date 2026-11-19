@@ -80,7 +80,22 @@
     faculty_pending: ['CHỜ KHOA DUYỆT', 'info'],
     approved: ['ĐÃ DUYỆT', 'success']
   };
-  let currentStatus = 'pending,faculty_pending';
+  const urlParams = new URLSearchParams(window.location.search);
+  const paramStatus = urlParams.get('status');
+  const paramTopicId = urlParams.get('topic_id') ? parseInt(urlParams.get('topic_id')) : null;
+
+  let currentStatus = paramStatus || 'pending,faculty_pending';
+  if (paramStatus) {
+    document.querySelectorAll('#asgFilters button').forEach(x => {
+      if (x.dataset.status === paramStatus) {
+        x.classList.remove('btn-light', 'text-muted');
+        x.classList.add('btn-primary');
+      } else {
+        x.classList.remove('btn-primary');
+        x.classList.add('btn-light', 'text-muted');
+      }
+    });
+  }
   let topics = new Map();
   let selectedTopic = null, selectedMentor = null, suggestions = [];
   const modal = () => bootstrap.Modal.getOrCreateInstance($('modalReassign'));
@@ -107,17 +122,24 @@
       body.innerHTML = list.map(t => {
         const st = STATUS[t.status] || [t.status, 'secondary'];
         const m = t.mentor;
-        return `<tr>
+        const isTarget = paramTopicId && t.topic_id === paramTopicId;
+        return `<tr data-topic-row="${t.topic_id}" class="${isTarget ? 'table-primary' : ''}">
           <td class="ps-4 fw-bold text-primary">${esc(t.code)}</td>
           <td><div class="fw-bold text-dark">${esc(t.title)}</div>
               <small class="text-muted">${t.group ? esc(t.group.name) + (t.group.members.length ? ' · ' + esc(t.group.members.join(', ')) : '') : 'Chưa có nhóm'}</small></td>
           <td style="min-width:170px"><div class="fw-bold small">${esc(m.full_name || 'Chưa phân công')}</div>
-              <div class="small text-muted">${esc(m.faculty || '')}</div>
+              <div class="small text-muted">${esc(m.faculty || '')}${m.department ? ' · ' + esc(m.department) : ''}</div>
               ${m.id ? loadBar(m.current_topics, m.quota) + `<div class="small text-muted">${m.current_topics}/${m.quota} đề tài</div>` : ''}</td>
           <td><span class="badge bg-${st[1]}-subtle text-${st[1]} border border-${st[1]}-subtle rounded-pill px-3 py-1 small">${st[0]}</span></td>
           <td class="text-end pe-4"><button class="btn btn-sm btn-outline-primary fw-bold rounded-pill" data-reassign="${t.topic_id}"><i class="fa-solid fa-shuffle me-1"></i> Chuyển GV</button></td>
         </tr>`;
       }).join('');
+      if (paramTopicId) {
+        const row = body.querySelector(`tr[data-topic-row="${paramTopicId}"]`);
+        if (row) {
+          row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
     } catch (e) { body.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">${esc(e.message)}</td></tr>`; }
   }
 
@@ -154,7 +176,7 @@
               <span>${s.available ? '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Còn chỗ</span>'
                                    : '<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">Đã đủ</span>'}</span>
             </div>
-            <div class="small text-muted">${esc(s.faculty || '')}${s.same_department ? ' · <span class="text-primary fw-bold">cùng bộ môn</span>' : ''}</div>
+            <div class="small text-muted">${esc(s.faculty || 'Khoa CNTT')} · ${s.same_department ? '<span class="text-primary fw-bold"><i class="fa-solid fa-users-rectangle me-1"></i>Cùng ' + esc(s.department || 'Bộ môn') + '</span>' : '<span class="text-muted"><i class="fa-solid fa-building me-1"></i>' + esc(s.department || 'Bộ môn') + '</span>'}</div>
             ${s.matched_keywords.length ? '<div class="mt-1">' + s.matched_keywords.map(k => `<span class="badge bg-primary-subtle text-primary me-1">${esc(k)}</span>`).join('') + '</div>' : ''}
             <div class="mt-2">${loadBar(s.current_topics, s.quota)}
               <div class="small text-muted">Đang giữ ${s.current_topics}/${s.quota} đề tài (${s.approved} đã duyệt, ${s.pending} đang chờ)</div></div>
@@ -171,7 +193,8 @@
     if (!selectedTopic) return;
     $('asgReason').value = '';
     $('asgShowAll').checked = false;
-    $('asgTopicInfo').innerHTML = `Đề tài <b>${esc(selectedTopic.title)}</b> — GV hiện tại: <b>${esc(selectedTopic.mentor.full_name || 'Chưa phân công')}</b>`;
+    const curMentorDept = selectedTopic.mentor && selectedTopic.mentor.department ? ` (${esc(selectedTopic.mentor.department)})` : '';
+    $('asgTopicInfo').innerHTML = `Đề tài <b>${esc(selectedTopic.title)}</b> — GV hiện tại: <b>${esc(selectedTopic.mentor && selectedTopic.mentor.full_name ? selectedTopic.mentor.full_name : 'Chưa phân công')}</b>${curMentorDept}`;
     modal().show();
     loadSuggestions();
   }

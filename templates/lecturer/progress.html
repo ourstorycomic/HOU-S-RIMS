@@ -37,12 +37,23 @@
                             
                             <!-- Chu trình tiến độ thực của đề tài NCKH (5 giai đoạn) -->
                             <div class="position-relative mb-4 mt-3 px-2">
-                                <div class="progress position-absolute" style="height: 5px; top: 12px; left: 30px; width: calc(100% - 60px); z-index: 1;">
-                                    <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ t.total_progress }}%; transition: width 0.6s ease;"></div>
+                                <!-- Stepper Connecting Lines (Node-to-Node, seamless, no discontinuous jagged cuts) -->
+                                <div class="position-absolute w-100" style="height: 4px; top: 12px; left: 0; z-index: 1;">
+                                    <!-- Đoạn 1: Mốc 1 -> Mốc 2 (10% đến 30%) -->
+                                    <div class="position-absolute" style="left: 10%; width: 20%; height: 4px; background: {% if t.status == 'approved' %}#10b981{% else %}#e2e8f0{% endif %}; border-radius: 2px; transition: background 0.3s ease;"></div>
+
+                                    <!-- Đoạn 2: Mốc 2 -> Mốc 3 (30% đến 50%) -->
+                                    <div class="position-absolute" style="left: 30%; width: 20%; height: 4px; background: {% if t.outline_status == 'approved' %}#10b981{% else %}#e2e8f0{% endif %}; border-radius: 2px; transition: background 0.3s ease;"></div>
+
+                                    <!-- Đoạn 3: Mốc 3 -> Mốc 4 (50% đến 70%) -->
+                                    <div class="position-absolute" style="left: 50%; width: 20%; height: 4px; background: {% if t.progress_status == 'approved' %}#10b981{% else %}#e2e8f0{% endif %}; border-radius: 2px; transition: background 0.3s ease;"></div>
+
+                                    <!-- Đoạn 4: Mốc 4 -> Mốc 5 (70% đến 90%) -->
+                                    <div class="position-absolute" style="left: 70%; width: 20%; height: 4px; background: {% if t.final_status == 'approved' %}#10b981{% else %}#e2e8f0{% endif %}; border-radius: 2px; transition: background 0.3s ease;"></div>
                                 </div>
                                 <div class="d-flex justify-content-between position-relative" style="z-index: 2;">
                                     <!-- Mốc 1: Phê duyệt đề tài -->
-                                    <div class="text-center" style="width: 19%;">
+                                    <div class="text-center" style="width: 20%;">
                                         <div class="{% if t.status == 'approved' %}bg-success text-white shadow-sm{% elif t.status == 'faculty_pending' %}bg-warning text-dark{% else %}bg-primary text-white{% endif %} rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" 
                                              style="width:26px; height:26px; font-size:11px;">
                                             {% if t.status == 'approved' %}<i class="fa-solid fa-check"></i>
@@ -92,22 +103,28 @@
 
                                     <!-- Mốc 4: Báo cáo tổng kết -->
                                     <div class="text-center" style="width: 20%;">
-                                        <div class="{% if t.final_status == 'approved' %}bg-success text-white shadow-sm{% elif t.final_status == 'submitted' %}bg-primary text-white shadow-sm{% else %}bg-white border text-muted{% endif %} rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" 
+                                        <div class="{% if t.final_status == 'approved' %}bg-success text-white shadow-sm{% elif t.final_status == 'submitted' or t.slide_status == 'approved' %}bg-primary text-white shadow-sm{% else %}bg-white border text-muted{% endif %} rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" 
                                              style="width:26px; height:26px; font-size:11px;">
                                             {% if t.final_status == 'approved' %}<i class="fa-solid fa-check"></i>
+                                            {% elif t.slide_status == 'approved' %}<i class="fa-solid fa-file-powerpoint"></i>
                                             {% elif t.final_status == 'submitted' %}<i class="fa-solid fa-file-lines"></i>
                                             {% else %}<span>4</span>{% endif %}
                                         </div>
-                                        <div class="fw-bold {% if t.final_status in ['approved', 'submitted'] %}text-dark{% else %}text-muted{% endif %}" style="font-size:11.5px;">4. Báo cáo tổng kết</div>
+                                        <div class="fw-bold {% if t.final_status in ['approved', 'submitted'] or t.slide_status in ['approved', 'submitted'] %}text-dark{% else %}text-muted{% endif %}" style="font-size:11.5px;">4. Báo cáo tổng kết</div>
                                         <div class="text-muted" style="font-size:10px;">
-                                            {% if t.final_status == 'approved' %}<span class="text-success fw-semibold">Đã thông qua</span>
-                                            {% elif t.final_status == 'submitted' %}<span class="text-primary fw-semibold">Đã nộp</span>
-                                            {% else %}Báo cáo & Slide{% endif %}
+                                            {% if t.final_status == 'approved' %}
+                                                {% if t.slide_status == 'approved' %}<span class="text-success fw-semibold">Đã duyệt BC &amp; Slide</span>
+                                                {% else %}<span class="text-success fw-semibold">Đã thông qua BC</span>{% endif %}
+                                            {% elif t.slide_status == 'approved' %}
+                                                {% if t.final_status == 'submitted' %}<span class="text-primary fw-semibold">Slide đạt • Chờ duyệt BC</span>
+                                                {% else %}<span class="text-primary fw-semibold">Đã duyệt Slide</span>{% endif %}
+                                            {% elif t.final_status == 'submitted' %}<span class="text-primary fw-semibold">Đã nộp báo cáo</span>
+                                            {% else %}Báo cáo &amp; Slide{% endif %}
                                         </div>
                                     </div>
 
                                     <!-- Mốc 5: Nghiệm thu & Bảo vệ -->
-                                    <div class="text-center" style="width: 19%;">
+                                    <div class="text-center" style="width: 20%;">
                                         <div class="{% if t.is_evaluated %}bg-success text-white shadow-sm{% elif t.total_progress >= 85 %}bg-primary text-white shadow-sm{% else %}bg-white border text-muted{% endif %} rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1" 
                                              style="width:26px; height:26px; font-size:11px;">
                                             {% if t.is_evaluated %}<i class="fa-solid fa-award"></i>

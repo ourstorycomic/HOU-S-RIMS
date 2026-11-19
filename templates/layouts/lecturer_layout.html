@@ -416,6 +416,66 @@
         </div>
     </div>
 
+    <!-- MODAL GIẢNG VIÊN LÊN LỊCH HỌP VỚI SINH VIÊN -->
+    <div class="modal fade" id="modalLecturerCreateMeeting" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold"><i class="fa-regular fa-calendar-check me-2"></i> Lên lịch họp với Sinh viên / Nhóm</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Chọn đề tài / nhóm sinh viên</label>
+                        <select id="lecturerMeetingTopicId" class="form-select">
+                            {% set has_topic = false %}
+                            {% for t in current_user.topics_mentored %}
+                                {% if t.status == 'approved' %}
+                                    <option value="{{ t.id }}">DT-00{{ t.id }} - {{ t.title }} ({{ t.group.name if t.group else 'Chưa có nhóm' }})</option>
+                                    {% set has_topic = true %}
+                                {% endif %}
+                            {% endfor %}
+                            {% if not has_topic %}
+                                <option value="">Không có đề tài nào đang hướng dẫn</option>
+                            {% endif %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Tiêu đề cuộc họp</label>
+                        <input type="text" id="lecturerMeetingTitle" class="form-control" placeholder="Ví dụ: Họp hướng dẫn đề cương chi tiết" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Nội dung trao đổi / Ghi chú cho nhóm</label>
+                        <textarea id="lecturerMeetingDesc" class="form-control" rows="2" placeholder="Ghi chú nội dung nhóm cần chuẩn bị trước..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Ngày họp dự kiến</label>
+                        <input type="date" id="lecturerMeetingDate" class="form-control" required>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">Giờ bắt đầu</label>
+                            <input type="time" id="lecturerMeetingStartTime" class="form-control" value="08:30" min="07:30" max="17:30" required>
+                            <small class="text-muted" style="font-size: 11px;">Từ 07:30 (Giờ HC)</small>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">Giờ kết thúc</label>
+                            <input type="time" id="lecturerMeetingEndTime" class="form-control" value="09:30" min="07:30" max="17:30" required>
+                            <small class="text-muted" style="font-size: 11px;">Đến 17:30 (Giờ HC)</small>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-light rounded-3 small text-muted border border-dashed">
+                        <i class="fa-solid fa-circle-info text-primary me-1"></i> Sau khi gửi, sinh viên trong nhóm sẽ nhận được thông báo để xác nhận tham gia hoặc từ chối lịch họp này.
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button class="btn btn-light fw-bold" data-bs-dismiss="modal">Hủy</button>
+                    <button class="btn btn-primary fw-bold px-4" onclick="submitLecturerMeeting()"><i class="fa-solid fa-paper-plane me-1"></i> Gửi lịch hẹn</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="modalCreateEvent" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg rounded-4">

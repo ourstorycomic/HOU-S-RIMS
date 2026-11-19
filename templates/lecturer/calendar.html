@@ -20,9 +20,14 @@
                         <div class="card border-0 shadow-sm rounded-4 p-4 h-100" style="min-width: 0;">
                             <div class="d-flex justify-content-between align-items-center mb-4">
                                 <h5 class="fw-bold mb-0 text-primary"><i class="fa-regular fa-calendar-check me-2"></i> LỊCH TRÌNH & SỰ KIỆN</h5>
-                                <button class="btn btn-primary-subtle text-primary fw-bold btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#modalCreateEvent">
-                                    + Tạo nhắc hẹn
-                                </button>
+                                <div class="d-flex align-items-center gap-2">
+                                    <button class="btn btn-primary fw-bold btn-sm rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalLecturerCreateMeeting">
+                                        <i class="fa-solid fa-plus me-1"></i> Lên lịch họp với SV
+                                    </button>
+                                    <button class="btn btn-light border text-muted fw-bold btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#modalCreateEvent">
+                                        <i class="fa-regular fa-flag me-1"></i> Tạo nhắc hẹn
+                                    </button>
+                                </div>
                             </div>
 
                             <div id="calendar" style="min-height: 500px;"></div>
@@ -119,6 +124,57 @@ document.addEventListener('DOMContentLoaded', function() {
     if (modalEl) modalEl.addEventListener('show.bs.modal', calUpgradeDeadlineInput);
 });
 
+window.currentUserId = {{ current_user.id if current_user else 'null' }};
+
+async function submitLecturerMeeting() {
+    const topicId = document.getElementById('lecturerMeetingTopicId').value;
+    const title = document.getElementById('lecturerMeetingTitle').value.trim();
+    const desc = document.getElementById('lecturerMeetingDesc').value.trim();
+    const date = document.getElementById('lecturerMeetingDate').value;
+    const startTime = document.getElementById('lecturerMeetingStartTime').value;
+    const endTime = document.getElementById('lecturerMeetingEndTime').value;
+
+    if (!topicId || !title || !date || !startTime || !endTime) {
+        return Swal.fire('Thiếu thông tin', 'Vui lòng điền đầy đủ đề tài, tiêu đề, ngày và giờ họp.', 'warning');
+    }
+
+    const startDT = new Date(`${date}T${startTime}`);
+    const endDT = new Date(`${date}T${endTime}`);
+    if (startDT <= new Date()) {
+        return Swal.fire('Thời gian không hợp lệ', 'Thời gian họp phải sau thời điểm hiện tại.', 'warning');
+    }
+    if (endDT <= startDT) {
+        return Swal.fire('Thời gian không hợp lệ', 'Giờ kết thúc phải sau giờ bắt đầu.', 'warning');
+    }
+
+    try {
+        const res = await fetch('/api/calendar/events', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                topic_id: parseInt(topicId),
+                title: title,
+                description: desc,
+                start_time: `${date}T${startTime}`,
+                end_time: `${date}T${endTime}`
+            })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Thành công',
+                text: 'Đã gửi lịch hẹn tới sinh viên trong nhóm để xác nhận!'
+            }).then(() => location.reload());
+        } else {
+            Swal.fire('Lỗi', data.error || 'Không thể tạo lịch hẹn', 'error');
+        }
+    } catch(err) {
+        console.error(err);
+        Swal.fire('Lỗi kết nối', err.message, 'error');
+    }
+}
+
 async function submitCalendarMilestone() {
     const topicId = document.getElementById('calendarMilestoneTopicId').value;
     const name = document.getElementById('calendarMilestoneName').value.trim();
@@ -186,13 +242,16 @@ document.addEventListener('DOMContentLoaded', function() {
         eventContent: function(arg) {
             var status = arg.event.extendedProps.status;
             var isMilestone = status === 'milestone';
+            var orgId = arg.event.extendedProps.organizer_id;
+            var isMyMeeting = (window.currentUserId && orgId === window.currentUserId);
             var bgColor = status === 'pending' ? '#f59e0b' : (isMilestone ? '#dc3545' : '#6366f1'); // warning vs danger vs indigo
             var iconHtml = isMilestone ? '<i class="fa-solid fa-flag text-white me-1"></i>' : '';
             var titleHtml = '<span class="text-truncate flex-grow-1 text-white" title="' + arg.event.title + '">' + iconHtml + arg.event.title + '</span>';
             var deleteBtn = '';
             
             if (status === 'pending') {
-                titleHtml = '<span class="text-truncate flex-grow-1 text-white" title="' + arg.event.title + ' (Chờ duyệt)">' + arg.event.title + ' (Chờ)</span>';
+                var pendingLabel = isMyMeeting ? ' (Chờ SV)' : ' (SV hẹn)';
+                titleHtml = '<span class="text-truncate flex-grow-1 text-white" title="' + arg.event.title + pendingLabel + '">' + arg.event.title + pendingLabel + '</span>';
                 deleteBtn = '<i class="fa-solid fa-xmark ms-1 text-white" style="cursor:pointer;" onclick="revokeMeeting(' + arg.event.id + ', event)"></i>';
             }
             
@@ -205,32 +264,50 @@ document.addEventListener('DOMContentLoaded', function() {
             var desc = arg.event.extendedProps.description || 'Không có mô tả';
             var title = arg.event.title;
             var start = arg.event.start ? arg.event.start.toLocaleString('vi-VN') : '';
+            var orgId = arg.event.extendedProps.organizer_id;
+            var isMyMeeting = (window.currentUserId && orgId === window.currentUserId);
             
             if (status === 'pending') {
-                Swal.fire({
-                    title: 'Yêu cầu đặt lịch',
-                    html: `<b>Tiêu đề:</b> ${title}<br><b>Thời gian:</b> ${start}<br><b>Mô tả:</b> ${desc}`,
-                    icon: 'info',
-                    showCancelButton: true,
-                    showDenyButton: true,
-                    confirmButtonText: 'Đồng ý',
-                    denyButtonText: 'Từ chối',
-                    cancelButtonText: 'Đóng'
-                }).then(async (result) => {
-                    if (result.isConfirmed) {
-                        await fetch('/api/calendar/events/' + arg.event.id + '/status', {
-                            method: 'PUT', headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({status: 'approved'})
-                        });
-                        Swal.fire('Thành công', 'Đã duyệt lịch họp', 'success').then(() => location.reload());
-                    } else if (result.isDenied) {
-                        await fetch('/api/calendar/events/' + arg.event.id + '/status', {
-                            method: 'PUT', headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({status: 'rejected'})
-                        });
-                        Swal.fire('Đã từ chối', 'Đã từ chối lịch họp', 'success').then(() => location.reload());
-                    }
-                });
+                if (isMyMeeting) {
+                    Swal.fire({
+                        title: title + ' (Chờ SV xác nhận)',
+                        html: `<b>Thời gian:</b> ${start}<br><b>Mô tả:</b> ${desc}<br><div class="alert alert-info small mt-2 mb-0">Lịch họp do bạn đề xuất, đang chờ sinh viên trong nhóm xác nhận tham gia.</div>`,
+                        icon: 'info',
+                        showCancelButton: true,
+                        confirmButtonText: 'Đóng',
+                        cancelButtonText: 'Hủy lịch hẹn này',
+                        cancelButtonColor: '#d33'
+                    }).then(function(result) {
+                        if (result.dismiss === Swal.DismissReason.cancel) {
+                            revokeMeeting(arg.event.id);
+                        }
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Yêu cầu đặt lịch từ Sinh viên',
+                        html: `<b>Tiêu đề:</b> ${title}<br><b>Thời gian:</b> ${start}<br><b>Mô tả:</b> ${desc}`,
+                        icon: 'info',
+                        showCancelButton: true,
+                        showDenyButton: true,
+                        confirmButtonText: 'Đồng ý',
+                        denyButtonText: 'Từ chối',
+                        cancelButtonText: 'Đóng'
+                    }).then(async (result) => {
+                        if (result.isConfirmed) {
+                            await fetch('/api/calendar/events/' + arg.event.id + '/status', {
+                                method: 'PUT', headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({status: 'approved'})
+                            });
+                            Swal.fire('Thành công', 'Đã duyệt lịch họp', 'success').then(() => location.reload());
+                        } else if (result.isDenied) {
+                            await fetch('/api/calendar/events/' + arg.event.id + '/status', {
+                                method: 'PUT', headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({status: 'rejected'})
+                            });
+                            Swal.fire('Đã từ chối', 'Đã từ chối lịch họp', 'success').then(() => location.reload());
+                        }
+                    });
+                }
             } else {
                 Swal.fire({
                     title: title,

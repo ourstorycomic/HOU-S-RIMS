@@ -45,9 +45,32 @@ def _in_text(keyword, normalized_text):
     return re.search(r'(?<!\w)' + re.escape(keyword) + r'(?!\w)', normalized_text) is not None
 
 
+def get_department(user):
+    """
+    Xác định Bộ môn chuyên môn cụ thể của Giảng viên.
+    Nếu faculty là Bộ môn cụ thể (khác Khoa CNTT chung), trả về tên bộ môn đó.
+    Nếu là 'Khoa Công nghệ thông tin' hoặc chung chung, tự động nhận diện chính xác
+    dựa trên hướng nghiên cứu (bio) và chuyên môn.
+    """
+    if not user:
+        return 'Bộ môn Công nghệ phần mềm'
+    fac = (user.faculty or '').strip()
+    if fac and fac not in ('Khoa Công nghệ thông tin', 'Khoa CNTT', 'Công nghệ thông tin', 'CNTT'):
+        return fac if fac.startswith('Bộ môn') else f'Bộ môn {fac}'
+
+    bio = ((user.bio or '') + ' ' + (user.full_name or '')).lower()
+    if any(k in bio for k in ['an toan', 'an toàn', 'bao mat', 'bảo mật', 'mat ma', 'mật mã', 'giau tin', 'giấu tin', 'ma doc', 'mã độc', 'nhung', 'nhúng', 'iot']):
+        return 'Bộ môn Mạng & An toàn thông tin'
+    if any(k in bio for k in ['phan mem', 'phần mềm', 'saas', 'front-end', 'react', 'chuyen doi so', 'chuyển đổi số', 'qr code', 'mobile', 'web design']):
+        return 'Bộ môn Công nghệ phần mềm'
+    if any(k in bio for k in ['he thong thong tin', 'hệ thống thông tin', 'thuong mai dien tu', 'thương mại điện tử', 'database', 'cơ sở dữ liệu']):
+        return 'Bộ môn Hệ thống thông tin'
+    return 'Bộ môn Khoa học máy tính'
+
+
 def match_info(ref_dept, ref_keywords, topic_text, cand_dept, cand_bio):
     """Trả về (score, same_dept, matched_keywords)."""
-    same_dept = bool(ref_dept) and normalize(cand_dept) == ref_dept
+    same_dept = bool(ref_dept) and normalize(cand_dept) == normalize(ref_dept)
     topic_norm = normalize(topic_text)
     matched = sorted(k for k in keywords(cand_bio)
                      if k in ref_keywords or _in_text(k, topic_norm))
@@ -86,6 +109,7 @@ def mentor_stats(academic_year):
     for u in User.query.filter(_is_lecturer()).order_by(User.full_name).all():
         l = _load_of(loads, u.id)
         out.append({'id': u.id, 'full_name': u.full_name, 'faculty': u.faculty,
+                    'department': get_department(u),
                     'current_topics': l['total'], 'approved': l['approved'],
                     'pending': l['pending'], 'quota': MAX_TOPICS_PER_MENTOR,
                     'available': l['total'] < MAX_TOPICS_PER_MENTOR})
@@ -99,7 +123,8 @@ def suggest_mentors(topic, academic_year, include_all=False):
     Sắp xếp: còn chỗ trước -> điểm cao -> ít đề tài -> theo tên.
     """
     ref = db.session.get(User, topic.mentor_id) if topic.mentor_id else None
-    ref_dept = normalize(ref.faculty) if ref and ref.faculty else ''
+    ref_dept_name = get_department(ref) if ref else ''
+    ref_dept = normalize(ref_dept_name)
     ref_kw = keywords(ref.bio) if ref else set()
     topic_text = f'{topic.title or ""} {topic.description or ""}'
     loads = mentor_loads(academic_year)
@@ -108,13 +133,17 @@ def suggest_mentors(topic, academic_year, include_all=False):
     for u in User.query.filter(_is_lecturer()).all():
         if ref and u.id == ref.id:
             continue
-        score, same_dept, matched = match_info(ref_dept, ref_kw, topic_text, u.faculty, u.bio)
+        cand_dept_name = get_department(u)
+        cand_dept = normalize(cand_dept_name)
+        score, same_dept, matched = match_info(ref_dept, ref_kw, topic_text, cand_dept, u.bio)
         same_specialty = same_dept or bool(matched)
         if not same_specialty and not include_all:
             continue
         l = _load_of(loads, u.id)
         result.append({
             'id': u.id, 'full_name': u.full_name, 'email': u.email, 'faculty': u.faculty,
+            'department': cand_dept_name,
+            'ref_department': ref_dept_name,
             'bio': u.bio, 'same_department': same_dept, 'matched_keywords': matched,
             'same_specialty': same_specialty, 'score': score,
             'current_topics': l['total'], 'approved': l['approved'], 'pending': l['pending'],

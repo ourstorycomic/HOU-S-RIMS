@@ -221,7 +221,7 @@ async function doReject() {
         const resp = await fetch(`/api/topics/${topicId}/approve`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'rejected' })
+            body: JSON.stringify({ status: 'rejected', reason: reason, note: reason })
         });
         const data = await resp.json();
         if (resp.ok) {
@@ -1526,6 +1526,12 @@ function buildModernNotificationHtml(id, content, fromAll, createdAt) {
     const isGroupInvitation = textContent.includes('Lời mời tham gia') || textContent.includes('mời vào nhóm') || textContent.includes('mời tham gia nhóm');
     const isTopicApproval = textContent.includes('phê duyệt đề tài') || (textContent.includes('Đề tài NCKH') && textContent.includes('phê duyệt'));
     const isBatchAnnouncement = textContent.includes('Đợt NCKH') || textContent.includes('NCKH 20') || textContent.includes('Kế hoạch NCKH') || mainHtml.includes('Đợt NCKH:');
+    const isTopicReassignment = textContent.includes('điều chuyển Giảng viên') || 
+                                textContent.includes('phân công bạn làm Giảng viên') || 
+                                textContent.includes('phân công Thầy/Cô') || 
+                                textContent.includes('điều chuyển đề tài') || 
+                                textContent.includes('tiếp nhận hướng dẫn') ||
+                                textContent.includes('ĐIỀU CHUYỂN GVHD');
     const isCalendarMeeting = textContent.includes('Lịch hẹn') || textContent.includes('lịch hẹn') || textContent.includes('cuộc họp');
     const isCouncil = textContent.includes('Hội đồng') || textContent.includes('nghiệm thu');
 
@@ -1610,6 +1616,13 @@ function buildModernNotificationHtml(id, content, fromAll, createdAt) {
         theme.sender = 'Hội đồng Khoa CNTT';
         theme.headline = 'Đề tài NCKH đã được phê duyệt chính thức';
         if (!actionUrl) actionUrl = '/student/progress';
+    } else if (isTopicReassignment) {
+        theme.categoryTag = 'KHOA CNTT • ĐIỀU CHUYỂN GVHD';
+        theme.categoryBadgeClass = 'bg-primary-subtle text-primary border border-primary-subtle';
+        theme.icon = 'fa-solid fa-shuffle text-primary';
+        theme.sender = 'Văn phòng Khoa Công nghệ Thông tin';
+        theme.headline = 'Quyết định Điều chuyển & Phân công Giảng viên hướng dẫn';
+        if (!actionUrl) actionUrl = '/lecturer/chat';
     }
 
     // Tinh chỉnh nút hành động và icon
@@ -1695,84 +1708,100 @@ function buildModernNotificationHtml(id, content, fromAll, createdAt) {
             ` : ''}
         `;
     } else {
-        // Thông báo khác (Phê duyệt đề tài, Yêu cầu sửa, Nhận xét, Lời mời...)
-        let topicTitle = '';
-        let docVersion = '';
-        let statusBadge = '';
-        let feedbackText = '';
-
-        const topicMatch = mainHtml.match(/Đề tài:\s*(?:<strong>)?(.*?)(?:<\/strong>)?(?:\s*\((.*?)\))?(?:<\/p>|<br>|[\r\n]|$)/i)
-                        || mainHtml.match(/đề tài\s*(?:NCKH)?(?:\s*<strong>)?:\s*(.*?)(?:<\/strong>)?(?:<\/p>|<br>|[\r\n]|$)/i);
-        if (topicMatch) {
-            topicTitle = topicMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim();
-            if (topicMatch[2]) docVersion = topicMatch[2].replace(/<\/?[^>]+(>|$)/g, '').trim();
-        }
-
-        const badgeMatch = mainHtml.match(/<span class="badge[^"]*">(.*?)<\/span>/i);
-        if (badgeMatch) {
-            statusBadge = badgeMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim();
-        }
-
-        const feedbackRegex = /(?:Ý kiến chỉ đạo(?: của Khoa| từ Khoa)?:?|Ghi chú(?: từ GV)?:?|Nhận xét(?: của Giảng viên)?:?|Lý do(?: từ chối)?:?)\s*(?:<\/strong>)?\s*([\s\S]*?)(?:<\/p>|<a |$)/i;
-        const feedbackMatch = mainHtml.match(feedbackRegex);
-        if (feedbackMatch) {
-            feedbackText = feedbackMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim();
-        }
-
-        let specialCardsHtml = '';
-        if (topicTitle) {
-            specialCardsHtml += `
-                <div class="p-3 bg-white rounded-3 border mb-3">
-                    <div class="d-flex align-items-center justify-content-between mb-1">
-                        <span class="text-muted fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">ĐỀ TÀI NGHIÊN CỨU</span>
-                        ${docVersion ? `<span class="badge bg-light text-secondary border rounded-pill px-2.5 py-0.5" style="font-size: 10.5px;"><i class="fa-regular fa-file me-1"></i>${docVersion}</span>` : ''}
-                    </div>
-                    <div class="fw-bold text-dark" style="font-size: 14px; line-height: 1.5;">${topicTitle}</div>
-                </div>
-            `;
-        }
-
-        if (statusBadge) {
-            let sClass = 'alert-info text-primary-emphasis border-info-subtle';
-            let sIcon = 'fa-solid fa-circle-info';
-            if (theme.isApproval || statusBadge.includes('ĐẠT') || statusBadge.includes('DUYỆT')) {
-                sClass = 'alert-success text-success-emphasis border-success-subtle';
-                sIcon = 'fa-solid fa-circle-check text-success';
-            } else if (theme.isRevision || statusBadge.includes('SỬA') || statusBadge.includes('TỪ CHỐI')) {
-                sClass = 'alert-danger text-danger-emphasis border-danger-subtle';
-                sIcon = 'fa-solid fa-triangle-exclamation text-danger';
-            }
-            specialCardsHtml += `
-                <div class="alert ${sClass} rounded-3 p-3 mb-3 d-flex align-items-center gap-2.5">
-                    <i class="${sIcon} fs-5"></i>
-                    <div>
-                        <div class="small fw-bold text-uppercase opacity-75" style="font-size: 10px;">Kết quả thẩm định:</div>
-                        <div class="fw-bold" style="font-size: 13.5px;">${statusBadge}</div>
-                    </div>
-                </div>
-            `;
-        }
-
-        if (feedbackText) {
-            specialCardsHtml += `
-                <div class="p-3 rounded-3 mb-3" style="background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #f59e0b;">
-                    <div class="fw-bold mb-1.5 d-flex align-items-center gap-1.5" style="color: #b45309; font-size: 12px;">
-                        <i class="fa-solid fa-comment-dots"></i> Ý KIẾN CHỈ ĐẠO & GHI CHÚ PHẢN HỒI:
-                    </div>
-                    <div style="font-size: 13.5px; color: #334155; line-height: 1.6; white-space: pre-wrap;">
-                        ${feedbackText}
-                    </div>
-                </div>
-            `;
-        }
-
-        bodyCardsHtml = specialCardsHtml + `
-            <div class="p-3.5 bg-white rounded-3 border mb-3">
+        // Nếu thông báo đã có cấu trúc thẻ card hoàn chỉnh (ví dụ bảng thành viên nhóm, card đề tài...)
+        if (cleanHtml.includes('THÀNH VIÊN NHÓM') || cleanHtml.includes('DANH SÁCH THÀNH VIÊN')) {
+            bodyCardsHtml = `
                 <div class="notif-rich-content" style="font-size: 13.5px; line-height: 1.65; color: #1e293b;">
                     ${cleanHtml}
                 </div>
-            </div>
-        `;
+            `;
+        } else {
+            // Thông báo khác (Phê duyệt đề tài, Yêu cầu sửa, Nhận xét, Lời mời...)
+            let topicTitle = '';
+            let docVersion = '';
+            let statusBadge = '';
+            let feedbackText = '';
+
+            const topicMatch = mainHtml.match(/Đề tài:\s*(?:<strong>)?(.*?)(?:<\/strong>)?(?:\s*\((.*?)\))?(?:<\/p>|<br>|[\r\n]|$)/i)
+                            || mainHtml.match(/đề tài\s*(?:NCKH)?(?:\s*<strong>)?:\s*(.*?)(?:<\/strong>)?(?:<\/p>|<br>|[\r\n]|$)/i)
+                            || mainHtml.match(/đề tài\s*(?:NCKH)?\s*['"“](.*?)['"”]/i);
+            if (topicMatch) {
+                topicTitle = topicMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim();
+                if (topicMatch[2]) docVersion = topicMatch[2].replace(/<\/?[^>]+(>|$)/g, '').trim();
+            }
+
+            const badgeMatch = mainHtml.match(/<span class="badge[^"]*">(.*?)<\/span>/i);
+            if (badgeMatch) {
+                statusBadge = badgeMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim();
+            }
+
+            const feedbackRegex = /(?:Ý kiến chỉ đạo(?: của Khoa| từ Khoa)?:?|Ghi chú(?: từ GV)?:?|Nhận xét(?: của Giảng viên)?:?|Lý do(?: từ chối)?:?)\s*(?:<\/strong>)?\s*([\s\S]*?)(?:<\/p>|<a |$)/i;
+            const feedbackMatch = mainHtml.match(feedbackRegex);
+            if (feedbackMatch) {
+                feedbackText = feedbackMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim();
+            }
+
+            let specialCardsHtml = '';
+            if (topicTitle) {
+                specialCardsHtml += `
+                    <div class="p-3 bg-white rounded-3 border mb-3">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <span class="text-muted fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">ĐỀ TÀI NGHIÊN CỨU</span>
+                            ${docVersion ? `<span class="badge bg-light text-secondary border rounded-pill px-2.5 py-0.5" style="font-size: 10.5px;"><i class="fa-regular fa-file me-1"></i>${docVersion}</span>` : ''}
+                        </div>
+                        <div class="fw-bold text-dark" style="font-size: 14px; line-height: 1.5;">${topicTitle}</div>
+                    </div>
+                `;
+            }
+
+            if (statusBadge) {
+                let sClass = 'alert-info text-primary-emphasis border-info-subtle';
+                let sIcon = 'fa-solid fa-circle-info';
+                if (theme.isApproval || statusBadge.includes('ĐẠT') || statusBadge.includes('DUYỆT')) {
+                    sClass = 'alert-success text-success-emphasis border-success-subtle';
+                    sIcon = 'fa-solid fa-circle-check text-success';
+                } else if (theme.isRevision || statusBadge.includes('SỬA') || statusBadge.includes('TỪ CHỐI')) {
+                    sClass = 'alert-danger text-danger-emphasis border-danger-subtle';
+                    sIcon = 'fa-solid fa-triangle-exclamation text-danger';
+                }
+                specialCardsHtml += `
+                    <div class="alert ${sClass} rounded-3 p-3 mb-3 d-flex align-items-center gap-2.5">
+                        <i class="${sIcon} fs-5"></i>
+                        <div>
+                            <div class="small fw-bold text-uppercase opacity-75" style="font-size: 10px;">Kết quả thẩm định:</div>
+                            <div class="fw-bold" style="font-size: 13.5px;">${statusBadge}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (feedbackText) {
+                specialCardsHtml += `
+                    <div class="p-3 rounded-3 mb-3" style="background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #f59e0b;">
+                        <div class="fw-bold mb-1.5 d-flex align-items-center gap-1.5" style="color: #b45309; font-size: 12px;">
+                            <i class="fa-solid fa-comment-dots"></i> Ý KIẾN CHỈ ĐẠO & GHI CHÚ PHẢN HỒI:
+                        </div>
+                        <div style="font-size: 13.5px; color: #334155; line-height: 1.6; white-space: pre-wrap;">
+                            ${feedbackText}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Tránh lặp lại phần Lý do trong cleanHtml nếu đã hiển thị ở card trên
+            let sanitizedCleanHtml = cleanHtml;
+            if (feedbackText) {
+                sanitizedCleanHtml = sanitizedCleanHtml.replace(/(?:\.\s*)?(?:Lý do|Ý kiến chỉ đạo|Ghi chú|Nhận xét)(?: của Khoa| từ Khoa| từ GV)?:?\s*[\s\S]*$/i, '.').trim();
+            }
+
+            bodyCardsHtml = specialCardsHtml + `
+                <div class="p-3.5 bg-white rounded-3 border mb-3">
+                    <div class="notif-rich-content" style="font-size: 13.5px; line-height: 1.65; color: #1e293b;">
+                        ${sanitizedCleanHtml}
+                    </div>
+                </div>
+            `;
+        }
     }
 
     // 4. Khối tệp đính kèm (nếu có)
