@@ -652,91 +652,334 @@ a { text-decoration: none !important; }
 }
 
 /* ==========================================================================
-   11. MOBILE RESPONSIVE (MÀN HÌNH ĐIỆN THOẠI & TABLET)
+   11. COMPREHENSIVE RESPONSIVE SYSTEM (CHUẨN FULL-WEB TOÀN DIỆN)
+   Hỗ trợ hoàn hảo mọi thiết bị: Desktop, Laptop, Tablet, Mobile (Portrait & Landscape)
    ========================================================================== */
+
+/* Nút mobile-only mặc định ẩn trên desktop */
+.btn-mobile-toggle, .btn-close-sidebar {
+    display: none;
+}
+
+/* Container cuộn ngang mượt mà cho bảng & stepper */
+.stepper-scroll-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
+}
+.stepper-scroll-wrapper::-webkit-scrollbar {
+    height: 4px;
+}
+.stepper-scroll-wrapper::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+/* Tự động cho phép bảng cuộn ngang nếu đặt trực tiếp trong card mà thiếu .table-responsive */
+.card-body > .table,
+.card > .table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* --- BREAKPOINT 1: TABLET & MOBILE (< 992px) --- */
 @media (max-width: 991.98px) {
+    /* 1. Sidebar trượt mượt mà dạng Offcanvas */
     .sidebar {
         transform: translateX(-100%);
-        transition: transform 0.3s ease-in-out !important;
-        box-shadow: 10px 0 20px rgba(0,0,0,0.2) !important;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.25) !important;
         left: 0 !important;
         width: 280px !important;
+        max-width: 85vw !important;
+        z-index: 1050 !important;
     }
 
     body.sidebar-open {
-        overflow: hidden;
+        overflow: hidden !important;
+        touch-action: none !important;
     }
 
     body.sidebar-open .sidebar {
-        transform: translateX(0);
+        transform: translateX(0) !important;
     }
 
-    .main-content {
-        margin-left: 0 !important;
-        width: 100% !important;
-    }
-
-    .top-bar {
-        padding: 0 15px;
-    }
-
-    .top-bar .fw-bold.text-uppercase.small {
-        font-size: 11px;
-    }
-
-    /* Overlay khi mở sidebar trên mobile */
+    /* 2. Lớp phủ mờ (Backdrop overlay) */
     .sidebar-overlay {
         display: none;
         position: fixed;
-        top: 0;
-        left: 0;
+        inset: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0,0,0,0.5);
-        z-index: 999;
-        backdrop-filter: blur(2px);
+        background: rgba(15, 23, 42, 0.65);
+        z-index: 1040;
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
     }
 
     body.sidebar-open .sidebar-overlay {
         display: block;
     }
 
-    /* Nút đóng sidebar (Mobile only) */
+    /* Nút đóng sidebar */
     .btn-close-sidebar {
-        display: block !important;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
         position: absolute;
-        top: 20px;
-        right: 20px;
+        top: 18px;
+        right: 18px;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.15);
         color: white;
-        font-size: 1.5rem;
+        font-size: 1rem;
         cursor: pointer;
-        opacity: 0.7;
-        z-index: 1001;
+        z-index: 1051;
+        transition: background 0.2s ease;
+    }
+    .btn-close-sidebar:hover {
+        background: rgba(255, 255, 255, 0.25);
+    }
+
+    /* 3. Main content chiếm trọn 100% màn hình */
+    .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    /* 4. Top-bar linh hoạt */
+    .top-bar {
+        padding: 0 16px;
+        height: 64px;
+    }
+
+    .top-bar .fw-bold.text-uppercase.small {
+        font-size: 11px;
+    }
+
+    /* 5. Vùng nội dung đệm hợp lý */
+    .content-area {
+        padding: 16px 18px !important;
     }
 
     /* Điều chỉnh các card thống kê */
     .stat-card-simple {
-        padding: 15px;
+        padding: 14px;
     }
-
     .stat-card-simple .h2 {
         font-size: 1.5rem;
     }
 }
 
-/* Ẩn các nút mobile-only trên desktop */
-.btn-mobile-toggle, .btn-close-sidebar {
-    display: none;
-}
+/* --- BREAKPOINT 2: MOBILE LANDSCAPE & SMARTPHONES (< 768px) --- */
+@media (max-width: 767.98px) {
+    /* 1. Header thu gọn tối ưu không gian */
+    .top-bar {
+        padding: 0 12px !important;
+        height: 58px !important;
+    }
 
-@media (max-width: 768px) {
+    /* Ẩn tên trường dài, chỉ giữ icon & thanh menu */
     .top-bar .d-flex.align-items-center.gap-2 span {
-        display: none; /* Ẩn chữ HANOI OPEN UNIVERSITY cho gọn */
+        display: none !important;
+    }
+
+    /* Ẩn tên và chức vụ của Giảng viên / Quản lý / Sinh viên trên topbar để không bị tràn màn hình */
+    .top-bar .dropdown .text-end {
+        display: none !important;
+    }
+    .top-bar .dropdown.border-start {
+        border-left: none !important;
+        padding-left: 0 !important;
+    }
+
+    /* Notification dropdown căn giữa màn hình điện thoại */
+    .top-bar .dropdown-menu {
+        position: fixed !important;
+        top: 58px !important;
+        left: 10px !important;
+        right: 10px !important;
+        width: auto !important;
+        max-width: calc(100vw - 20px) !important;
+        transform: none !important;
+        border-radius: 16px !important;
+        margin-top: 0 !important;
+    }
+
+    /* 2. Content area trên điện thoại */
+    .content-area {
+        padding: 14px 10px !important;
+    }
+
+    /* 3. Đệm thẻ (Card padding) giảm tránh lãng phí diện tích */
+    .card, .stat-card {
+        padding: 1rem !important;
+        border-radius: 14px !important;
+    }
+    .p-4 {
+        padding: 1rem !important;
+    }
+    .p-5 {
+        padding: 1.15rem !important;
+    }
+    .px-4 {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+    .py-4 {
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
+    }
+
+    /* 4. Sub-nav trượt ngang mượt mà */
+    .sub-nav {
+        padding: 0 12px !important;
+        gap: 20px !important;
+        scrollbar-width: none;
+    }
+    .sub-nav::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* 5. Bảng dữ liệu tự động cuộn ngang (Full Responsive Tables) */
+    .table-responsive {
+        width: 100% !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        border-radius: 10px;
+    }
+    .table th, .table td {
+        font-size: 13px !important;
+        padding: 8px 10px !important;
+        white-space: nowrap;
+    }
+
+    /* 6. Stepper tiến độ 5 mốc không bị ép dẹt */
+    .stepper-scroll-inner {
+        min-width: 560px !important;
+    }
+
+    /* 7. Danh sách bài nộp trong trang Tiến độ Giảng viên */
+    .submission-actions-responsive {
+        flex-direction: row !important;
+        width: 100% !important;
+        margin-left: 0 !important;
+        margin-top: 10px !important;
+        flex-wrap: wrap !important;
+    }
+    .submission-actions-responsive .btn {
+        flex: 1 1 auto;
+        min-width: 120px;
+        text-align: center;
+    }
+
+    /* 8. Input tìm kiếm tự động giãn full trên mobile */
+    .search-input-responsive, 
+    input#topicSearchInput, 
+    input#lecSearchInput,
+    input#searchMentorInput {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* 9. Trò chuyện (Chat Interface) trên Mobile */
+    .chat-card-responsive {
+        height: calc(100vh - 75px) !important;
+    }
+    .chat-user-list-mobile {
+        max-height: 220px !important;
+        border-bottom: 2px solid #e2e8f0 !important;
+    }
+
+    /* 10. Modals & Dialogs trên mobile */
+    .modal-dialog {
+        margin: 10px !important;
+        max-width: calc(100vw - 20px) !important;
+    }
+    .modal-content {
+        border-radius: 14px !important;
+    }
+    .modal-header {
+        padding: 14px 16px !important;
+    }
+    .modal-body {
+        padding: 16px 14px !important;
+        max-height: calc(100vh - 130px);
+        overflow-y: auto;
+    }
+    .modal-footer {
+        padding: 10px 14px 14px !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+    .modal-footer > * {
+        flex: 1 1 auto !important;
+        min-width: 110px;
+    }
+
+    /* SweetAlert2 Popup trên màn hình nhỏ */
+    .swal2-popup {
+        width: calc(100vw - 24px) !important;
+        max-width: 440px !important;
+        padding: 1.25rem 1rem !important;
+        border-radius: 18px !important;
+    }
+
+    /* Word Editor Toolbar */
+    .word-editor-toolbar {
+        padding: 4px 6px !important;
+        gap: 2px !important;
+    }
+    .word-editor-toolbar .btn-tool {
+        min-width: 24px !important;
+        height: 24px !important;
+        padding: 2px 4px !important;
+        font-size: 11px !important;
     }
 }
 
-  60% { transform: scale(1.02) translateY(-2px); opacity: 1; }
-  100% { transform: scale(1) translateY(0); opacity: 1; }
+/* --- BREAKPOINT 3: MOBILE PORTRAIT & SMALL PHONES (< 576px) --- */
+@media (max-width: 575.98px) {
+    /* Nút Lịch sự kiện hiển thị icon-only để tiết kiệm diện tích */
+    .top-bar a.btn[href*="calendar"] {
+        padding: 6px 10px !important;
+        font-size: 0 !important;
+    }
+    .top-bar a.btn[href*="calendar"] i {
+        font-size: 14px !important;
+        margin-right: 0 !important;
+    }
+
+    /* Nút năm học (Admin & Khoa) gọn gàng */
+    .year-select {
+        padding: 6px 10px !important;
+        font-size: 12px !important;
+    }
+
+    /* Nhóm nút lọc (Filter buttons) tự động xếp hàng và co giãn */
+    .sub-filter-btn, .btn-filter {
+        flex: 1 1 auto !important;
+        font-size: 11px !important;
+        padding: 5px 8px !important;
+        text-align: center !important;
+    }
+
+    /* Tiêu đề trang */
+    h4, .h4 { font-size: 1.2rem !important; }
+    h5, .h5 { font-size: 1.1rem !important; }
+    h6, .h6 { font-size: 0.95rem !important; }
+
+    /* Login card trên màn hình cực nhỏ */
+    .login-card {
+        padding: 22px 16px !important;
+        border-radius: 16px !important;
+    }
 }
 
 #chat-messages-container {

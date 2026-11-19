@@ -3,26 +3,26 @@
 {% block faculty_content %}
 <div id="view-f-topics" class="fade-in ">
                 <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-                    <div class="card-header bg-white border-bottom py-3 px-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div class="d-flex gap-2">
-                                <button class="btn btn-primary btn-sm rounded-pill px-4 fw-bold btn-filter active" onclick="filterTopics('all', this)">
+                    <div class="card-header bg-white border-bottom py-3 px-3 px-md-4">
+                        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-stretch align-items-lg-center gap-3 mb-2">
+                            <div class="d-flex flex-wrap gap-2">
+                                <button class="btn btn-primary btn-sm rounded-pill px-3 px-md-4 fw-bold btn-filter active" onclick="filterTopics('all', this)">
                                     TẤT CẢ ({{ topics|length }})
                                 </button>
-                                <button class="btn btn-light btn-sm rounded-pill px-4 text-muted fw-bold btn-filter position-relative" onclick="filterTopics('faculty_pending', this)">
+                                <button class="btn btn-light btn-sm rounded-pill px-3 px-md-4 text-muted fw-bold btn-filter position-relative" onclick="filterTopics('faculty_pending', this)">
                                     CHỜ PHÊ DUYỆT ({{ topics|selectattr('status', 'equalto', 'faculty_pending')|list|length }})
                                 </button>
-                                <button class="btn btn-light btn-sm rounded-pill px-4 text-muted fw-bold btn-filter" onclick="filterTopics('approved', this)">
+                                <button class="btn btn-light btn-sm rounded-pill px-3 px-md-4 text-muted fw-bold btn-filter" onclick="filterTopics('approved', this)">
                                     ĐÃ PHÊ DUYỆT ({{ topics|selectattr('status', 'equalto', 'approved')|list|length }})
                                 </button>
-                                <button class="btn btn-light btn-sm rounded-pill px-4 text-muted fw-bold btn-filter" onclick="filterTopics('rejected', this)">
+                                <button class="btn btn-light btn-sm rounded-pill px-3 px-md-4 text-muted fw-bold btn-filter" onclick="filterTopics('rejected', this)">
                                     ĐÃ HỦY ({{ topics|selectattr('status', 'equalto', 'rejected')|list|length }})
                                 </button>
                             </div>
-                            <input type="text" id="topicSearchInput" oninput="searchTopics(this.value)" class="form-control rounded-pill bg-light border-0 px-4 small" placeholder="Tìm tên đề tài, mã đề tài, giảng viên..." style="width: 300px;">
+                            <input type="text" id="topicSearchInput" oninput="searchTopics(this.value)" class="form-control rounded-pill bg-light border-0 px-4 small search-input-responsive" placeholder="Tìm tên đề tài, mã đề tài, giảng viên..." style="width: 300px; max-width: 100%;">
                         </div>
                     </div>
-                    <div class="card-body p-0">
+                    <div class="card-body p-0 table-responsive">
                         <table class="table table-hover mb-0 align-middle">
                             <thead class="bg-light text-muted small text-uppercase fw-bold">
                                 <tr>

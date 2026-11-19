@@ -2,14 +2,14 @@
 
 {% block faculty_content %}
 <div id="view-f-students" class="fade-in ">
-                <div class="bg-white p-4 rounded-4 shadow-sm mb-4 d-flex justify-content-between align-items-center">
+                <div class="bg-white p-3 p-md-4 rounded-4 shadow-sm mb-4 d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center gap-3">
                     <h5 class="fw-bold mb-0">DANH SÁCH SINH VIÊN</h5>
-                    <div class="d-flex gap-2">
-                        <input type="text" class="form-control rounded-pill px-3" placeholder="Tìm kiếm SV..." style="width: 200px;">
+                    <div class="d-flex flex-wrap gap-2">
+                        <input type="text" class="form-control rounded-pill px-3 search-input-responsive" placeholder="Tìm kiếm SV..." style="width: 200px; max-width: 100%;">
                         <button class="btn btn-outline-primary fw-bold rounded-pill px-3"><i class="fa-solid fa-file-excel me-1"></i> IMPORT</button>
                     </div>
                 </div>
-                <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden table-responsive">
                     <table class="table table-hover mb-0 align-middle">
                         <thead class="bg-light"><tr class="text-muted small text-uppercase fw-bold"><th class="ps-4 py-3">MSSV</th><th>Họ và Tên</th><th>Chuyên ngành</th><th>Email</th><th class="text-end pe-4">Thao tác</th></tr></thead>
                         <tbody>

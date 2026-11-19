@@ -5,9 +5,29 @@ function toggleSidebar() {
     document.body.classList.toggle('sidebar-open');
 }
 
+function closeSidebar() {
+    document.body.classList.remove('sidebar-open');
+}
+
 document.addEventListener('DOMContentLoaded', function() {
 
     console.log("HOU S-RIMS Scripts Loaded Successfully!");
+    
+    // Tự động đóng sidebar trên mobile khi bấm vào nav-link
+    document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+        link.addEventListener('click', function() {
+            if (window.innerWidth < 992) {
+                closeSidebar();
+            }
+        });
+    });
+
+    // Đóng sidebar khi nhấn phím Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && document.body.classList.contains('sidebar-open')) {
+            closeSidebar();
+        }
+    });
     
     // Khởi tạo tất cả Tooltip của Bootstrap (nếu có sử dụng data-bs-toggle="tooltip")
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
@@ -220,6 +240,11 @@ function switchTab(tabName, element, pushHistory = true) {
     const sidebarMenu = document.querySelector('.sidebar-menu-wrapper');
     const currentScrollPosition = sidebarMenu ? sidebarMenu.scrollTop : 0;
     console.log('=== switchTab START ===', tabName, 'pushHistory:', pushHistory);
+    
+    // Tự động đóng sidebar trên mobile khi chuyển tab
+    if (window.innerWidth < 992) {
+        closeSidebar();
+    }
     
     // Tự động tìm element nếu chưa truyền
     if (!element) {

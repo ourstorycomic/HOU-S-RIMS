@@ -36,7 +36,8 @@
                             </div>
                             
                             <!-- Chu trình tiến độ thực của đề tài NCKH (5 giai đoạn) -->
-                            <div class="position-relative mb-4 mt-3 px-2">
+                            <div class="stepper-scroll-wrapper mb-4 mt-3">
+                                <div class="position-relative px-2 stepper-scroll-inner">
                                 <!-- Stepper Connecting Lines (Node-to-Node, seamless, no discontinuous jagged cuts) -->
                                 <div class="position-absolute w-100" style="height: 4px; top: 12px; left: 0; z-index: 1;">
                                     <!-- Đoạn 1: Mốc 1 -> Mốc 2 (10% đến 30%) -->
@@ -140,6 +141,7 @@
                                     </div>
                                 </div>
                             </div>
+                            </div>
                             
                             <!-- SECTION 1: TÀI LIỆU & BÁO CÁO ĐÃ NỘP (Đề cương chi tiết, Báo cáo tiến độ, Slide...) -->
                             <div class="mt-4 pt-3 border-top">
@@ -170,7 +172,7 @@
                                         <div class="list-group-item p-3 border-bottom submission-item-{{ t.id }} {% if not sub.is_latest %}bg-light bg-opacity-75{% endif %}"
                                              data-status="{{ sub.status or 'submitted' }}"
                                              style="{% if not sub.is_latest %}background-color: #f8fafc; border-left: 4px solid #cbd5e1;{% else %}border-left: 4px solid #3b82f6;{% endif %}">
-                                            <div class="d-flex justify-content-between align-items-start gap-3">
+                                            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
                                                 <div class="flex-grow-1">
                                                     <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                                                         {% if sub.is_latest %}
@@ -327,7 +329,7 @@
                                                     {% endif %}
                                                 </div>
 
-                                                <div class="d-flex flex-column gap-2 flex-shrink-0 ms-2">
+                                                <div class="d-flex flex-row flex-md-column gap-2 flex-shrink-0 ms-0 ms-md-2 mt-2 mt-md-0 w-100 w-md-auto submission-actions-responsive">
                                                     {% if sub.is_latest %}
                                                         {% if sub.status == 'approved' %}
                                                         <button type="button" class="btn btn-sm btn-outline-success rounded-pill fw-bold text-nowrap d-inline-flex align-items-center justify-content-center gap-1.5 px-3 py-1.5 shadow-2xs" 

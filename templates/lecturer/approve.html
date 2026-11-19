@@ -11,7 +11,7 @@
                     {% if pending_topics %}
                         {% for topic in pending_topics %}
                         <div class="card border shadow-sm p-3 mb-3 rounded-3">
-                            <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
                                 <div>
                                     <div class="d-flex gap-2 mb-1">
                                         <span class="badge bg-warning text-dark" style="font-size: 10px;">CHỜ PHÊ DUYỆT</span>
@@ -28,7 +28,7 @@
                                     </div>
                                     {% endif %}
                                 </div>
-                                <div class="d-flex gap-2">
+                                <div class="d-flex flex-wrap gap-2 w-100 w-md-auto justify-content-start justify-content-md-end">
                                     {% set students = [] %}
                                     {% if topic.group and topic.group.members %}
                                         {% for member in topic.group.members %}

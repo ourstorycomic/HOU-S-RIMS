@@ -5,12 +5,12 @@
     <div class="d-flex gap-4 align-items-start">
         <div style="flex: 1; min-width: 0;">
             <div class="card border-0 shadow-sm rounded-4 p-4">
-                <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center gap-3 mb-4">
                     <div>
                         <h5 class="fw-bold text-primary mb-1"><i class="fa-solid fa-gavel me-2"></i> QUẢN LÝ HỘI ĐỒNG ĐÁNH GIÁ & NGHIỆM THU</h5>
                         <small class="text-muted">Thành lập hội đồng, gom nhóm theo lĩnh vực, chấm điểm và upload biên bản scan</small>
                     </div>
-                    <div class="d-flex gap-2">
+                    <div class="d-flex flex-wrap gap-2">
                         <button class="btn btn-outline-primary fw-bold rounded-pill px-3 shadow-xs" onclick="openAutoGroupModal()">
                             <i class="fa-solid fa-wand-magic-sparkles me-1"></i> TỰ ĐỘNG CHIA HỘI ĐỒNG
                         </button>
@@ -23,7 +23,7 @@
                 {% if councils %}
                     {% for c in councils %}
                     <div class="card border shadow-sm mb-4 rounded-4 overflow-hidden">
-                        <div class="p-3 bg-white d-flex justify-content-between align-items-center border-bottom" data-bs-toggle="collapse" href="#councilCollapse{{ c.id }}" role="button" style="cursor: pointer;">
+                        <div class="p-3 bg-white d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 border-bottom" data-bs-toggle="collapse" href="#councilCollapse{{ c.id }}" role="button" style="cursor: pointer;">
                             <div>
                                 <div class="d-flex align-items-center gap-2 mb-1">
                                     <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold px-3 py-1">HỘI ĐỒNG #{{ c.id }}</span>
@@ -35,7 +35,7 @@
                                     {% if c.location %}| <i class="fa-solid fa-location-dot me-1"></i> {{ c.location }}{% endif %}
                                 </small>
                             </div>
-                            <div class="d-flex align-items-center gap-2">
+                            <div class="d-flex flex-wrap align-items-center gap-2 w-100 w-md-auto justify-content-start justify-content-md-end">
                                 <button class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold" onclick="event.stopPropagation(); openUploadMinutesModal({{ c.id }}, '{{ c.name }}', '{{ c.minute_file_url or '' }}');" title="Upload Biên bản cứng">
                                     <i class="fa-solid fa-file-arrow-up me-1"></i> {% if c.minute_file_url %}Biên bản cứng (Đã có){% else %}Upload Biên bản scan{% endif %}
                                 </button>
